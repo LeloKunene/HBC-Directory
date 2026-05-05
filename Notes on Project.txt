@@ -1,0 +1,39 @@
+GitHub Copilot
+I implemented a minimal Church Directory web app in your workspace. Summary of what I added and how to use it:
+What I implemented
+•	Data models
+•	Family.cs — family entity (Id, FamilyName, Members)
+•	Member.cs — member entity (Name, Surname, Birthdate, Anniversary, PhoneNumber, PhotoFileName, FamilyId)
+•	EF Core context
+•	DirectoryContext.cs — DbContext with Families and Members (SQLite)
+•	Pages / admin
+•	Index.cshtml.cs + Index.cshtml.cs — public directory listing; filter by family and search by name/surname; shows member photos from /wwwroot/uploads.
+•	Login.cshtml + Login.cshtml.cs — simple admin login (cookie auth).
+•	Admin.cshtml + Admin.cshtml.cs — authenticated admin dashboard to add/delete families and add/delete members (supports photo upload).
+•	Logout.cshtml.cs + Logout.cshtml.cs — sign out.
+•	Project config
+•	Program.cs — registers DbContext, cookie auth, ensures DB and wwwroot/uploads exist, serves static files.
+•	HBCDirectory.csproj — added EF Core SQLite package.
+How to run
+1.	From repository root: cd HBCDirectory
+2.	Run: dotnet run
+3.	Open browser:
+•	Public directory: https://localhost:5001/ (or displayed URL)
+•	Admin login: https://.../Login
+•	Admin dashboard: https://.../Admin (requires login)
+Default admin credentials
+•	Username: admin
+•	Password: password Change these in Login.cshtml.cs for production.
+Storage and DB
+•	SQLite DB file: hbc.db (created in app content root)
+•	Uploaded photos: wwwroot/uploads (saved as GUID filenames). If you delete a member, their photo file is removed.
+Notes and limitations
+•	Simple cookie-based single admin credential (not using Identity). For production, replace with a secure user store / Identity.
+•	No image resizing; uploaded files are stored as-is.
+•	I kept UI and features minimal for clarity; you can extend the admin page to add edit forms or separate CRUD pages.
+If you want, I can:
+•	Add member edit functionality,
+•	Add validation and client-side UI polish,
+•	Switch to ASP.NET Core Identity for proper user management,
+•	Add image resizing and thumbnails.
+Which next enhancement would you like?

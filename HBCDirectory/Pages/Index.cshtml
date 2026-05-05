@@ -1,0 +1,31 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Directory";
+}
+
+<h2>Church Directory</h2>
+
+<form method="get">
+    <input name="q" placeholder="Search name or surname" />
+    <select name="familyId">
+        <option value="">All families</option>
+        @foreach(var f in Model.Families){
+            <option value="@f.Id">@f.FamilyName</option>
+        }
+    </select>
+    <button type="submit">Search</button>
+    <a asp-page="/Admin">Admin</a>
+    <a asp-page="/Login">Login</a>
+</form>
+
+<ul>
+@foreach(var m in Model.Members)
+{
+    <li style="margin-bottom:12px">
+        <img src="/uploads/@(m.PhotoFileName ?? "placeholder.png")" alt="photo" width="80" style="vertical-align:middle;margin-right:8px" />
+        <strong>@m.Name @m.Surname</strong>
+        <div>@(m.Family?.FamilyName ?? "") - Phone: @m.PhoneNumber</div>
+    </li>
+}
+</ul>

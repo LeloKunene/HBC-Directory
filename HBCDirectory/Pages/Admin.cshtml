@@ -1,0 +1,74 @@
+@page
+@model HBCDirectory.Pages.AdminModel
+@using Microsoft.AspNetCore.Authorization
+@{
+    ViewData["Title"] = "Admin";
+}
+
+<h2>Admin Dashboard</h2>
+<p><a asp-page="/Index">View public directory</a> | <a asp-page="/Logout">Logout</a></p>
+
+<h3>Families</h3>
+<form method="post" asp-page-handler="AddFamily">
+    <input name="FamilyName" placeholder="Family name" />
+    <button type="submit">Add Family</button>
+</form>
+<ul>
+@foreach(var f in Model.Families)
+{
+    <li>
+        <strong>@f.FamilyName</strong>
+        <form method="post" style="display:inline" asp-page-handler="DeleteFamily">
+            <input type="hidden" name="familyId" value="@f.Id" />
+            <button type="submit">Delete</button>
+        </form>
+    </li>
+}
+</ul>
+
+<h3>Add Member</h3>
+<form method="post" enctype="multipart/form-data" asp-page-handler="AddMember">
+    <div>
+        <input name="Name" placeholder="Name" />
+        <input name="Surname" placeholder="Surname" />
+    </div>
+    <div>
+        <label>Birthdate</label>
+        <input name="Birthdate" type="date" />
+        <label>Anniversary</label>
+        <input name="Anniversary" type="date" />
+    </div>
+    <div>
+        <input name="PhoneNumber" placeholder="Phone" />
+    </div>
+    <div>
+        <label>Family</label>
+        <select name="FamilyId">
+            <option value="">-- none --</option>
+            @foreach(var f in Model.Families)
+            {
+                <option value="@f.Id">@f.FamilyName</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label>Photo</label>
+        <input type="file" name="Photo" />
+    </div>
+    <button type="submit">Add Member</button>
+</form>
+
+<h3>Members</h3>
+<ul>
+@foreach(var m in Model.Members)
+{
+    <li>
+        <img src="/uploads/@(m.PhotoFileName ?? "placeholder.png")" alt="photo" width="80" style="vertical-align:middle;margin-right:8px" />
+        @m.Name @m.Surname (@m.Family?.FamilyName)
+        <form method="post" style="display:inline" asp-page-handler="DeleteMember">
+            <input type="hidden" name="memberId" value="@m.Id" />
+            <button type="submit">Delete</button>
+        </form>
+    </li>
+}
+</ul>
