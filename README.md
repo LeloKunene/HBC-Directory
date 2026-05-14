@@ -1,4 +1,4 @@
-# HBC Directory - A private church member directory built with ASP .NET COre Razor Pages and SQLite
+# HBC Directory - A private church member directory built with ASP .NET Core Razor Pages and SQLite
 
 ## Tech Stack
 
