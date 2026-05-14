@@ -1,18 +1,18 @@
-# HBC Directory - A private church member directory built with ASP.Net Core Razor Pages and SQLite
+# HBC Directory - A private church member directory built with ASP .NET COre Razor Pages and SQLite
 
 ## Tech Stack
 
 | Layer     | Technology                                |
 | --------- | ----------------------------------------- |
-| Framework | ASP.NET COre 10.0 (Razor Pages)           |
-| ORM       | Entitiy Framewoek Core 8                  |
+| Framework | ASP.NET Core 10.0 (Razor Pages)           |
+| ORM       | Entity Framework Core 8                   |
 | Database  | SQLite                                    |
 | Auth      | Cookie authentication (Subject to change) |
 | UI        | Bootstrap 5                               |
 
 ## Prerequisites
 
-- .NET 10 SDk (`dotnet --version` to check)
+- .NET 10 SDK (`dotnet --version` to check)
 - Git
 
 ## How to run
@@ -22,33 +22,39 @@ git clone <repo-url>
 cd HBCDirectory
 dotnet run
 
-# Public directory https://localhost:5272 (or displayed URL)
-# Admin login: https://.../Login
-# Admin dashboard: https://.../Admin (requires login)
+- Public directory https://localhost:5272 (or displayed URL)
+- Admin login: https://.../Login (required to access admin features)
+- Admin dashboard: https://.../Admin
 ```
 
 ### Default admin Credentials
 
-- Username: admin
-- Password: password
+- **Username**: `admin`
+- **Password**: `password`
 
-These are subject to change see [known issues](https://github.com/LeloKunene/HBC-Directory/issues/10)
+> ⚠️ These are hardcoded for development. See [#10](https://github.com/LeloKunene/HBC-Directory/issues/10) for the planned fix.
 
 ## Project Structure
 
-- Models/ # EF Core entities - Member (name, photo, birthdate, etc.) and Family (groups members together)
-- Data/ # DirectoryContext - Configures the SQLite database and relationships between models
-- Pages/ # Razor Pages- Each page is a .cshtml (UI) + .cshtml.cs (logic) pair
-- wwwroot/ # Static files (CSS, JS, Uploaded photos)
+```
+HBCDirectory/
+├── Models/     # EF Core entities — Member and Family
+├── Data/       # DirectoryContext — SQLite config and relationships
+├── Pages/      # Razor Pages (.cshtml + .cshtml.cs pairs)
+└── wwwroot/    # Static files (CSS, JS, uploaded photos)
+```
 
-## Key features
+## Features
 
-- User can signup and add user info.
-- User can view other memebers and their info.
-- User can view and edit their own user info.
-- User can can search for specific members or families.
-- Admin has all previously mentioned functionality.
-- Admin can delete members and families.
+- Public directory: anyone can browse and search members by name or family
+- Admin can add, delete and manage members and families
+- Admin can upload a photo for each member
+- Members are grouped into family units
+
+## Planned Features
+
+- Member self-registration and profile management
+- Members can edit their own info
 
 ## Contributing
 
