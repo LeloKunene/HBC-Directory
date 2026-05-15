@@ -8,6 +8,13 @@ namespace HBCDirectory.Pages
 {
     public class LoginModel : PageModel
     {
+        private readonly IConfiguration _config;
+
+        public LoginModel(IConfiguration config)
+        {
+            _config = config;
+        }
+
         public string? ErrorMessage { get; set; }
 
         public void OnGet()
@@ -16,9 +23,10 @@ namespace HBCDirectory.Pages
 
         public async Task<IActionResult> OnPostAsync(string username, string password)
         {
-            // Simple admin credential - in production store securely
-            const string adminUser = "admin";
-            const string adminPass = "password";
+            var adminUser = _config["AdminCredentials:Username"]
+                ?? throw new InvalidOperationException("AdminCredentials:Username is not configured.");
+            var adminPass = _config["AdminCredentials:Password"]
+                ?? throw new InvalidOperationException("AdminCredentials:Password is not configured.");
 
             if (username == adminUser && password == adminPass)
             {
