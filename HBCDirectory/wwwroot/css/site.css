@@ -1,31 +1,379 @@
-html {
-  font-size: 14px;
+:root {
+  /* ── Heritage Baptist Church Brand Palette ── */
+  --color-primary: #c69760;
+  /* Heritage Mustard  — main accent */
+  --color-primary-dark: #a87d4a;
+  /* Mustard hover state */
+  --color-gold: #9a865f;
+  /* Heritage Gold */
+  --color-dark-gold: #847153;
+  /* Heritage Dark Gold */
+  --color-beige: #c6b08d;
+  /* Heritage Beige */
+  --color-olive: #808e6b;
+  /* Heritage Olive Green */
+  --color-slate: #899cad;
+  /* Heritage Slate Blue */
+  --color-dark: #202222;
+  /* Heritage Dark Grey — near black */
+  --color-white: #ffffff;
+  --color-background: #ffffff;
+  --color-light: #f5f1eb;
+  /* warm off-white — card backgrounds */
+  --color-light-2: #ede8df;
+  /* slightly deeper warm tint — borders */
+
+  /* ── Semantic aliases ── */
+  --color-secondary: var(--color-beige);
+  --color-accent: var(--color-gold);
+  --color-success: var(--color-olive);
+  --color-warning: var(--color-primary);
+  --color-danger: #b91c1c;
+
+  /* ── Typography ── */
+  --font-display: "Montserrat", sans-serif;
+  --font-body: "Open Sans", sans-serif;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 4px rgba(32, 34, 34, 0.07);
+  --shadow-md: 0 4px 16px rgba(32, 34, 34, 0.11);
+  --shadow-lg: 0 10px 30px rgba(32, 34, 34, 0.16);
+
+  /* ── Transitions ── */
+  --transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+body {
+  font-family: var(--font-body);
+  background: var(--color-background);
+  color: var(--color-dark);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-dark);
+  line-height: 1.2;
 }
 
+a {
+  color: var(--color-gold);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+a:hover {
+  color: var(--color-primary);
+}
+.navbar {
+  background: var(--color-dark) !important;
+  border-bottom: 3px solid var(--color-primary);
+  box-shadow: 0 2px 20px rgba(32, 34, 34, 0.4);
+}
+
+.navbar-brand {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  color: var(--color-white) !important;
+}
+
+.nav-link {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75) !important;
+  transition: var(--transition);
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--color-primary) !important;
+}
+
+.btn-primary {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-dark) !important;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 0.6rem 1.4rem;
+  transition: var(--transition);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark) !important;
+  border-color: var(--color-primary-dark) !important;
+  color: var(--color-white) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Outline variant */
+.btn-outline-primary {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.btn-outline-primary:hover {
+  background: var(--color-primary) !important;
+  color: var(--color-dark) !important;
+}
+
+/* Danger (delete) */
+.btn-danger {
+  background: var(--color-danger) !important;
+  border-color: var(--color-danger) !important;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.member-card {
+  background: var(--color-white);
+  border: 1px solid var(--color-light-2);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+  overflow: hidden;
+}
+
+.member-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
+}
+
+.member-card .card-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-dark);
+}
+
+.member-card .card-subtitle {
+  font-size: 0.82rem;
+  color: var(--color-gold);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.member-card .card-text {
+  font-size: 0.85rem;
+  color: var(--color-dark);
+  opacity: 0.7;
+}
+
+.member-card .card-img-top {
+  height: 180px;
+  object-fit: cover;
+}
+.section-warm {
+  background: var(--color-light);
+  border: 1px solid var(--color-light-2);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.section-dark {
+  background: var(--color-dark);
+  color: var(--color-white);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.section-dark h2,
+.section-dark h3 {
+  color: var(--color-primary);
+}
+.form-control,
+.form-select {
+  border: 1.5px solid var(--color-light-2);
+  border-radius: 4px;
+  font-family: var(--font-body);
+  color: var(--color-dark);
+  background: var(--color-white);
+  transition: var(--transition);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(198, 151, 96, 0.2);
+  outline: none;
+}
+
+.form-label {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-dark);
+  opacity: 0.75;
+  margin-bottom: 0.3rem;
+}
+.alert-success {
+  background: rgba(128, 142, 107, 0.15);
+  /* olive tint */
+  border-color: var(--color-olive);
+  color: var(--color-dark);
+  font-family: var(--font-body);
+  border-radius: 4px;
+}
+
+.alert-danger {
+  background: rgba(185, 28, 28, 0.08);
+  border-color: var(--color-danger);
+  color: var(--color-dark);
+  border-radius: 4px;
+}
+
+.alert .btn-close {
+  opacity: 0.5;
+}
+
+.alert .btn-close:hover {
+  opacity: 1;
+}
+/* Admin section card */
+.admin-card {
+  background: var(--color-white);
+  border: 1px solid var(--color-light-2);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.admin-card .card-header {
+  background: var(--color-light);
+  border-bottom: 2px solid var(--color-light-2);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-dark);
+  padding: 0.85rem 1.25rem;
+}
+
+/* Table */
+.table {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+}
+
+.table thead th {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-dark);
+  opacity: 0.6;
+  background: var(--color-light);
+  border-bottom: 2px solid var(--color-light-2);
+}
+
+.table-hover tbody tr:hover {
+  background: rgba(198, 151, 96, 0.06);
+}
+.login-page {
+  min-height: 100vh;
+  background: var(--color-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  background: var(--color-white);
+  border-radius: 8px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-xl);
+}
+
+.login-card h4 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--color-dark);
+  margin-bottom: 0.25rem;
+}
+
+.login-card .text-muted {
+  font-size: 0.85rem;
+  color: var(--color-gold) !important;
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+/* Family name badge on member card */
+.badge-family {
+  background: rgba(198, 151, 96, 0.15);
+  color: var(--color-dark-gold);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  border: 1px solid rgba(198, 151, 96, 0.3);
+}
+
+/* Upcoming birthday/anniversary */
+.badge-upcoming {
+  background: var(--color-primary);
+  color: var(--color-dark);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+}
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 60px;
+}
 html {
   position: relative;
   min-height: 100%;
 }
-
-body {
-  margin-bottom: 60px;
-}
-
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
-}
-
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
 }
