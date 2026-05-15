@@ -22,7 +22,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DirectoryContext>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
     var uploads = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "uploads");
     if (!Directory.Exists(uploads)) Directory.CreateDirectory(uploads);
 }
