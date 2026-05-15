@@ -431,7 +431,7 @@ FodyWeavers.xsd
 # ------------ CUSTOM RULES ------------
 
 # ASP.NET Core runtime data
-wwwroot/uploads/
+HBCDirectory/wwwroot/uploads/
 
 # SQLite database (runtime, not source)
 *.db
