@@ -59,11 +59,20 @@
 </form>
 
 <h3>Members</h3>
-<ul>
+<ul class="member-list">
 @foreach(var m in Model.Members)
 {
-    <li>
-        <img src="/uploads/@(m.PhotoFileName ?? "placeholder.png")" alt="photo" width="80" style="vertical-align:middle;margin-right:8px" />
+    <li style="padding: 8px">
+            @if (m.PhotoFileName != null)
+            {
+                <img src="/uploads/@m.PhotoFileName" alt="photo" width="72"
+                     style="vertical-align:middle ;margin-right:8px; border-radius: 50% " />
+            }
+            else
+            {
+                <i class="fa-solid fa-circle-user"
+                   style="font-size: 72px; color: var(--color-primary); vertical-align:middle;margin-right:8px"></i>
+            }
         @m.Name @m.Surname (@m.Family?.FamilyName)
         <form method="post" style="display:inline" asp-page-handler="DeleteMember">
             <input type="hidden" name="memberId" value="@m.Id" />

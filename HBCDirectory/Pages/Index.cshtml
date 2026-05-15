@@ -14,16 +14,23 @@
             <option value="@f.Id">@f.FamilyName</option>
         }
     </select>
-    <button type="submit">Search</button>
+    <button type="submit" >Search</button>
     <a asp-page="/Admin">Admin</a>
     <a asp-page="/Login">Login</a>
 </form>
 
-<ul>
+<ul class="member-list">
 @foreach(var m in Model.Members)
 {
-    <li style="margin-bottom:12px">
-        <img src="/uploads/@(m.PhotoFileName ?? "placeholder.png")" alt="photo" width="80" style="vertical-align:middle;margin-right:8px" />
+    <li style="padding: 8px">
+            @if (m.PhotoFileName != null) {
+                <img src="/uploads/@m.PhotoFileName" alt="photo" width="72" style="vertical-align:middle ;margin-right:8px; border-radius: 50% " />
+            }
+else
+            {
+                <i class="fa-solid fa-circle-user"
+                   style="font-size: 72px; color: var(--color-primary); vertical-align:middle;margin-right:8px"></i>
+            }
         <strong>@m.Name @m.Surname</strong>
         <div>@(m.Family?.FamilyName ?? "") - Phone: @m.PhoneNumber</div>
     </li>
