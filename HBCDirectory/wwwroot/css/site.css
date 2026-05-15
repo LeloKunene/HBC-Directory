@@ -149,6 +149,10 @@ a:hover {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+.member-list {
+  list-style: none;
+  padding-top: 16px;
+}
 
 .member-card {
   background: var(--color-white);
