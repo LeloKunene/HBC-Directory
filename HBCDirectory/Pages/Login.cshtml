@@ -2,21 +2,51 @@
 @model HBCDirectory.Pages.LoginModel
 @{
     ViewData["Title"] = "Admin Login";
+    ViewData["HideNav"] = true;
+    ViewData["HideFooter"] = true;
+
+    
 }
 
-<h2>Admin Login</h2>
-<form method="post">
-    <div>
-        <label>Username</label>
-        <input name="Username" />
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-header">
+            
+                <div class="login-title">Heritage Directory</div>
+            <div class="login-divider">
+                
+                <span class="divider-ornament">✦</span>
+               
+            </div>
+            <p class="login-subtitle">
+                Now you are the body of Christ and individually members of it.
+            </p>
+            <span class="quote-author">— 1 Corinthians 12:27</span>
+           
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+
+                @Model.ErrorMessage
+            </div>
+        }
+
+        <form method="post">
+            <div class="mb-3">
+                <label class="form-label" for="username" >Username</label>
+                <input id="username" name="Username" class="form-control" autocomplete="username"
+                       placeholder="your@email.com" />
+            </div>
+            <div class="mb-4">
+                <label class="form-label" for="password">Password</label>
+                <input id="password" name="Password" type="password" class="form-control"
+                       autocomplete="current-password" placeholder="******" />
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Sign in</button>
+        </form>
+
     </div>
-    <div>
-        <label>Password</label>
-        <input name="Password" type="password" />
-    </div>
-    <button type="submit">Sign in</button>
-</form>
-@if (!string.IsNullOrEmpty(Model.ErrorMessage))
-{
-    <div style="color:red">@Model.ErrorMessage</div>
-}
+</div>
