@@ -36,6 +36,7 @@ namespace HBCDirectory.Pages
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
                 return RedirectToPage("/Admin");
             }
+            
 
             ErrorMessage = "Invalid credentials";
             return Page();
