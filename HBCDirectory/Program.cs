@@ -44,4 +44,10 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
+app.Use(async (context, next) =>
+{
+    context.Request.Scheme = "https";
+    await next();
+});
+
 app.Run();

@@ -1,5 +1,6 @@
 using HBCDirectory.Data;
 using HBCDirectory.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,10 +15,16 @@ namespace HBCDirectory.Pages
             _db = db;
         }
 
+        [BindProperty(SupportsGet = true)]
+        public string? q { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public int? familyId { get; set; }
+
         public List<Family> Families { get; set; } = new();
         public List<Member> Members { get; set; } = new();
 
-        public async Task OnGetAsync(int? familyId, string? q)
+        public async Task OnGetAsync()
         {
             var membersQuery = _db.Members.Include(m => m.Family).AsQueryable();
             if (familyId.HasValue)

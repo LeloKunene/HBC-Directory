@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HBCDirectory.Pages
 {
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class AdminModel : PageModel
     {
         private readonly DirectoryContext _db;
