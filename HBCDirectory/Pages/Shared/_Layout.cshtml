@@ -27,11 +27,14 @@
                              loading="lazy" />
                         <span>Heritage Directory</span>
                     </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
+                    <button class="hamburger navbar-toggler" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
+                            aria-label="Toggle navigation">
+                        <span class="hamburger-bar"></span>
+                        <span class="hamburger-bar"></span>
+                        <span class="hamburger-bar"></span>
                     </button>
-                    <div class="nav-links" id="navbarNav">
+                    <div class="collapse navbar-collapse nav-links" id="navbarNav">
                         <ul class="navbar-nav flex-grow-1">
                             <li>
                                 <a class="nav-link" asp-area="" asp-page="/Index">Home</a>
@@ -39,9 +42,17 @@
                             <li>
                                 <a class="nav-link" asp-area="" asp-page="/Privacy">Privacy</a>
                             </li>
+                            
+                            @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin")){
+                                <li>
+                                    <a asp-page="/Admin" class="nav-link">Admin</a>
+                                </li>
+                            }
+                            <li>
+                                <a asp-page="/Login" class="btn btn-logout">Logout</a>
+                            </li>
                         </ul>
                     </div>
-                </div>
             </nav>
         </header>
     }

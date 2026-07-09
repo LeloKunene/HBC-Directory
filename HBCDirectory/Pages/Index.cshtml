@@ -1,38 +1,68 @@
-﻿@page
+﻿@page "Index"
 @model IndexModel
 @{
     ViewData["Title"] = "Directory";
 }
 
-<h2>Church Directory</h2>
+<h2 class="page-title">Church Directory</h2>
+<form method="get" class="d-flex gap-2 mb-4 align-items-center flex-wrap" role="search">
 
-<form method="get">
-    <input name="q" placeholder="Search name or surname" />
-    <select name="familyId">
-        <option value="">All families</option>
-        @foreach(var f in Model.Families){
-            <option value="@f.Id">@f.FamilyName</option>
-        }
-    </select>
-    <button type="submit" >Search</button>
-    <a asp-page="/Admin">Admin</a>
-    <a asp-page="/Login">Login</a>
+    <div class="search-bar-wrap">
+        <input asp-for="q" class="form-control search-bar" placeholder="Search by name or surname" />
+        <button type="submit" class="search-icon-btn" aria-label="Search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+    </div>
+    <div class="select-wrap">
+        <select asp-for="familyId" class="form-select" >
+            <option class ="form-select" value="">All families</option>
+            @foreach (var f in Model.Families)
+            {
+                <option value="@f.Id">@f.FamilyName</option>
+            }
+        </select>
+    </div>
 </form>
 
-<ul class="member-list">
-@foreach(var m in Model.Members)
-{
-    <li style="padding: 8px">
-            @if (m.PhotoFileName != null) {
-                <img src="/uploads/@m.PhotoFileName" alt="photo" width="72" style="vertical-align:middle ;margin-right:8px; border-radius: 50% " />
-            }
-else
-            {
-                <i class="fa-solid fa-circle-user"
-                   style="font-size: 72px; color: var(--color-primary); vertical-align:middle;margin-right:8px"></i>
-            }
-        <strong>@m.Name @m.Surname</strong>
-        <div>@(m.Family?.FamilyName ?? "") - Phone: @m.PhoneNumber</div>
-    </li>
-}
+<ul class="member-list member-list--index">
+    @foreach (var m in Model.Members)
+    {
+        <li class="member-card">
+            <div class="member-card-photo">
+                @if (m.PhotoFileName != null)
+                {
+                    
+                    <img src="/uploads/@m.PhotoFileName" alt="photo" /> 
+                    
+                }
+                else
+                {
+                    <i class="fa-solid fa-circle-user"></i>
+                }
+            </div>
+            <div class="member-card-info">
+                <strong>@m.Name @m.Surname</strong>
+                @if (m.PhoneNumber != null)
+                {
+                    <div> 
+                        <i class="fa-solid fa-phone" style="color: var(--color-dark);"></i>
+                        <span>@m.PhoneNumber</span>
+                    </div>
+                }
+                else
+                {
+                    <div></div>
+                }
+
+                @if (m.Family?.FamilyName != null)
+                { 
+                    <div class="badge-family" title="@m.Family.FamilyName">@(m.Family?.FamilyName ?? "")</div>
+                }
+                else {
+                    <div></div>
+                }
+                
+            </div>
+        </li>
+    }
 </ul>
