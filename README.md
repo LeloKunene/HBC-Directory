@@ -20,19 +20,31 @@
 ```bash
 git clone <repo-url>
 cd HBCDirectory
-dotnet run
+dotnet run / dotnet watch (Enables HotReload)
 
 - Public directory https://localhost:5272 (or displayed URL)
 - Admin login: https://.../Login (required to access admin features)
 - Admin dashboard: https://.../Admin
 ```
 
-### Default admin Credentials
+### Admin Credentials
 
-- **Username**: `admin`
-- **Password**: `password`
+Set your local admin login credentials using the .NET User Secrets tool (these are stored outside the repo and never committed):
 
-> ⚠️ These are hardcoded for development. See [#10](https://github.com/LeloKunene/HBC-Directory/issues/10) for the planned fix.
+```bash
+cd HBCDirectory
+dotnet user-secrets init
+dotnet user-secrets set "AdminCredentials:Username" "<your_username>"
+dotnet user-secrets set "AdminCredentials:Password" "<your_password>"
+```
+
+Replace `<your_username>` and `<your_password>` with your own values, then use them to log into the admin panel locally.
+
+Verify it worked:
+
+```bash
+dotnet user-secrets list
+```
 
 ## Project Structure
 
