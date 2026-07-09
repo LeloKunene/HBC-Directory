@@ -460,6 +460,7 @@ a:hover {
   background: var(--color-white);
   transition: var(--transition);
   border-color: var(--color-primary-dark);
+  cursor: pointer;
 }
 
 .form-control:focus,
