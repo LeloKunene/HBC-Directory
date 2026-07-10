@@ -17,7 +17,7 @@
     <div class="card-body">
 
         <form method="post" asp-page-handler="AddFamily" class="admin-add-form">
-            <input name="FamilyName" placeholder="Family name" class="form-control" style="max-width: 240px" />
+            <input name="FamilyName" placeholder="Family name" class="form-control" style="max-width: 240px" required />
             <button type="submit" class="btn btn-primary btn-sm">Add Family</button>
         </form>
 
@@ -47,16 +47,16 @@
 
             <div class="form-field">
                 <label class="form-label">Name</label>
-                <input name="Name" placeholder="Name" class="form-control" />
+                <input name="Name" placeholder="Name" class="form-control" required />
             </div>
             <div class="form-field">
                 <label class="form-label">Surname</label>
-                <input name="Surname" placeholder="Surname" class="form-control" />
+                <input name="Surname" placeholder="Surname" class="form-control" required />
             </div>
 
             <div class="form-field">
                 <label class="form-label">Birthdate</label>
-                <input name="Birthdate" type="date" class="form-control" />
+                <input name="Birthdate" type="date" class="form-control" required />
             </div>
             <div class="form-field">
                 <label class="form-label">Anniversary</label>
@@ -65,7 +65,7 @@
 
             <div class="form-field">
                 <label class="form-label">Phone</label>
-                <input name="PhoneNumber" placeholder="Phone" class="form-control" />
+                <input name="PhoneNumber" placeholder="Phone" class="form-control" required />
             </div>
             <div class="form-field">
                 <label class="form-label">Family</label>
@@ -117,7 +117,7 @@
                                 <i class="fa-solid fa-circle-user table-avatar-icon"></i>
                             }
                         </td>
-                        <td>@m.Name @m.Surname</td>
+                        <td class="member-name">@m.Name @m.Surname</td>
                         <td>@(m.Family?.FamilyName ?? "—")</td>
                         <td class="text-end">
                             <form method="post" asp-page-handler="DeleteMember" class="d-inline">

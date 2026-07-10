@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,6 +16,7 @@
     rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </head>
+
 <body>
     @if (ViewData["HideNav"] as bool? != true)
     {
@@ -42,8 +44,9 @@
                             <li>
                                 <a class="nav-link" asp-area="" asp-page="/Privacy">Privacy</a>
                             </li>
-                            
-                            @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin")){
+
+                            @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin"))
+                            {
                                 <li>
                                     <a asp-page="/Admin" class="nav-link">Admin</a>
                                 </li>
@@ -53,35 +56,50 @@
                             </li>
                         </ul>
                     </div>
-            </nav>
-        </header>
-    }
-    @if (ViewData["HideChrome"] as bool? == true)
-    {
-        @RenderBody()
-    }
-    
+                </nav>
+            </header>
+        }
+        @if (ViewData["HideChrome"] as bool? == true)
+        {
+            @RenderBody()
+        }
+
         <div class="container">
             <main role="main" class="pb-3">
+                @if (TempData["Success"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        @TempData["Success"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        @TempData["Error"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
                 @RenderBody()
             </main>
         </div>
+
     
-    
-    @if (ViewData["HideFooter"] as bool? != true)
-    {
-        <footer class="border-top footer text-muted">
-            <div class="container">
-                &copy; 2026 - HBCDirectory - <a asp-area="" asp-page="/Privacy">Privacy</a>
-            </div>
-        </footer>
-    }
+        @if (ViewData["HideFooter"] as bool? != true)
+        {
+            <footer class="border-top footer text-muted">
+                <div class="container">
+                    &copy; 2026 - HBCDirectory - <a asp-area="" asp-page="/Privacy">Privacy</a>
+                </div>
+            </footer>
+        }
+
    
+        <script src="~/lib/jquery/dist/jquery.min.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="~/js/site.js" asp-append-version="true"></script>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+        @await RenderSectionAsync("Scripts", required: false)
+    </body>
 
-    @await RenderSectionAsync("Scripts", required: false)
-</body>
 </html>
