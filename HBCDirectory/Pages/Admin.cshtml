@@ -14,107 +14,19 @@
 
 @if (TempData["Success"] != null)
 {
-    <div class="alert alert-success">@TempData["Success"]</div>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
 }
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
-
-<h3>Families</h3>
-<form method="post" asp-page-handler="AddFamily">
-    <input name="FamilyName" placeholder="Family name" />
-    <button type="submit">Add Family</button>
-</form>
-<ul>
-@foreach(var f in Model.Families)
-{
-    <li style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
-
-        @* Rename form *@
-        <form method="post" asp-page-handler="EditFamily" style="display:flex; gap:0.4rem; flex:1;">
-            <input type="hidden" name="familyId" value="@f.Id" />
-            <input name="familyName" value="@f.FamilyName" style="flex:1;" />
-            <button type="submit">Rename</button>
-        </form>
-
-        @* Delete form: separate form because it posts to a different handler *@
-        <form method="post" asp-page-handler="DeleteFamily">
-            <input type="hidden" name="familyId" value="@f.Id" />
-            <button type="submit"
-                    onclick="return confirm('Delete @f.FamilyName? All members in this family will also be deleted.')">
-                Delete
-            </button>
-        </form>
-
-    </li>
-}
-</ul>
-
-@if (Model.EditingMember != null)
-{
-    <div style="border:1px solid #ccc; padding:1rem; margin-bottom:1rem;">
-        <h3>Editing: @Model.EditingMember.Name @Model.EditingMember.Surname</h3>
-
-        <form method="post" enctype="multipart/form-data" asp-page-handler="EditMember">
-            @* Hidden field carries the member's Id so the POST handler knows which record to update *@
-            <input type="hidden" name="memberId" value="@Model.EditingMember.Id" />
-
-            <div>
-                <input name="Name" placeholder="Name" value="@Model.EditingMember.Name" required />
-                <input name="Surname" placeholder="Surname" value="@Model.EditingMember.Surname" required />
-            </div>
-            <div>
-                <label>Birthdate</label>
-                @* ToString("yyyy-MM-dd") formats the date so the browser's date input understands it *@
-                <input name="Birthdate" type="date" value="@Model.EditingMember.Birthdate?.ToString("yyyy-MM-dd")" />
-                <label>Anniversary</label>
-                <input name="Anniversary" type="date" value="@Model.EditingMember.Anniversary?.ToString("yyyy-MM-dd")" />
-            </div>
-            <div>
-                <input name="PhoneNumber" placeholder="Phone" value="@Model.EditingMember.PhoneNumber" />
-            </div>
-            <div>
-                <label>Family</label>
-                <select name="FamilyId">
-                    <option value="">-- none --</option>
-                    @foreach(var f in Model.Families)
-                    {
-                        @* selected="..." pre-selects the member's current family *@
-                        <option value="@f.Id" selected="@(Model.EditingMember.FamilyId == f.Id)">@f.FamilyName</option>
-                    }
-                </select>
-            </div>
-            <div>
-                <label>New Photo (leave empty to keep current)</label>
-                <input type="file" name="Photo" accept="image/jpeg,image/png" />
-            </div>
-            <button type="submit">Save Changes</button>
-            <a asp-page="/Admin">Cancel</a>
-        </form>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 
-<h3>Add Member</h3>
-<form method="post" enctype="multipart/form-data" asp-page-handler="AddMember">
-    <div>
-        <input name="Name" placeholder="Name" required />
-        <input name="Surname" placeholder="Surname" required />
-    </div>
-    <div>
-        <label>Birthdate</label>
-        <input name="Birthdate" type="date" />
-        <label>Anniversary</label>
-        <input name="Anniversary" type="date" />
-    </div>
-    <div>
-        <input name="PhoneNumber" placeholder="Phone" />
-    </div>
-    <div>
-        <label>Family</label>
-        <select name="FamilyId">
-            <option value="">-- none --</option>
-            @foreach(var f in Model.Families)
 <div class="admin-card">
     <div class="card-header">Families</div>
     <div class="card-body">
@@ -128,7 +40,12 @@
             @foreach (var f in Model.Families)
             {
                 <li class="admin-list-item">
-                    <strong>@f.FamilyName</strong>
+                    <form method="post" asp-page-handler="EditFamily" class="d-flex gap-2 flex-grow-1 me-2">
+                        <input type="hidden" name="familyId" value="@f.Id" />
+                        <input name="familyName" value="@f.FamilyName" class="form-control form-control-sm" />
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Rename</button>
+                    </form>
+
                     <form method="post" asp-page-handler="DeleteFamily" class="d-inline">
                         <input type="hidden" name="familyId" value="@f.Id" />
                         <button type="submit" class="btn btn-danger btn-sm"
@@ -138,15 +55,69 @@
                     </form>
                 </li>
             }
-        </select>
-    </div>
-    <div>
-        <label>Photo (JPG or PNG, max 2MB)</label>
-        <input type="file" name="Photo" accept="image/jpeg,image/png" />
         </ul>
 
     </div>
 </div>
+
+@if (Model.EditingMember != null)
+{
+    <div class="admin-card border-primary">
+        <div class="card-header bg-primary text-white">
+            Editing: @Model.EditingMember.Name @Model.EditingMember.Surname
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" asp-page-handler="EditMember" class="admin-form-grid">
+                <input type="hidden" name="memberId" value="@Model.EditingMember.Id" />
+
+                <div class="form-field">
+                    <label class="form-label">Name</label>
+                    <input name="Name" class="form-control" value="@Model.EditingMember.Name" required />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Surname</label>
+                    <input name="Surname" class="form-control" value="@Model.EditingMember.Surname" required />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label">Birthdate</label>
+                    <input name="Birthdate" type="date" class="form-control"
+                           value="@Model.EditingMember.Birthdate?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Anniversary</label>
+                    <input name="Anniversary" type="date" class="form-control"
+                           value="@Model.EditingMember.Anniversary?.ToString("yyyy-MM-dd")" />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label">Phone</label>
+                    <input name="PhoneNumber" class="form-control" value="@Model.EditingMember.PhoneNumber" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Family</label>
+                    <select name="FamilyId" class="form-select">
+                        <option value="">-- none --</option>
+                        @foreach (var f in Model.Families)
+                        {
+                            <option value="@f.Id" selected="@(Model.EditingMember.FamilyId == f.Id)">@f.FamilyName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-field form-field--full">
+                    <label class="form-label">New Photo (leave empty to keep current)</label>
+                    <input type="file" name="Photo" class="form-control" accept="image/jpeg,image/png" />
+                </div>
+
+                <div class="form-field form-field--full d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a asp-page="/Admin" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
 
 <div class="admin-card">
     <div class="card-header">Add Member</div>
@@ -155,11 +126,11 @@
 
             <div class="form-field">
                 <label class="form-label">Name</label>
-                <input name="Name" placeholder="Name" class="form-control" />
+                <input name="Name" placeholder="Name" class="form-control" required />
             </div>
             <div class="form-field">
                 <label class="form-label">Surname</label>
-                <input name="Surname" placeholder="Surname" class="form-control" />
+                <input name="Surname" placeholder="Surname" class="form-control" required />
             </div>
 
             <div class="form-field">
@@ -187,26 +158,14 @@
             </div>
 
             <div class="form-field form-field--full">
-                <label class="form-label">Photo</label>
-                <input type="file" name="Photo" class="form-control" />
+                <label class="form-label">Photo (JPG or PNG, max 2MB)</label>
+                <input type="file" name="Photo" class="form-control" accept="image/jpeg,image/png" />
             </div>
 
             <div class="form-field form-field--full">
                 <button type="submit" class="btn btn-primary">Add Member</button>
             </div>
 
-<h3>Members</h3>
-<ul>
-@foreach(var m in Model.Members)
-{
-    <li>
-        <img src="/uploads/@(m.PhotoFileName ?? "placeholder.png")" alt="photo" width="80"
-             style="vertical-align:middle;margin-right:8px" />
-        @m.Name @m.Surname (@m.Family?.FamilyName)
-        <a asp-page="/Admin" asp-route-editMemberId="@m.Id">Edit</a>
-        <form method="post" style="display:inline" asp-page-handler="DeleteMember">
-            <input type="hidden" name="memberId" value="@m.Id" />
-            <button type="submit">Delete</button>
         </form>
     </div>
 </div>
@@ -240,6 +199,9 @@
                         <td>@m.Name @m.Surname</td>
                         <td>@(m.Family?.FamilyName ?? "—")</td>
                         <td class="text-end">
+                            <a asp-page="/Admin" asp-route-editMemberId="@m.Id"
+                               class="btn btn-outline-primary btn-sm me-1">Edit</a>
+
                             <form method="post" asp-page-handler="DeleteMember" class="d-inline">
                                 <input type="hidden" name="memberId" value="@m.Id" />
                                 <button type="submit" class="btn btn-danger btn-sm"

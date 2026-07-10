@@ -32,7 +32,7 @@ namespace HBCDirectory.Pages
         public async Task OnGetAsync()
         {
             Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
-            Members = await _db.Members.Include(m => m.Family).OrderBy(m => m.Surname).ToListAsync();
+            Members = await _db.Members.Include(m => m.Family).OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
 
             if (EditMemberId.HasValue)
                 EditingMember = Members.FirstOrDefault(m => m.Id == EditMemberId.Value);
@@ -74,7 +74,6 @@ namespace HBCDirectory.Pages
             using var fs = System.IO.File.Create(filePath);
             await photo.CopyToAsync(fs);
             return fileName;
-            Members = await _db.Members.Include(m => m.Family).OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
         }
 
         public async Task<IActionResult> OnPostAddFamilyAsync(string familyName)
