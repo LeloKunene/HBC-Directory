@@ -33,6 +33,10 @@ namespace HBCDirectory.Pages
         [BindProperty(SupportsGet = true)]
         public int? EditMemberId { get; set; }
         public Member? EditingMember { get; set; }
+        
+        [BindProperty(SupportsGet = true)]
+        public int? EditFamilyId { get; set; }
+        public Family? EditingFamily { get; set; }
 
         public async Task OnGetAsync()
         {
@@ -41,6 +45,9 @@ namespace HBCDirectory.Pages
 
             if (EditMemberId.HasValue)
                 EditingMember = Members.FirstOrDefault(m => m.Id == EditMemberId.Value);
+
+            if (EditFamilyId.HasValue)
+                EditingFamily = Families.FirstOrDefault(f => f.Id == EditFamilyId.Value);
         }
 
         private string? ValidatePhoto(IFormFile photo)

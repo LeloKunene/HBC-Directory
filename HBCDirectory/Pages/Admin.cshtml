@@ -36,26 +36,50 @@
             <button type="submit" class="btn btn-primary btn-sm">Add Family</button>
         </form>
 
-        <ul class="member-list member-list--admin">
-            @foreach (var f in Model.Families)
-            {
-                <li class="admin-list-item">
-                    <form method="post" asp-page-handler="EditFamily" class="d-flex gap-2 flex-grow-1 me-2">
-                        <input type="hidden" name="familyId" value="@f.Id" />
-                        <input name="familyName" value="@f.FamilyName" class="form-control form-control-sm" />
-                        <button type="submit" class="btn btn-outline-primary btn-sm">Rename</button>
-                    </form>
+        @if (Model.EditingFamily != null)
+        {
+            <div class="mt-3 p-3 border rounded">
+                <strong>Renaming: @Model.EditingFamily.FamilyName</strong>
+                <form method="post" asp-page-handler="EditFamily" class="d-flex gap-2 mt-2">
+                    <input type="hidden" name="familyId" value="@Model.EditingFamily.Id" />
+                    <input name="familyName" value="@Model.EditingFamily.FamilyName"
+                           class="form-control form-control-sm" style="max-width: 240px" />
+                    <button type="submit" class="btn btn-primary btn-sm">Rename</button>
+                    <a asp-page="/Admin" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                </form>
+            </div>
+        }
 
-                    <form method="post" asp-page-handler="DeleteFamily" class="d-inline">
-                        <input type="hidden" name="familyId" value="@f.Id" />
-                        <button type="submit" class="btn btn-danger btn-sm"
-                                onclick="return confirm('Delete the @f.FamilyName family? This will also delete all members in it.')">
-                            Delete
-                        </button>
-                    </form>
-                </li>
-            }
-        </ul>
+        <table class="table table-hover align-middle mb-0 mt-3">
+            <thead>
+                <tr>
+                    <th>Family Name</th>
+                    <th>Members</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var f in Model.Families)
+                {
+                    <tr>
+                        <td class="member-name">@f.FamilyName</td>
+                        <td>@Model.Members.Count(m => m.FamilyId == f.Id)</td>
+                        <td class="text-end">
+                            <a asp-page="/Admin" asp-route-editFamilyId="@f.Id"
+                               class="btn btn-outline-primary btn-sm me-1">Edit</a>
+
+                            <form method="post" asp-page-handler="DeleteFamily" class="d-inline">
+                                <input type="hidden" name="familyId" value="@f.Id" />
+                                <button type="submit" class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Delete @f.FamilyName? All members in this family will also be deleted.')">
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
 
     </div>
 </div>
