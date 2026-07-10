@@ -12,6 +12,7 @@ namespace HBCDirectory.Pages
     {
         private readonly DirectoryContext _db;
         private readonly IWebHostEnvironment _env;
+
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
         private const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
 
@@ -24,10 +25,32 @@ namespace HBCDirectory.Pages
         public List<Family> Families { get; set; } = new();
         public List<Member> Members { get; set; } = new();
 
+        // ── ISSUE 12: Edit state ─────────────────────────────────────────────────────
+        //
+        // [BindProperty(SupportsGet = true)] means this property is populated from the
+        // URL query string on GET requests as well as from form data on POST requests.
+        //
+        // When the admin clicks Edit on a member, the browser navigates to:
+        //   /Admin?editMemberId=5
+        // ASP.NET Core sees the [BindProperty(SupportsGet = true)] attribute and
+        // automatically sets EditMemberId = 5 before OnGetAsync runs.
+        //
+        // Without SupportsGet = true, BindProperty only works on POST requests.
+        [BindProperty(SupportsGet = true)]
+        public int? EditMemberId { get; set; }
+
+        // The member currently being edited. Null if no Edit button has been clicked.
+        public Member? EditingMember { get; set; }
+
         public async Task OnGetAsync()
         {
             Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
             Members = await _db.Members.Include(m => m.Family).OrderBy(m => m.Surname).ToListAsync();
+
+            // If an editMemberId was passed in the URL, find that member and expose it
+            // to the page so the edit form can pre-fill its fields.
+            if (EditMemberId.HasValue)
+                EditingMember = Members.FirstOrDefault(m => m.Id == EditMemberId.Value);
         }
 
         /// Checks file extension and size. Returns an error message string if invalid or null if the file passes validation.
@@ -143,6 +166,52 @@ namespace HBCDirectory.Pages
             _db.Members.Add(member);
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Member {member.Name} {member.Surname} added.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostEditMemberAsync(
+            int memberId, string name, string surname, DateTime? birthdate,
+            DateTime? anniversary, string? phoneNumber, int? familyId, IFormFile? photo)
+        {
+            // FindAsync looks up a record by primary key. Returns null if not found.
+            var member = await _db.Members.FindAsync(memberId);
+            if (member == null) return NotFound();
+
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
+            {
+                TempData["Error"] = "Name and surname are required.";
+                return RedirectToPage();
+            }
+
+            // Update the scalar fields
+            member.Name = name.Trim();
+            member.Surname = surname.Trim();
+            member.Birthdate = birthdate;
+            member.Anniversary = anniversary;
+            member.PhoneNumber = phoneNumber?.Trim();
+            member.FamilyId = familyId;
+
+            // Only replace the photo if the user actually uploaded a new one
+            if (photo != null && photo.Length > 0)
+            {
+                var error = ValidatePhoto(photo);
+                if (error != null) { TempData["Error"] = error; return RedirectToPage(); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Not a valid image."; return RedirectToPage(); }
+
+                // Delete the old photo file from disk so we don't accumulate orphaned files
+                if (!string.IsNullOrEmpty(member.PhotoFileName))
+                {
+                    var oldPath = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", member.PhotoFileName);
+                    if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+                }
+
+                member.PhotoFileName = await SavePhotoAsync(photo);
+            }
+
+            // EF Core tracks changes to entities automatically. Calling SaveChangesAsync
+            // generates and executes the UPDATE SQL statement.
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Member {member.Name} {member.Surname} updated.";
             return RedirectToPage();
         }
 
