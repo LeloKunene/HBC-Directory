@@ -5,79 +5,132 @@
     ViewData["Title"] = "Admin";
 }
 
-<h2>Admin Dashboard</h2>
-<p><a asp-page="/Index">View public directory</a> | <a asp-page="/Logout">Logout</a></p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title">Admin Dashboard</h2>
+    <div>
+        <a asp-page="/Index" class="btn btn-outline-secondary btn-sm me-2">View Directory</a>
+    </div>
+</div>
 
-<h3>Families</h3>
-<form method="post" asp-page-handler="AddFamily">
-    <input name="FamilyName" placeholder="Family name" />
-    <button type="submit">Add Family</button>
-</form>
-<ul>
-@foreach(var f in Model.Families)
-{
-    <li>
-        <strong>@f.FamilyName</strong>
-        <form method="post" style="display:inline" asp-page-handler="DeleteFamily">
-            <input type="hidden" name="familyId" value="@f.Id" />
-            <button type="submit">Delete</button>
+<div class="admin-card">
+    <div class="card-header">Families</div>
+    <div class="card-body">
+
+        <form method="post" asp-page-handler="AddFamily" class="admin-add-form">
+            <input name="FamilyName" placeholder="Family name" class="form-control" style="max-width: 240px" />
+            <button type="submit" class="btn btn-primary btn-sm">Add Family</button>
         </form>
-    </li>
-}
-</ul>
 
-<h3>Add Member</h3>
-<form method="post" enctype="multipart/form-data" asp-page-handler="AddMember">
-    <div>
-        <input name="Name" placeholder="Name" />
-        <input name="Surname" placeholder="Surname" />
-    </div>
-    <div>
-        <label>Birthdate</label>
-        <input name="Birthdate" type="date" />
-        <label>Anniversary</label>
-        <input name="Anniversary" type="date" />
-    </div>
-    <div>
-        <input name="PhoneNumber" placeholder="Phone" />
-    </div>
-    <div>
-        <label>Family</label>
-        <select name="FamilyId">
-            <option value="">-- none --</option>
-            @foreach(var f in Model.Families)
+        <ul class="member-list member-list--admin">
+            @foreach (var f in Model.Families)
             {
-                <option value="@f.Id">@f.FamilyName</option>
+                <li class="admin-list-item">
+                    <strong>@f.FamilyName</strong>
+                    <form method="post" asp-page-handler="DeleteFamily" class="d-inline">
+                        <input type="hidden" name="familyId" value="@f.Id" />
+                        <button type="submit" class="btn btn-danger btn-sm"
+                                onclick="return confirm('Delete the @f.FamilyName family? This will also delete all members in it.')">
+                            Delete
+                        </button>
+                    </form>
+                </li>
             }
-        </select>
-    </div>
-    <div>
-        <label>Photo</label>
-        <input type="file" name="Photo" />
-    </div>
-    <button type="submit">Add Member</button>
-</form>
+        </ul>
 
-<h3>Members</h3>
-<ul class="member-list">
-@foreach(var m in Model.Members)
-{
-    <li style="padding: 8px">
-            @if (m.PhotoFileName != null)
-            {
-                <img src="/uploads/@m.PhotoFileName" alt="photo" width="72"
-                     style="vertical-align:middle ;margin-right:8px; border-radius: 50% " />
-            }
-            else
-            {
-                <i class="fa-solid fa-circle-user"
-                   style="font-size: 72px; color: var(--color-primary); vertical-align:middle;margin-right:8px"></i>
-            }
-        @m.Name @m.Surname (@m.Family?.FamilyName)
-        <form method="post" style="display:inline" asp-page-handler="DeleteMember">
-            <input type="hidden" name="memberId" value="@m.Id" />
-            <button type="submit">Delete</button>
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="card-header">Add Member</div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" asp-page-handler="AddMember" class="admin-form-grid">
+
+            <div class="form-field">
+                <label class="form-label">Name</label>
+                <input name="Name" placeholder="Name" class="form-control" />
+            </div>
+            <div class="form-field">
+                <label class="form-label">Surname</label>
+                <input name="Surname" placeholder="Surname" class="form-control" />
+            </div>
+
+            <div class="form-field">
+                <label class="form-label">Birthdate</label>
+                <input name="Birthdate" type="date" class="form-control" />
+            </div>
+            <div class="form-field">
+                <label class="form-label">Anniversary</label>
+                <input name="Anniversary" type="date" class="form-control" />
+            </div>
+
+            <div class="form-field">
+                <label class="form-label">Phone</label>
+                <input name="PhoneNumber" placeholder="Phone" class="form-control" />
+            </div>
+            <div class="form-field">
+                <label class="form-label">Family</label>
+                <select name="FamilyId" class="form-select">
+                    <option value="">-- none --</option>
+                    @foreach (var f in Model.Families)
+                    {
+                        <option value="@f.Id">@f.FamilyName</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-field form-field--full">
+                <label class="form-label">Photo</label>
+                <input type="file" name="Photo" class="form-control" />
+            </div>
+
+            <div class="form-field form-field--full">
+                <button type="submit" class="btn btn-primary">Add Member</button>
+            </div>
+
         </form>
-    </li>
-}
-</ul>
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="card-header">Members</div>
+    <div class="card-body">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Name</th>
+                    <th>Family</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in Model.Members)
+                {
+                    <tr>
+                        <td>
+                            @if (m.PhotoFileName != null)
+                            {
+                                <img src="/uploads/@m.PhotoFileName" alt="photo" class="table-avatar" />
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-circle-user table-avatar-icon"></i>
+                            }
+                        </td>
+                        <td>@m.Name @m.Surname</td>
+                        <td>@(m.Family?.FamilyName ?? "—")</td>
+                        <td class="text-end">
+                            <form method="post" asp-page-handler="DeleteMember" class="d-inline">
+                                <input type="hidden" name="memberId" value="@m.Id" />
+                                <button type="submit" class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Delete @m.Name @m.Surname?')">
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
