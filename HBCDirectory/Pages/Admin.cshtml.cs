@@ -74,6 +74,7 @@ namespace HBCDirectory.Pages
             using var fs = System.IO.File.Create(filePath);
             await photo.CopyToAsync(fs);
             return fileName;
+            Members = await _db.Members.Include(m => m.Family).OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
         }
 
         public async Task<IActionResult> OnPostAddFamilyAsync(string familyName)
