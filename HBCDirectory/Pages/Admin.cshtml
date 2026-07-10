@@ -12,6 +12,21 @@
     </div>
 </div>
 
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="admin-card">
     <div class="card-header">Families</div>
     <div class="card-body">
@@ -25,7 +40,12 @@
             @foreach (var f in Model.Families)
             {
                 <li class="admin-list-item">
-                    <strong>@f.FamilyName</strong>
+                    <form method="post" asp-page-handler="EditFamily" class="d-flex gap-2 flex-grow-1 me-2">
+                        <input type="hidden" name="familyId" value="@f.Id" />
+                        <input name="familyName" value="@f.FamilyName" class="form-control form-control-sm" />
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Rename</button>
+                    </form>
+
                     <form method="post" asp-page-handler="DeleteFamily" class="d-inline">
                         <input type="hidden" name="familyId" value="@f.Id" />
                         <button type="submit" class="btn btn-danger btn-sm"
@@ -39,6 +59,65 @@
 
     </div>
 </div>
+
+@if (Model.EditingMember != null)
+{
+    <div class="admin-card border-primary">
+        <div class="card-header bg-primary text-white">
+            Editing: @Model.EditingMember.Name @Model.EditingMember.Surname
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" asp-page-handler="EditMember" class="admin-form-grid">
+                <input type="hidden" name="memberId" value="@Model.EditingMember.Id" />
+
+                <div class="form-field">
+                    <label class="form-label">Name</label>
+                    <input name="Name" class="form-control" value="@Model.EditingMember.Name" required />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Surname</label>
+                    <input name="Surname" class="form-control" value="@Model.EditingMember.Surname" required />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label">Birthdate</label>
+                    <input name="Birthdate" type="date" class="form-control"
+                           value="@Model.EditingMember.Birthdate?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Anniversary</label>
+                    <input name="Anniversary" type="date" class="form-control"
+                           value="@Model.EditingMember.Anniversary?.ToString("yyyy-MM-dd")" />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label">Phone</label>
+                    <input name="PhoneNumber" class="form-control" value="@Model.EditingMember.PhoneNumber" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Family</label>
+                    <select name="FamilyId" class="form-select">
+                        <option value="">-- none --</option>
+                        @foreach (var f in Model.Families)
+                        {
+                            <option value="@f.Id" selected="@(Model.EditingMember.FamilyId == f.Id)">@f.FamilyName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-field form-field--full">
+                    <label class="form-label">New Photo (leave empty to keep current)</label>
+                    <input type="file" name="Photo" class="form-control" accept="image/jpeg,image/png" />
+                </div>
+
+                <div class="form-field form-field--full d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a asp-page="/Admin" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
 
 <div class="admin-card">
     <div class="card-header">Add Member</div>
@@ -79,8 +158,8 @@
             </div>
 
             <div class="form-field form-field--full">
-                <label class="form-label">Photo</label>
-                <input type="file" name="Photo" class="form-control" />
+                <label class="form-label">Photo (JPG or PNG, max 2MB)</label>
+                <input type="file" name="Photo" class="form-control" accept="image/jpeg,image/png" />
             </div>
 
             <div class="form-field form-field--full">
@@ -120,6 +199,9 @@
                         <td class="member-name">@m.Name @m.Surname</td>
                         <td>@(m.Family?.FamilyName ?? "—")</td>
                         <td class="text-end">
+                            <a asp-page="/Admin" asp-route-editMemberId="@m.Id"
+                               class="btn btn-outline-primary btn-sm me-1">Edit</a>
+
                             <form method="post" asp-page-handler="DeleteMember" class="d-inline">
                                 <input type="hidden" name="memberId" value="@m.Id" />
                                 <button type="submit" class="btn btn-danger btn-sm"
