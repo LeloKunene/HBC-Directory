@@ -215,6 +215,25 @@ a:hover {
   color: var(--color-dark) !important;
 }
 
+.btn-outline-secondary {
+  border-color: var(--color-secondary) !important;
+  color: var(--color-dark-gold) !important;
+  background: transparent;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.btn-outline-secondary:hover {
+  background: var(--color-secondary) !important;
+  border-color: var(--color-secondary) !important;
+  color: var(--color-dark) !important;
+}
+
 .btn-logout {
   border-color: var(--color-primary) !important;
   color: var(--color-primary) !important;
@@ -238,6 +257,11 @@ a:hover {
   font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.75rem;
 }
 
 .page-title {
@@ -460,6 +484,17 @@ a:hover {
   background: var(--color-white);
   transition: var(--transition);
   border-color: var(--color-primary-dark);
+}
+
+input[type="date"] {
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+.form-select {
   cursor: pointer;
 }
 
@@ -525,6 +560,53 @@ a:hover {
   padding: 0.85rem 1.25rem;
 }
 
+.admin-card .card-body {
+  padding: 1.25rem;
+}
+
+.admin-add-form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-field--full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 575.98px) {
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-light-2);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--color-dark);
+}
+
+.admin-list-item:last-child {
+  border-bottom: none;
+}
+
 /* Table */
 .table {
   font-family: var(--font-body);
@@ -545,6 +627,18 @@ a:hover {
 
 .table-hover tbody tr:hover {
   background: rgba(198, 151, 96, 0.06);
+}
+
+.table-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.table-avatar-icon {
+  font-size: 44px;
+  color: var(--color-primary);
 }
 .login-page {
   min-height: 100vh;
