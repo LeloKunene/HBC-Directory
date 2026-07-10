@@ -25,6 +25,11 @@ namespace HBCDirectory.Pages
         public List<Family> Families { get; set; } = new();
         public List<Member> Members { get; set; } = new();
 
+        private static string CapitalizeFirst(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return input;
+            return char.ToUpper(input[0]) + input.Substring(1);
+        }
         [BindProperty(SupportsGet = true)]
         public int? EditMemberId { get; set; }
         public Member? EditingMember { get; set; }
@@ -83,9 +88,11 @@ namespace HBCDirectory.Pages
                 TempData["Error"] = "Family name cannot be empty.";
                 return RedirectToPage();
             }
-            _db.Families.Add(new Family { FamilyName = familyName.Trim() });
+
+            _db.Families.Add(new Family { FamilyName = CapitalizeFirst(familyName.Trim()) });
             await _db.SaveChangesAsync();
-            TempData["Success"] = $"Family '{familyName.Trim()}' added.";
+            TempData["Success"] = $"Family '{familyName.Trim()}' successfully added.";
+
             return RedirectToPage();
         }
 
@@ -105,54 +112,84 @@ namespace HBCDirectory.Pages
             await _db.SaveChangesAsync();
 
             TempData["Success"] = $"Family renamed from '{oldName}' to '{family.FamilyName}'.";
+
             return RedirectToPage();
         }
 
         public async Task<IActionResult> OnPostDeleteFamilyAsync(int familyId)
         {
-            var f = await _db.Families.FindAsync(familyId);
-            if (f != null)
+            var family = await _db.Families.FindAsync(familyId);
+            var familyName = family.FamilyName;
+
+            if (family != null)
             {
-                _db.Families.Remove(f);
+                
+                _db.Families.Remove(family);
                 await _db.SaveChangesAsync();
-                TempData["Success"] = $"Family '{f.FamilyName}' deleted.";
+                TempData["Success"] = $"Family '{familyName}' successfully deleted.";
+            }
+            else
+            {
+                TempData["Error"] = $"Could not delete family '{familyName}'.";
             }
             return RedirectToPage();
         }
 
         public async Task<IActionResult> OnPostAddMemberAsync(
-            string name, string surname, DateTime? birthdate,
-            DateTime? anniversary, string? phoneNumber, int? familyId, IFormFile? photo)
+    string name, string surname, DateTime? birthdate,
+    DateTime? anniversary, string phoneNumber, int? familyId, IFormFile? photo)
+{
+    if (string.IsNullOrWhiteSpace(name) ||
+        string.IsNullOrWhiteSpace(surname) ||
+        !birthdate.HasValue ||
+        string.IsNullOrWhiteSpace(phoneNumber))
+    {
+        TempData["Error"] = "Could not add member — name, surname, birthdate, and phone number are all required.";
+        return RedirectToPage();
+    }
+
+    try
+    {
+        var member = new Member
         {
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
+            Name = CapitalizeFirst(name.Trim()),
+            Surname = CapitalizeFirst(surname.Trim()),
+            Birthdate = birthdate,
+            Anniversary = anniversary,
+            PhoneNumber = phoneNumber.Trim(),
+            FamilyId = familyId
+        };
+
+        if (photo != null && photo.Length > 0)
+        {
+            var error = ValidatePhoto(photo);
+            if (error != null)
             {
-                TempData["Error"] = "Name and surname are required.";
+                TempData["Error"] = error;
                 return RedirectToPage();
             }
 
-            var member = new Member
+            if (!await IsImageAsync(photo))
             {
-                Name = name.Trim(),
-                Surname = surname.Trim(),
-                Birthdate = birthdate,
-                Anniversary = anniversary,
-                PhoneNumber = phoneNumber?.Trim(),
-                FamilyId = familyId
-            };
-
-            if (photo != null && photo.Length > 0)
-            {
-                var error = ValidatePhoto(photo);
-                if (error != null) { TempData["Error"] = error; return RedirectToPage(); }
-                if (!await IsImageAsync(photo)) { TempData["Error"] = "Not a valid image."; return RedirectToPage(); }
-                member.PhotoFileName = await SavePhotoAsync(photo);
+                TempData["Error"] = "Not a valid image.";
+                return RedirectToPage();
             }
 
-            _db.Members.Add(member);
-            await _db.SaveChangesAsync();
-            TempData["Success"] = $"Member {member.Name} {member.Surname} added.";
-            return RedirectToPage();
+            member.PhotoFileName = await SavePhotoAsync(photo);
         }
+
+        _db.Members.Add(member);
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = $"Member '{member.Name} {member.Surname}' successfully added";
+    }
+    catch (Exception)
+    {
+        TempData["Error"] = $"Could not add member '{name} {surname}' — something went wrong. Please try again.";
+    }
+
+    return RedirectToPage();
+}
 
         public async Task<IActionResult> OnPostEditMemberAsync(
             int memberId, string name, string surname, DateTime? birthdate,
@@ -200,19 +237,29 @@ namespace HBCDirectory.Pages
 
         public async Task<IActionResult> OnPostDeleteMemberAsync(int memberId)
         {
-            var m = await _db.Members.FindAsync(memberId);
-            if (m != null)
+            var member = await _db.Members.FindAsync(memberId);
+            var memberName = member.Name;
+            var memberSurname = member.Surname;
+
+            if (member != null)
             {
-                // Delete the photo file from disk when the member is deleted
-                if (!string.IsNullOrEmpty(m.PhotoFileName))
+  // Delete the photo file from disk when the member is deleted
+                if (!string.IsNullOrEmpty(member.PhotoFileName))
+              
+               )
+               
                 {
                     var uploads = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
-                    var filePath = Path.Combine(uploads, m.PhotoFileName);
+                    var filePath = Path.Combine(uploads, member.PhotoFileName);
                     if (System.IO.File.Exists(filePath)) System.IO.File.Delete(filePath);
                 }
-                _db.Members.Remove(m);
+                _db.Members.Remove(member);
                 await _db.SaveChangesAsync();
-                TempData["Success"] = $"Member {m.Name} {m.Surname} deleted.";
+                TempData["Success"] = $"Member '{memberName} {memberSurname}' successfully deleted";
+            }
+            else
+            {
+                TempData["Error"] = $"Could not delete member '{memberName} {memberSurname}'.";
             }
             return RedirectToPage();
         }
