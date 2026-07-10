@@ -14,8 +14,8 @@
         </button>
     </div>
     <div class="select-wrap">
-        <select asp-for="familyId" class="form-select" >
-            <option class ="form-select" value="">All families</option>
+        <select asp-for="familyId" class="form-select">
+            <option class="form-select" value="">All families</option>
             @foreach (var f in Model.Families)
             {
                 <option value="@f.Id">@f.FamilyName</option>
@@ -24,45 +24,57 @@
     </div>
 </form>
 
-<ul class="member-list member-list--index">
-    @foreach (var m in Model.Members)
-    {
-        <li class="member-card">
-            <div class="member-card-photo">
-                @if (m.PhotoFileName != null)
-                {
-                    
-                    <img src="/uploads/@m.PhotoFileName" alt="photo" /> 
-                    
-                }
-                else
-                {
-                    <i class="fa-solid fa-circle-user"></i>
-                }
-            </div>
-            <div class="member-card-info">
-                <strong>@m.Name @m.Surname</strong>
-                @if (m.PhoneNumber != null)
-                {
-                    <div> 
-                        <i class="fa-solid fa-phone" style="color: var(--color-dark);"></i>
-                        <span>@m.PhoneNumber</span>
-                    </div>
-                }
-                else
-                {
-                    <div></div>
-                }
+@if (!Model.Members.Any() && (!string.IsNullOrEmpty(Model.q) || Model.familyId.HasValue))
+{
+    <div class="empty-state">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <p>No members found matching your search.</p>
+        <a asp-page="/Index" class="btn btn-outline-primary">Clear search</a>
+    </div>
+}
+else
+{
+    <ul class="member-list member-list--index">
+        @foreach (var m in Model.Members)
+        {
+            <li class="member-card">
+                <div class="member-card-photo">
+                    @if (m.PhotoFileName != null)
+                    {
 
-                @if (m.Family?.FamilyName != null)
-                { 
-                    <div class="badge-family" title="@m.Family.FamilyName">@(m.Family?.FamilyName ?? "")</div>
-                }
-                else {
-                    <div></div>
-                }
-                
-            </div>
-        </li>
-    }
-</ul>
+                        <img src="/uploads/@m.PhotoFileName" alt="photo" />
+
+                    }
+                    else
+                    {
+                        <i class="fa-solid fa-circle-user"></i>
+                    }
+                </div>
+                <div class="member-card-info">
+                    <strong>@m.Name @m.Surname</strong>
+                    @if (m.PhoneNumber != null)
+                    {
+                        <div>
+                            <i class="fa-solid fa-phone" style="color: var(--color-dark);"></i>
+                            <span>@m.PhoneNumber</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div></div>
+                    }
+
+                    @if (m.Family?.FamilyName != null)
+                    {
+                        <div class="badge-family" title="@m.Family.FamilyName">@(m.Family?.FamilyName ?? "")</div>
+                    }
+                    else
+                    {
+                        <div></div>
+                    }
+
+                </div>
+            </li>
+        }
+    </ul>
+}
