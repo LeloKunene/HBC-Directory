@@ -25,12 +25,24 @@
 <ul>
 @foreach(var f in Model.Families)
 {
-    <li>
-        <strong>@f.FamilyName</strong>
-        <form method="post" style="display:inline" asp-page-handler="DeleteFamily">
+    <li style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+
+        @* Rename form *@
+        <form method="post" asp-page-handler="EditFamily" style="display:flex; gap:0.4rem; flex:1;">
             <input type="hidden" name="familyId" value="@f.Id" />
-            <button type="submit">Delete</button>
+            <input name="familyName" value="@f.FamilyName" style="flex:1;" />
+            <button type="submit">Rename</button>
         </form>
+
+        @* Delete form: separate form because it posts to a different handler *@
+        <form method="post" asp-page-handler="DeleteFamily">
+            <input type="hidden" name="familyId" value="@f.Id" />
+            <button type="submit"
+                    onclick="return confirm('Delete @f.FamilyName? All members in this family will also be deleted.')">
+                Delete
+            </button>
+        </form>
+
     </li>
 }
 </ul>
@@ -119,9 +131,7 @@
         <img src="/uploads/@(m.PhotoFileName ?? "placeholder.png")" alt="photo" width="80"
              style="vertical-align:middle;margin-right:8px" />
         @m.Name @m.Surname (@m.Family?.FamilyName)
-
         <a asp-page="/Admin" asp-route-editMemberId="@m.Id">Edit</a>
-
         <form method="post" style="display:inline" asp-page-handler="DeleteMember">
             <input type="hidden" name="memberId" value="@m.Id" />
             <button type="submit">Delete</button>

@@ -25,21 +25,8 @@ namespace HBCDirectory.Pages
         public List<Family> Families { get; set; } = new();
         public List<Member> Members { get; set; } = new();
 
-        // ── ISSUE 12: Edit state ─────────────────────────────────────────────────────
-        //
-        // [BindProperty(SupportsGet = true)] means this property is populated from the
-        // URL query string on GET requests as well as from form data on POST requests.
-        //
-        // When the admin clicks Edit on a member, the browser navigates to:
-        //   /Admin?editMemberId=5
-        // ASP.NET Core sees the [BindProperty(SupportsGet = true)] attribute and
-        // automatically sets EditMemberId = 5 before OnGetAsync runs.
-        //
-        // Without SupportsGet = true, BindProperty only works on POST requests.
         [BindProperty(SupportsGet = true)]
         public int? EditMemberId { get; set; }
-
-        // The member currently being edited. Null if no Edit button has been clicked.
         public Member? EditingMember { get; set; }
 
         public async Task OnGetAsync()
@@ -47,13 +34,10 @@ namespace HBCDirectory.Pages
             Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
             Members = await _db.Members.Include(m => m.Family).OrderBy(m => m.Surname).ToListAsync();
 
-            // If an editMemberId was passed in the URL, find that member and expose it
-            // to the page so the edit form can pre-fill its fields.
             if (EditMemberId.HasValue)
                 EditingMember = Members.FirstOrDefault(m => m.Id == EditMemberId.Value);
         }
 
-        /// Checks file extension and size. Returns an error message string if invalid or null if the file passes validation.
         private string? ValidatePhoto(IFormFile photo)
         {
             if (photo.Length > MaxFileSizeBytes)
@@ -74,13 +58,8 @@ namespace HBCDirectory.Pages
             var header = new byte[4];
             using var stream = file.OpenReadStream();
             await stream.ReadAsync(header, 0, 4);
-
-            // JPEG files always start with: FF D8 FF
             if (header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF) return true;
-
-            // PNG files always start with: 89 50 4E 47
             if (header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47) return true;
-
             return false;
         }
 
@@ -107,6 +86,25 @@ namespace HBCDirectory.Pages
             _db.Families.Add(new Family { FamilyName = familyName.Trim() });
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Family '{familyName.Trim()}' added.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostEditFamilyAsync(int familyId, string familyName)
+        {
+            if (string.IsNullOrWhiteSpace(familyName))
+            {
+                TempData["Error"] = "Family name cannot be empty.";
+                return RedirectToPage();
+            }
+
+            var family = await _db.Families.FindAsync(familyId);
+            if (family == null) return NotFound();
+
+            var oldName = family.FamilyName;
+            family.FamilyName = familyName.Trim();
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"Family renamed from '{oldName}' to '{family.FamilyName}'.";
             return RedirectToPage();
         }
 
@@ -144,22 +142,9 @@ namespace HBCDirectory.Pages
 
             if (photo != null && photo.Length > 0)
             {
-                // Check extension and file size
                 var error = ValidatePhoto(photo);
-                if (error != null)
-                {
-                    TempData["Error"] = error;
-                    return RedirectToPage();
-                }
-
-                // Check magic bytes (actual file content)
-                if (!await IsImageAsync(photo))
-                {
-                    TempData["Error"] = "The uploaded file is not a valid image.";
-                    return RedirectToPage();
-                }
-
-                // All good? save it
+                if (error != null) { TempData["Error"] = error; return RedirectToPage(); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Not a valid image."; return RedirectToPage(); }
                 member.PhotoFileName = await SavePhotoAsync(photo);
             }
 
@@ -208,8 +193,6 @@ namespace HBCDirectory.Pages
                 member.PhotoFileName = await SavePhotoAsync(photo);
             }
 
-            // EF Core tracks changes to entities automatically. Calling SaveChangesAsync
-            // generates and executes the UPDATE SQL statement.
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Member {member.Name} {member.Surname} updated.";
             return RedirectToPage();
