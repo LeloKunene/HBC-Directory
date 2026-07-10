@@ -32,7 +32,8 @@ namespace HBCDirectory.Pages
         public async Task OnGetAsync()
         {
             Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
-            Members = await _db.Members.Include(m => m.Family).OrderBy(m => m.Surname).ToListAsync();
+            // Keep Malcom's secondary sort + your EditingMember logic
+            Members = await _db.Members.Include(m => m.Family).OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
 
             if (EditMemberId.HasValue)
                 EditingMember = Members.FirstOrDefault(m => m.Id == EditMemberId.Value);
@@ -47,12 +48,9 @@ namespace HBCDirectory.Pages
             if (!AllowedExtensions.Contains(ext))
                 return $"Only JPG and PNG files are allowed. Got: {ext}";
 
-            return null; // null means valid
+            return null;
         }
 
-        /** Checks the actual bytes at the start of the file to confirm it is a real image.
-        This is called "magic bytes" checking. It protects against someone renaming
-        malware.exe to malware.jpg to bypass the extension check above.*/
         private static async Task<bool> IsImageAsync(IFormFile file)
         {
             var header = new byte[4];
@@ -63,9 +61,6 @@ namespace HBCDirectory.Pages
             return false;
         }
 
-        /** Saves an uploaded photo to wwwroot/uploads and returns the generated filename.
-            We use Guid.NewGuid() to generate a random filename so two members uploading
-            the same file don't overwrite each other.*/
         private async Task<string> SavePhotoAsync(IFormFile photo)
         {
             var uploads = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
@@ -158,7 +153,6 @@ namespace HBCDirectory.Pages
             int memberId, string name, string surname, DateTime? birthdate,
             DateTime? anniversary, string? phoneNumber, int? familyId, IFormFile? photo)
         {
-            // FindAsync looks up a record by primary key. Returns null if not found.
             var member = await _db.Members.FindAsync(memberId);
             if (member == null) return NotFound();
 
@@ -168,7 +162,6 @@ namespace HBCDirectory.Pages
                 return RedirectToPage();
             }
 
-            // Update the scalar fields
             member.Name = name.Trim();
             member.Surname = surname.Trim();
             member.Birthdate = birthdate;
@@ -176,14 +169,12 @@ namespace HBCDirectory.Pages
             member.PhoneNumber = phoneNumber?.Trim();
             member.FamilyId = familyId;
 
-            // Only replace the photo if the user actually uploaded a new one
             if (photo != null && photo.Length > 0)
             {
                 var error = ValidatePhoto(photo);
                 if (error != null) { TempData["Error"] = error; return RedirectToPage(); }
                 if (!await IsImageAsync(photo)) { TempData["Error"] = "Not a valid image."; return RedirectToPage(); }
 
-                // Delete the old photo file from disk so we don't accumulate orphaned files
                 if (!string.IsNullOrEmpty(member.PhotoFileName))
                 {
                     var oldPath = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", member.PhotoFileName);
@@ -203,7 +194,6 @@ namespace HBCDirectory.Pages
             var m = await _db.Members.FindAsync(memberId);
             if (m != null)
             {
-                // Delete the photo file from disk when the member is deleted
                 if (!string.IsNullOrEmpty(m.PhotoFileName))
                 {
                     var uploads = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
