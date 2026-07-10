@@ -245,8 +245,6 @@ namespace HBCDirectory.Pages
             {
   // Delete the photo file from disk when the member is deleted
                 if (!string.IsNullOrEmpty(member.PhotoFileName))
-              
-               )
                
                 {
                     var uploads = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");

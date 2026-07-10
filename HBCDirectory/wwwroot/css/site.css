@@ -581,6 +581,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   gap: 1rem 1.5rem;
 }
 
+.admin-card--editing {
+  border: 2px solid var(--color-primary);
+}
+
+.admin-card--editing .card-header {
+  background: var(--color-primary);
+  color: var(--color-dark);
+}
 .form-field {
   display: flex;
   flex-direction: column;
