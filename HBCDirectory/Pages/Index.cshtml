@@ -54,16 +54,32 @@ else
                     <strong class="member-name">@m.Name @m.Surname</strong>
                     @if (m.PhoneNumber != null)
                     {
-                        <div>
+                        <div class="card-text">
                             <i class="fa-solid fa-phone" style="color: var(--color-dark);"></i>
                             <span>@m.PhoneNumber</span>
                         </div>
                     }
-                    else
+                    @if (m.Birthdate.HasValue)
                     {
-                        <div></div>
+                        <div class="card-text">
+                            <i class="fa-solid fa-cake" style="color: var(--color-dark);"></i>
+                            <span>@m.Birthdate.Value.ToString("MMMM d")</span> 
+                            @if (Model.IsUpcoming(m.Birthdate))
+                            {
+                                <span class="badge-upcoming">Upcoming</span>
+                            }
+                        
+                        </div>
+                        
                     }
-
+                    @if (m.Anniversary.HasValue)
+                    {
+                        <div class="card-text">
+                            <i class="fa-solid fa-gem" style="color: var(--color-dark);"></i>
+                             @m.Anniversary.Value.ToString("MMMM d")
+                        </div>
+                    }
+                   
                     @if (m.Family?.FamilyName != null)
                     {
                         <div class="badge-family" title="@m.Family.FamilyName">@(m.Family?.FamilyName ?? "")</div>
