@@ -197,46 +197,52 @@
 <div class="admin-card">
     <div class="card-header">Members</div>
     <div class="card-body">
-        <table class="table table-hover align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Photo</th>
-                    <th>Name</th>
-                    <th>Family</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var m in Model.Members)
-                {
+        <div class="table-scroll">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
                     <tr>
-                        <td>
-                            @if (m.PhotoFileName != null)
-                            {
-                                <img src="/uploads/@m.PhotoFileName" alt="photo" class="table-avatar" />
-                            }
-                            else
-                            {
-                                <i class="fa-solid fa-circle-user table-avatar-icon"></i>
-                            }
-                        </td>
-                        <td class="member-name">@m.Name @m.Surname</td>
-                        <td>@(m.Family?.FamilyName ?? "—")</td>
-                        <td class="text-end">
-                            <a asp-page="/Admin" asp-route-editMemberId="@m.Id"
-                               class="btn btn-outline-primary btn-sm me-1">Edit</a>
-
-                            <form method="post" asp-page-handler="DeleteMember" class="d-inline">
-                                <input type="hidden" name="memberId" value="@m.Id" />
-                                <button type="submit" class="btn btn-danger btn-sm"
-                                        onclick="return confirm('Delete @m.Name @m.Surname?')">
-                                    Delete
-                                </button>
-                            </form>
-                        </td>
+                        <th>Photo</th>
+                        <th>Name</th>
+                        <th>Family</th>
+                        <th>Birthdate</th>
+                        <th>Anniversary</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var m in Model.Members)
+                    {
+                        <tr>
+                            <td>
+                                @if (m.PhotoFileName != null)
+                                {
+                                    <img src="/uploads/@m.PhotoFileName" alt="photo" class="table-avatar" />
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-circle-user table-avatar-icon"></i>
+                                }
+                            </td>
+                            <td class="member-name">@m.Name @m.Surname</td>
+                            <td>@(m.Family?.FamilyName ?? "—")</td>
+                            <td>@(m.Birthdate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td>@(m.Anniversary?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td class="text-end">
+                                <a asp-page="/Admin" asp-route-editMemberId="@m.Id"
+                                   class="btn btn-outline-primary btn-sm me-1">Edit</a>
+
+                                <form method="post" asp-page-handler="DeleteMember" class="d-inline">
+                                    <input type="hidden" name="memberId" value="@m.Id" />
+                                    <button type="submit" class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Delete @m.Name @m.Surname?')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        
     </div>
 </div>
