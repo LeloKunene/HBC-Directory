@@ -794,7 +794,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 0.2rem 0.55rem;
+  padding: 0.2rem 0.25rem;
   border-radius: 20px;
 }
 

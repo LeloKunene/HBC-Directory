@@ -77,6 +77,10 @@ else
                         <div class="card-text">
                             <i class="fa-solid fa-gem" style="color: var(--color-dark);"></i>
                              @m.Anniversary.Value.ToString("MMMM d")
+                            @if (Model.IsUpcoming(m.Anniversary))
+                            {
+                                <span class="badge-upcoming">Upcoming</span>
+                            }
                         </div>
                     }
                    
