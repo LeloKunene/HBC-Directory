@@ -14,7 +14,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 // Use SQLite file database in content root
 var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=hbc.db";
-builder.Services.AddDbContext<DirectoryContext>(options => options.UseSqlite(connectionString));
+builder.Services.AddDbContext<DirectoryContext>(options => options.UseNpgsql(connectionString));
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var app = builder.Build();
 
