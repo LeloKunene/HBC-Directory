@@ -42,7 +42,7 @@ else
                     @if (m.PhotoFileName != null)
                     {
 
-                        <img src="/uploads/@m.PhotoFileName" alt="photo" />
+                        <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="photo" />
 
                     }
                     else

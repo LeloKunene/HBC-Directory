@@ -215,7 +215,7 @@
                             <td>
                                 @if (m.PhotoFileName != null)
                                 {
-                                    <img src="/uploads/@m.PhotoFileName" alt="photo" class="table-avatar" />
+                                    <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="photo" class="table-avatar" />
                                 }
                                 else
                                 {

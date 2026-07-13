@@ -1,5 +1,6 @@
 using HBCDirectory.Data;
 using HBCDirectory.Models;
+using HBCDirectory.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -9,11 +10,16 @@ namespace HBCDirectory.Pages
     public class IndexModel : PageModel
     {
         private readonly DirectoryContext _db;
+        private readonly PhotoService _photos;
+        private readonly IConfiguration _config;
 
-        public IndexModel(DirectoryContext db)
+        public IndexModel(DirectoryContext db, IConfiguration config, PhotoService photos)
         {
             _db = db;
+            _config = config;
+            _photos = photos;
         }
+        public string PhotoUrl(string? fileName) => _photos.Url(fileName);
 
         [BindProperty(SupportsGet = true)]
         public string? q { get; set; }

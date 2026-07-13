@@ -1,5 +1,9 @@
+using Amazon.S3;
+using Amazon.S3.Model;
+using Amazon.Runtime;
 using HBCDirectory.Data;
 using HBCDirectory.Models;
+using HBCDirectory.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -11,16 +15,20 @@ namespace HBCDirectory.Pages
     public class AdminModel : PageModel
     {
         private readonly DirectoryContext _db;
-        private readonly IWebHostEnvironment _env;
+        private readonly PhotoService _photos;
+        private readonly IConfiguration _config;
 
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
         private const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
 
-        public AdminModel(DirectoryContext db, IWebHostEnvironment env)
+        public AdminModel(DirectoryContext db, IConfiguration config, PhotoService photos)
         {
             _db = db;
-            _env = env;
+            _config = config;
+            _photos = photos;
         }
+
+        public string PhotoUrl(string? fileName) => _photos.Url(fileName);
 
         public List<Family> Families { get; set; } = new();
         public List<Member> Members { get; set; } = new();
@@ -33,7 +41,7 @@ namespace HBCDirectory.Pages
         [BindProperty(SupportsGet = true)]
         public int? EditMemberId { get; set; }
         public Member? EditingMember { get; set; }
-        
+
         [BindProperty(SupportsGet = true)]
         public int? EditFamilyId { get; set; }
         public Family? EditingFamily { get; set; }
@@ -80,12 +88,62 @@ namespace HBCDirectory.Pages
             the same file don't overwrite each other.*/
         private async Task<string> SavePhotoAsync(IFormFile photo)
         {
-            var uploads = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(photo.FileName).ToLowerInvariant();
-            var filePath = Path.Combine(uploads, fileName);
-            using var fs = System.IO.File.Create(filePath);
-            await photo.CopyToAsync(fs);
+            var fileName = Guid.NewGuid().ToString() + 
+                        Path.GetExtension(photo.FileName).ToLowerInvariant();
+
+            var credentials = new BasicAWSCredentials(
+                _config["R2:AccessKeyId"],
+                _config["R2:SecretAccessKey"]);
+
+            var config = new AmazonS3Config
+            {
+                ServiceURL = _config["R2:Endpoint"],
+                ForcePathStyle = true
+            };
+
+            using var client = new AmazonS3Client(credentials, config);
+            using var stream = photo.OpenReadStream();
+
+            await client.PutObjectAsync(new PutObjectRequest
+            {
+                BucketName = _config["R2:BucketName"],
+                Key = fileName,
+                InputStream = stream,
+                ContentType = photo.ContentType,
+                DisablePayloadSigning = true
+            });
+
             return fileName;
+        }
+
+        private async Task DeletePhotoAsync(string fileName)
+        {
+            try
+            {
+                var credentials = new BasicAWSCredentials(
+                    _config["R2:AccessKeyId"],
+                    _config["R2:SecretAccessKey"]);
+
+                var config = new AmazonS3Config
+                {
+                    ServiceURL = _config["R2:Endpoint"],
+                    ForcePathStyle = true
+                };
+
+                using var client = new AmazonS3Client(credentials, config);
+
+                await client.DeleteObjectAsync(new DeleteObjectRequest
+                {
+                    BucketName = _config["R2:BucketName"],
+                    Key = fileName
+                });
+
+                Console.WriteLine($"Deleted from R2: {fileName}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"R2 delete failed for {fileName}: {ex.Message}");
+            }
         }
 
         public async Task<IActionResult> OnPostAddFamilyAsync(string familyName)
@@ -143,60 +201,60 @@ namespace HBCDirectory.Pages
         }
 
         public async Task<IActionResult> OnPostAddMemberAsync(
-    string name, string surname, DateTime? birthdate,
-    DateTime? anniversary, string phoneNumber, int? familyId, IFormFile? photo)
-{
-    if (string.IsNullOrWhiteSpace(name) ||
-        string.IsNullOrWhiteSpace(surname) ||
-        !birthdate.HasValue ||
-        string.IsNullOrWhiteSpace(phoneNumber))
-    {
-        TempData["Error"] = "Could not add member — name, surname, birthdate, and phone number are all required.";
-        return RedirectToPage();
-    }
-
-    try
-    {
-        var member = new Member
+            string name, string surname, DateTime? birthdate,
+            DateTime? anniversary, string phoneNumber, int? familyId, IFormFile? photo)
         {
-            Name = CapitalizeFirst(name.Trim()),
-            Surname = CapitalizeFirst(surname.Trim()),
-            Birthdate = birthdate,
-            Anniversary = anniversary,
-            PhoneNumber = phoneNumber.Trim(),
-            FamilyId = familyId
-        };
-
-        if (photo != null && photo.Length > 0)
-        {
-            var error = ValidatePhoto(photo);
-            if (error != null)
+            if (string.IsNullOrWhiteSpace(name) ||
+                string.IsNullOrWhiteSpace(surname) ||
+                !birthdate.HasValue ||
+                string.IsNullOrWhiteSpace(phoneNumber))
             {
-                TempData["Error"] = error;
+                TempData["Error"] = "Could not add member — name, surname, birthdate, and phone number are all required.";
                 return RedirectToPage();
             }
 
-            if (!await IsImageAsync(photo))
+            try
             {
-                TempData["Error"] = "Not a valid image.";
-                return RedirectToPage();
+                var member = new Member
+                {
+                    Name = CapitalizeFirst(name.Trim()),
+                    Surname = CapitalizeFirst(surname.Trim()),
+                    Birthdate = birthdate,
+                    Anniversary = anniversary,
+                    PhoneNumber = phoneNumber.Trim(),
+                    FamilyId = familyId
+                };
+
+                if (photo != null && photo.Length > 0)
+                {
+                    var error = ValidatePhoto(photo);
+                    if (error != null)
+                    {
+                        TempData["Error"] = error;
+                        return RedirectToPage();
+                    }
+
+                    if (!await IsImageAsync(photo))
+                    {
+                        TempData["Error"] = "Not a valid image.";
+                        return RedirectToPage();
+                    }
+
+                    member.PhotoFileName = await SavePhotoAsync(photo);
+                }
+
+                _db.Members.Add(member);
+                await _db.SaveChangesAsync();
+
+                TempData["Success"] = $"Member '{member.Name} {member.Surname}' successfully added";
+            }
+            catch (Exception)
+            {
+                TempData["Error"] = $"Could not add member '{name} {surname}' — something went wrong. Please try again.";
             }
 
-            member.PhotoFileName = await SavePhotoAsync(photo);
+            return RedirectToPage();
         }
-
-        _db.Members.Add(member);
-        await _db.SaveChangesAsync();
-
-        TempData["Success"] = $"Member '{member.Name} {member.Surname}' successfully added";
-    }
-    catch (Exception)
-    {
-        TempData["Error"] = $"Could not add member '{name} {surname}' — something went wrong. Please try again.";
-    }
-
-    return RedirectToPage();
-}
 
         public async Task<IActionResult> OnPostEditMemberAsync(
             int memberId, string name, string surname, DateTime? birthdate,
@@ -229,10 +287,7 @@ namespace HBCDirectory.Pages
 
                 // Delete the old photo file from disk so we don't accumulate orphaned files
                 if (!string.IsNullOrEmpty(member.PhotoFileName))
-                {
-                    var oldPath = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", member.PhotoFileName);
-                    if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
-                }
+                    await DeletePhotoAsync(member.PhotoFileName);
 
                 member.PhotoFileName = await SavePhotoAsync(photo);
             }
@@ -250,13 +305,10 @@ namespace HBCDirectory.Pages
 
             if (member != null)
             {
-  // Delete the photo file from disk when the member is deleted
-                if (!string.IsNullOrEmpty(member.PhotoFileName))
-               
+                // Delete the photo file from disk when the member is deleted
+                if (!string.IsNullOrEmpty(member.PhotoFileName))  
                 {
-                    var uploads = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
-                    var filePath = Path.Combine(uploads, member.PhotoFileName);
-                    if (System.IO.File.Exists(filePath)) System.IO.File.Delete(filePath);
+                    await DeletePhotoAsync(member.PhotoFileName);
                 }
                 _db.Members.Remove(member);
                 await _db.SaveChangesAsync();
