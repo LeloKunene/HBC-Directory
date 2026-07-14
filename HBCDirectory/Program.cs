@@ -53,4 +53,5 @@ app.Use(async (context, next) =>
     await next();
 });
 
-app.Run();
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5272";
+app.Run($"http://0.0.0.0:{port}");
