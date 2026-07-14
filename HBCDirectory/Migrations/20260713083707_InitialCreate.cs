@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -15,9 +16,9 @@ namespace HBCDirectory.Migrations
                 name: "Families",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FamilyName = table.Column<string>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FamilyName = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -28,15 +29,15 @@ namespace HBCDirectory.Migrations
                 name: "Members",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
-                    Surname = table.Column<string>(type: "TEXT", nullable: false),
-                    Birthdate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    Anniversary = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "TEXT", nullable: true),
-                    PhotoFileName = table.Column<string>(type: "TEXT", nullable: true),
-                    FamilyId = table.Column<int>(type: "INTEGER", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Surname = table.Column<string>(type: "text", nullable: false),
+                    Birthdate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    Anniversary = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "text", nullable: true),
+                    PhotoFileName = table.Column<string>(type: "text", nullable: true),
+                    FamilyId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
