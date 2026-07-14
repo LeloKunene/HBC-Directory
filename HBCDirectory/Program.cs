@@ -14,8 +14,18 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/Login";
     });
 
-// Use SQLite file database in content root
 var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=hbc.db";
+var pgHost = Environment.GetEnvironmentVariable("PGHOST");
+if (!string.IsNullOrEmpty(pgHost))
+{
+    connectionString = $"Host={pgHost};" +
+        $"Port={Environment.GetEnvironmentVariable("PGPORT") ?? "5432"};" +
+        $"Database={Environment.GetEnvironmentVariable("PGDATABASE")};" +
+        $"Username={Environment.GetEnvironmentVariable("PGUSER")};" +
+        $"Password={Environment.GetEnvironmentVariable("PGPASSWORD")};" +
+        $"SSL Mode=Require;Trust Server Certificate=true";
+}
+
 builder.Services.AddDbContext<DirectoryContext>(options => options.UseNpgsql(connectionString));
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
