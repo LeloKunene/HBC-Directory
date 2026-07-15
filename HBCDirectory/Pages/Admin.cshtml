@@ -152,11 +152,11 @@
         <form method="post" enctype="multipart/form-data" asp-page-handler="AddMember" class="admin-form-grid">
 
             <div class="form-field">
-                <label class="form-label">Name</label>
+                <<label class="form-label">Name <span class="text-danger">*</span></label>
                 <input name="Name" placeholder="Name" class="form-control" required />
             </div>
             <div class="form-field">
-                <label class="form-label">Surname</label>
+                <label class="form-label">Surname <span class="text-danger">*</span></label>
                 <input name="Surname" placeholder="Surname" class="form-control" required />
             </div>
 
@@ -167,7 +167,7 @@
             </div>
 
             <div class="form-field">
-                <label class="form-label">Birthdate</label>
+                <label class="form-label">Birthdate <span class="text-danger">*</span></label>
                 <input name="Birthdate" type="date" class="form-control" required />
             </div>
             <div class="form-field">
@@ -176,7 +176,7 @@
             </div>
 
             <div class="form-field">
-                <label class="form-label">Phone</label>
+                <label class="form-label">Phone <span class="text-danger">*</span></label>
                 <input name="PhoneNumber" placeholder="Phone" class="form-control" required />
             </div>
             <div class="form-field">
@@ -197,6 +197,7 @@
 
             <div class="form-field form-field--full">
                 <button type="submit" class="btn btn-primary">Add Member</button>
+                <p class="small text-muted mt-2"><span class="text-danger">*</span> Required fields</p>
             </div>
 
         </form>
