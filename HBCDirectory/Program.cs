@@ -1,13 +1,18 @@
 using HBCDirectory.Data;
 using HBCDirectory.Services;
+using QuestPDF.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddSingleton<PhotoService>();
+builder.Services.AddHttpClient();
 builder.Services.AddRazorPages();
+builder.Services.AddSingleton<PhotoService>();
+builder.Services.AddScoped<DirectoryPdfService>();
+builder.Services.AddScoped<HBCDirectory.Services.TokenService>();
+builder.Services.AddScoped<HBCDirectory.Services.EmailService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -26,6 +31,7 @@ if (!string.IsNullOrEmpty(pgHost))
         $"SSL Mode=Require;Trust Server Certificate=true";
 }
 
+QuestPDF.Settings.License = LicenseType.Community;
 builder.Services.AddDbContext<DirectoryContext>(options => options.UseNpgsql(connectionString));
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 

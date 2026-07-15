@@ -10,6 +10,11 @@ namespace HBCDirectory.Models
         [Required]
         public string FamilyName { get; set; } = string.Empty;
 
-        public List<Member> Members { get; set; } = new();
+        // Navigation property, lets EF Core load members with Include()
+        public ICollection<Member> Members { get; set; } = new List<Member>();
+
+        // Family group photo stored in R2
+        public string? PhotoFileName { get; set; }
+
     }
 }

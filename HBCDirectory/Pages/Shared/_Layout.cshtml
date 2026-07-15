@@ -52,6 +52,12 @@
                                     <a asp-page="/Admin" class="nav-link">Admin</a>
                                 </li>
                             }
+                            @if (User.IsInRole("Member") || User.IsInRole("Admin"))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-page="/Profile/Index">My Profile</a>
+                                </li>
+                            }
                             <li>
                                 <a asp-page="/Login" class="btn btn-logout">Logout</a>
                             </li>

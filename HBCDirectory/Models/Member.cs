@@ -10,21 +10,22 @@ namespace HBCDirectory.Models
 
         [Required]
         public string Name { get; set; } = string.Empty;
-
         [Required]
         public string Surname { get; set; } = string.Empty;
+        [Required]
+        public string Email { get; set; } = string.Empty;
 
         public DateTime? Birthdate { get; set; }
-
         public DateTime? Anniversary { get; set; }
-
         public string? PhoneNumber { get; set; }
-
-        // Stored filename in wwwroot/uploads
         public string? PhotoFileName { get; set; }
-
         // Foreign key
         public int? FamilyId { get; set; }
         public Family? Family { get; set; }
+        public string? Role { get; set; }
+
+        public bool ShowPhone { get; set; } = true;
+        public bool ShowBirthdate { get; set; } = true;
+        public bool ShowAnniversary { get; set; } = true;
     }
 }

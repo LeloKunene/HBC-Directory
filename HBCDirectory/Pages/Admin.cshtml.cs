@@ -17,21 +17,34 @@ namespace HBCDirectory.Pages
         private readonly DirectoryContext _db;
         private readonly PhotoService _photos;
         private readonly IConfiguration _config;
+        private readonly TokenService _tokens;
+        private readonly EmailService _email;
 
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
         private const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
 
-        public AdminModel(DirectoryContext db, IConfiguration config, PhotoService photos)
+        public static readonly string[] AllowedRoles = { "Member", "Deacon", "Elder" };
+
+        public AdminModel(DirectoryContext db, IConfiguration config, PhotoService photos,
+                        TokenService tokens, EmailService email)
         {
             _db = db;
             _config = config;
             _photos = photos;
+            _tokens = tokens;
+            _email  = email;
         }
 
         public string PhotoUrl(string? fileName) => _photos.Url(fileName);
 
         public List<Family> Families { get; set; } = new();
         public List<Member> Members { get; set; } = new();
+
+        public int TotalMembers { get; set; }
+        public int TotalFamilies { get; set; }
+
+        public List<Member> UpcomingBirthdays { get; set; } = new();
+        public List<Member> UpcomingAnniversaries { get; set; } = new();
 
         private static string CapitalizeFirst(string input)
         {
@@ -46,6 +59,23 @@ namespace HBCDirectory.Pages
         public int? EditFamilyId { get; set; }
         public Family? EditingFamily { get; set; }
 
+        private static bool IsWithinDays(DateTime? date, int days)
+        {
+            if (!date.HasValue) return false;
+            var today = DateTime.Today;
+            var thisYear = new DateTime(today.Year, date.Value.Month, date.Value.Day);
+            if (thisYear < today) thisYear = thisYear.AddYears(1);
+            return (thisYear - today).TotalDays <= days;
+        }
+
+        private static DateTime NextOccurrence(DateTime date)
+        {
+            var today = DateTime.Today;
+            var next = new DateTime(today.Year, date.Month, date.Day);
+            if (next < today) next = next.AddYears(1);
+            return next;
+        }
+
         public async Task OnGetAsync()
         {
             Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
@@ -56,6 +86,19 @@ namespace HBCDirectory.Pages
 
             if (EditFamilyId.HasValue)
                 EditingFamily = Families.FirstOrDefault(f => f.Id == EditFamilyId.Value);
+
+            TotalMembers = Members.Count;
+            TotalFamilies = Families.Count;
+
+            UpcomingBirthdays = Members
+                .Where(m => IsWithinDays(m.Birthdate, 30))
+                .OrderBy(m => NextOccurrence(m.Birthdate!.Value))
+                .ToList();
+
+            UpcomingAnniversaries = Members
+                .Where(m => IsWithinDays(m.Anniversary, 30))
+                .OrderBy(m => NextOccurrence(m.Anniversary!.Value))
+                .ToList();
         }
 
         private string? ValidatePhoto(IFormFile photo)
@@ -200,64 +243,10 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        public async Task<IActionResult> OnPostAddMemberAsync(
-            string name, string surname, DateTime? birthdate,
-            DateTime? anniversary, string phoneNumber, int? familyId, IFormFile? photo)
-        {
-            if (string.IsNullOrWhiteSpace(name) ||
-                string.IsNullOrWhiteSpace(surname) ||
-                !birthdate.HasValue ||
-                string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                TempData["Error"] = "Could not add member — name, surname, birthdate, and phone number are all required.";
-                return RedirectToPage();
-            }
 
-            try
-            {
-                var member = new Member
-                {
-                    Name = CapitalizeFirst(name.Trim()),
-                    Surname = CapitalizeFirst(surname.Trim()),
-                    Birthdate = birthdate,
-                    Anniversary = anniversary,
-                    PhoneNumber = phoneNumber.Trim(),
-                    FamilyId = familyId
-                };
-
-                if (photo != null && photo.Length > 0)
-                {
-                    var error = ValidatePhoto(photo);
-                    if (error != null)
-                    {
-                        TempData["Error"] = error;
-                        return RedirectToPage();
-                    }
-
-                    if (!await IsImageAsync(photo))
-                    {
-                        TempData["Error"] = "Not a valid image.";
-                        return RedirectToPage();
-                    }
-
-                    member.PhotoFileName = await SavePhotoAsync(photo);
-                }
-
-                _db.Members.Add(member);
-                await _db.SaveChangesAsync();
-
-                TempData["Success"] = $"Member '{member.Name} {member.Surname}' successfully added";
-            }
-            catch (Exception)
-            {
-                TempData["Error"] = $"Could not add member '{name} {surname}' — something went wrong. Please try again.";
-            }
-
-            return RedirectToPage();
-        }
 
         public async Task<IActionResult> OnPostEditMemberAsync(
-            int memberId, string name, string surname, DateTime? birthdate,
+            int memberId, string name, string surname, DateTime? birthdate, string? role,
             DateTime? anniversary, string? phoneNumber, int? familyId, IFormFile? photo)
         {
             // FindAsync looks up a record by primary key. Returns null if not found.
@@ -277,6 +266,7 @@ namespace HBCDirectory.Pages
             member.Anniversary = anniversary;
             member.PhoneNumber = phoneNumber?.Trim();
             member.FamilyId = familyId;
+            member.Role = string.IsNullOrEmpty(role) ? "Member" : role;
 
             // Only replace the photo if the user actually uploaded a new one
             if (photo != null && photo.Length > 0)
@@ -319,6 +309,102 @@ namespace HBCDirectory.Pages
                 TempData["Error"] = $"Could not delete member '{memberName} {memberSurname}'.";
             }
             return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostAddMemberAsync(
+            string name, string surname, string email, DateTime? birthdate,
+            DateTime? anniversary, string phoneNumber, int? familyId,
+            string? role, IFormFile? photo)
+        {
+            // ── Validation ────────────────────────────────────────────────────────────
+            if (string.IsNullOrWhiteSpace(name)        ||
+                string.IsNullOrWhiteSpace(surname)      ||
+                string.IsNullOrWhiteSpace(email)        ||
+                !birthdate.HasValue                     ||
+                string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                TempData["Error"] = "Name, surname, email, birthdate, and phone number are all required.";
+                return RedirectToPage("/Admin");
+            }
+
+            // Check email uniqueness
+            var emailTaken = await _db.Members.AnyAsync(m => m.Email == email.Trim().ToLower());
+            if (emailTaken)
+            {
+                TempData["Error"] = $"A member with email '{email}' already exists.";
+                return RedirectToPage("/Admin");
+            }
+
+            try
+            {
+                // ── Create member ─────────────────────────────────────────────────────
+                var member = new Member
+                {
+                    Name        = CapitalizeFirst(name.Trim()),
+                    Surname     = CapitalizeFirst(surname.Trim()),
+                    Email       = email.Trim().ToLower(),
+                    Birthdate   = birthdate,
+                    Anniversary = anniversary,
+                    PhoneNumber = phoneNumber.Trim(),
+                    FamilyId    = familyId,
+                    Role        = string.IsNullOrEmpty(role) ? null : role,
+                };
+
+                if (photo != null && photo.Length > 0)
+                {
+                    var err = ValidatePhoto(photo);
+                    if (err != null) { TempData["Error"] = err; return RedirectToPage("/Admin"); }
+                    if (!await IsImageAsync(photo)) { TempData["Error"] = "Not a valid image."; return RedirectToPage("/Admin"); }
+                    member.PhotoFileName = await SavePhotoAsync(photo);
+                }
+
+                _db.Members.Add(member);
+                await _db.SaveChangesAsync();
+
+                // ── Auto-create MemberAccount with temp password ──────────────────────
+                var tempPassword = GenerateTempPassword();
+
+                var account = new MemberAccount
+                {
+                    MemberId     = member.Id,
+                    Username     = member.Email,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(tempPassword)
+                };
+
+                _db.MemberAccounts.Add(account);
+                await _db.SaveChangesAsync();
+
+                // ── Generate reset token (24hr expiry for welcome email) ──────────────
+                var token       = await _tokens.CreateTokenAsync(member.Email, TimeSpan.FromHours(24));
+                var baseUrl     = $"{Request.Scheme}://{Request.Host}";
+                var resetLink   = $"{baseUrl}/ResetPassword?token={token}";
+
+                // ── Send welcome email ────────────────────────────────────────────────
+                await _email.SendWelcomeEmailAsync(
+                    toEmail:           member.Email,
+                    memberName:        $"{member.Name} {member.Surname}",
+                    temporaryPassword: tempPassword,
+                    resetPasswordLink: resetLink
+                );
+
+                TempData["Success"] = $"Member '{member.Name} {member.Surname}' added and welcome email sent to {member.Email}.";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                TempData["Error"] = "Could not add member — something went wrong. Please try again.";
+            }
+
+            return RedirectToPage("/Admin");
+        }
+
+        // ── Helper — generates a readable 12-character temp password ─────────────────
+        private static string GenerateTempPassword()
+        {
+            const string chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+            var random = new byte[12];
+            System.Security.Cryptography.RandomNumberGenerator.Fill(random);
+            return new string(random.Select(b => chars[b % chars.Length]).ToArray());
         }
     }
 }
