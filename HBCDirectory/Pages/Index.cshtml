@@ -37,7 +37,7 @@ else
     <ul class="member-list member-list--index">
         @foreach (var m in Model.Members)
         {
-            <li class="member-card">
+            <li class="member-card" data-bs-toggle="modal" data-bs-target="#member-modal-@m.Id">
                 <div class="member-card-photo">
                     @if (m.PhotoFileName != null)
                     {
@@ -94,7 +94,34 @@ else
                     }
 
                 </div>
+              
             </li>
+            <div class="modal fade" id="member-modal-@m.Id" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">@m.Name @m.Surname</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="member-modal-photo">
+                                @if (m.PhotoFileName != null)
+                                {
+                                    <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="photo" />
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-circle-user"></i>
+                                }
+                            </div>
+                            <p><strong>Family:</strong> @(m.Family?.FamilyName ?? "—")</p>
+                            <p><strong>Phone:</strong> @(m.PhoneNumber ?? "—")</p>
+                            <p><strong>Birthday:</strong> @(m.Birthdate?.ToString("MMMM d") ?? "—")</p>
+                            <p><strong>Anniversary:</strong> @(m.Anniversary?.ToString("MMMM d") ?? "—")</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         }
     </ul>
 }
