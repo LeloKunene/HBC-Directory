@@ -224,7 +224,7 @@ namespace HBCDirectory.Pages
                     Birthdate = birthdate,
                     Anniversary = anniversary,
                     PhoneNumber = phoneNumber.Trim(),
-                    FamilyId = familyId
+                    FamilyId = familyId,
                     Role = string.IsNullOrEmpty(role) ? null : role,
                 };
 

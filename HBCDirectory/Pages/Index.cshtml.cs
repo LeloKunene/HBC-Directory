@@ -11,12 +11,10 @@ namespace HBCDirectory.Pages
     {
         private readonly DirectoryContext _db;
         private readonly PhotoService _photos;
-        private readonly IConfiguration _config;
 
-        public IndexModel(DirectoryContext db, IConfiguration config, PhotoService photos)
+        public IndexModel(DirectoryContext db, PhotoService photos)
         {
             _db = db;
-            _config = config;
             _photos = photos;
         }
         public string PhotoUrl(string? fileName) => _photos.Url(fileName);
@@ -27,23 +25,27 @@ namespace HBCDirectory.Pages
         [BindProperty(SupportsGet = true)]
         public int? familyId { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public string? role { get; set; }
+        
         public List<Family> Families { get; set; } = new();
         public List<Member> Members { get; set; } = new();
 
         public async Task OnGetAsync()
         {
-            var membersQuery = _db.Members.Include(m => m.Family).AsQueryable();
-            if (familyId.HasValue)
-            {
-                membersQuery = membersQuery.Where(m => m.FamilyId == familyId.Value);
-            }
+            var query = _db.Members.Include(m => m.Family).AsQueryable();
+
             if (!string.IsNullOrEmpty(q))
-            {
-                membersQuery = membersQuery.Where(m => m.Name.Contains(q) || m.Surname.Contains(q));
-            }
+                query = query.Where(m => m.Name.Contains(q) || m.Surname.Contains(q));
+
+            if (familyId.HasValue)
+                query = query.Where(m => m.FamilyId == familyId.Value);
+
+            if (!string.IsNullOrEmpty(role))
+                query = query.Where(m => m.Role == role);
 
             Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
-            Members = await membersQuery.OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
+            Members = await query.OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
         }
 
         public bool IsUpcoming(DateTime? date)
