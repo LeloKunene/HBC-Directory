@@ -21,6 +21,8 @@ namespace HBCDirectory.Pages
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
         private const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
 
+        public static readonly string[] AllowedRoles = { "Member", "Deacon", "Elder" };
+
         public AdminModel(DirectoryContext db, IConfiguration config, PhotoService photos)
         {
             _db = db;
@@ -201,7 +203,7 @@ namespace HBCDirectory.Pages
         }
 
         public async Task<IActionResult> OnPostAddMemberAsync(
-            string name, string surname, DateTime? birthdate,
+            string name, string surname, DateTime? birthdate, string? role,
             DateTime? anniversary, string phoneNumber, int? familyId, IFormFile? photo)
         {
             if (string.IsNullOrWhiteSpace(name) ||
@@ -223,6 +225,7 @@ namespace HBCDirectory.Pages
                     Anniversary = anniversary,
                     PhoneNumber = phoneNumber.Trim(),
                     FamilyId = familyId
+                    Role = string.IsNullOrEmpty(role) ? null : role,
                 };
 
                 if (photo != null && photo.Length > 0)
@@ -257,7 +260,7 @@ namespace HBCDirectory.Pages
         }
 
         public async Task<IActionResult> OnPostEditMemberAsync(
-            int memberId, string name, string surname, DateTime? birthdate,
+            int memberId, string name, string surname, DateTime? birthdate, string? role,
             DateTime? anniversary, string? phoneNumber, int? familyId, IFormFile? photo)
         {
             // FindAsync looks up a record by primary key. Returns null if not found.
@@ -277,6 +280,7 @@ namespace HBCDirectory.Pages
             member.Anniversary = anniversary;
             member.PhoneNumber = phoneNumber?.Trim();
             member.FamilyId = familyId;
+            member.Role = string.IsNullOrEmpty(role) ? null : role;
 
             // Only replace the photo if the user actually uploaded a new one
             if (photo != null && photo.Length > 0)

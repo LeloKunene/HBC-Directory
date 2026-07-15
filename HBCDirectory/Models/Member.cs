@@ -20,11 +20,12 @@ namespace HBCDirectory.Models
 
         public string? PhoneNumber { get; set; }
 
-        // Stored filename in wwwroot/uploads
         public string? PhotoFileName { get; set; }
 
         // Foreign key
         public int? FamilyId { get; set; }
         public Family? Family { get; set; }
+
+        public string? Role { get; set; }
     }
 }
