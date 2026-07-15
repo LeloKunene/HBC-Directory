@@ -1,0 +1,73 @@
+@page
+@model HBCDirectory.Pages.Profile.IndexModel
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title">My Profile</h2>
+    <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">Back to Directory</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (Model.CurrentMember != null)
+{
+    <div class="admin-card">
+        <div class="card-header">Edit My Details</div>
+        <div class="card-body">
+
+            <div class="text-center mb-4">
+                <img src="@Model.PhotoUrl(Model.CurrentMember.PhotoFileName)"
+                     alt="Profile photo"
+                     style="width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--color-primary)" />
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="admin-form-grid">
+
+                <div class="form-field">
+                    <label class="form-label">Name</label>
+                    <input name="name" class="form-control" value="@Model.CurrentMember.Name" required />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Surname</label>
+                    <input name="surname" class="form-control" value="@Model.CurrentMember.Surname" required />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label">Phone</label>
+                    <input name="phoneNumber" class="form-control" value="@Model.CurrentMember.PhoneNumber" />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label">Role</label>
+                    @* Members cannot change their own role — admin-only *@
+                    <input class="form-control" value="@(Model.CurrentMember.Role ?? "—")" readonly disabled />
+                </div>
+
+                <div class="form-field form-field--full">
+                    <label class="form-label">Update Photo (leave empty to keep current)</label>
+                    <input type="file" name="photo" class="form-control" accept="image/jpeg,image/png" />
+                </div>
+
+                <div class="form-field form-field--full">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+}

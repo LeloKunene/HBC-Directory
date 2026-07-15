@@ -8,9 +8,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<DirectoryPdfService>();
-builder.Services.AddSingleton<PhotoService>();
 builder.Services.AddRazorPages();
+builder.Services.AddSingleton<PhotoService>();
+builder.Services.AddScoped<DirectoryPdfService>();
+builder.Services.AddScoped<HBCDirectory.Services.TokenService>();
+builder.Services.AddScoped<HBCDirectory.Services.EmailService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {

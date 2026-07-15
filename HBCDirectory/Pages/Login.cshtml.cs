@@ -1,7 +1,9 @@
+using HBCDirectory.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace HBCDirectory.Pages
@@ -9,37 +11,70 @@ namespace HBCDirectory.Pages
     public class LoginModel : PageModel
     {
         private readonly IConfiguration _config;
+        private readonly DirectoryContext _db;
 
-        public LoginModel(IConfiguration config)
+        public LoginModel(IConfiguration config, DirectoryContext db)
         {
             _config = config;
+            _db = db;
         }
 
         public string? ErrorMessage { get; set; }
 
-        public void OnGet()
-        {
-        }
+        public void OnGet() { }
 
         public async Task<IActionResult> OnPostAsync(string username, string password)
         {
-            var adminUser = _config["AdminCredentials:Username"]
-                ?? throw new InvalidOperationException("AdminCredentials:Username is not configured.");
-            var adminPass = _config["AdminCredentials:Password"]
-                ?? throw new InvalidOperationException("AdminCredentials:Password is not configured.");
-
-            if (username == adminUser && password == adminPass)
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                var claims = new[] { new Claim(ClaimTypes.Name, username), new Claim(ClaimTypes.Role, "Admin") };
-                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var principal = new ClaimsPrincipal(identity);
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                ErrorMessage = "Please enter your email and password.";
+                return Page();
+            }
+
+            var input = username.Trim().ToLower();
+
+            // ── 1. Check admin credentials ────────────────────────────────────────
+            var adminUser = _config["AdminCredentials:Username"] ?? "admin";
+            var adminPass = _config["AdminCredentials:Password"]
+                ?? throw new InvalidOperationException("AdminCredentials:Password not configured.");
+
+            if (input == adminUser && password == adminPass)
+            {
+                await SignInAsync(input, "Admin");
                 return RedirectToPage("/Admin");
             }
-            
 
-            ErrorMessage = "Invalid credentials";
+            // ── 2. Check member accounts (username = email) ───────────────────────
+            var account = await _db.MemberAccounts
+                .Include(a => a.Member)
+                .FirstOrDefaultAsync(a => a.Username == input);
+
+            if (account != null && BCrypt.Net.BCrypt.Verify(password, account.PasswordHash))
+            {
+                await SignInAsync(input, "Member", account.MemberId.ToString());
+                return RedirectToPage("/Index");
+            }
+
+            // ── 3. Both failed ────────────────────────────────────────────────────
+            ErrorMessage = "Invalid email or password.";
             return Page();
+        }
+
+        private async Task SignInAsync(string username, string role, string? memberId = null)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, username),
+                new Claim(ClaimTypes.Role, role),
+            };
+
+            if (memberId != null)
+                claims.Add(new Claim("MemberId", memberId));
+
+            var identity  = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
         }
     }
 }
