@@ -35,6 +35,12 @@ namespace HBCDirectory.Pages
         public List<Family> Families { get; set; } = new();
         public List<Member> Members { get; set; } = new();
 
+        public int TotalMembers { get; set; }
+        public int TotalFamilies { get; set; }
+
+        public List<Member> UpcomingBirthdays { get; set; } = new();
+        public List<Member> UpcomingAnniversaries { get; set; } = new();
+
         private static string CapitalizeFirst(string input)
         {
             if (string.IsNullOrWhiteSpace(input)) return input;
@@ -48,8 +54,22 @@ namespace HBCDirectory.Pages
         public int? EditFamilyId { get; set; }
         public Family? EditingFamily { get; set; }
 
-        public int TotalMembers { get; set; }
-        public int TotalFamilies { get; set; }
+        private static bool IsWithinDays(DateTime? date, int days)
+        {
+            if (!date.HasValue) return false;
+            var today = DateTime.Today;
+            var thisYear = new DateTime(today.Year, date.Value.Month, date.Value.Day);
+            if (thisYear < today) thisYear = thisYear.AddYears(1);
+            return (thisYear - today).TotalDays <= days;
+        }
+
+        private static DateTime NextOccurrence(DateTime date)
+        {
+            var today = DateTime.Today;
+            var next = new DateTime(today.Year, date.Month, date.Day);
+            if (next < today) next = next.AddYears(1);
+            return next;
+        }
 
         public async Task OnGetAsync()
         {
@@ -64,6 +84,16 @@ namespace HBCDirectory.Pages
 
             TotalMembers = Members.Count;
             TotalFamilies = Families.Count;
+
+            UpcomingBirthdays = Members
+                .Where(m => IsWithinDays(m.Birthdate, 30))
+                .OrderBy(m => NextOccurrence(m.Birthdate!.Value))
+                .ToList();
+
+            UpcomingAnniversaries = Members
+                .Where(m => IsWithinDays(m.Anniversary, 30))
+                .OrderBy(m => NextOccurrence(m.Anniversary!.Value))
+                .ToList();
         }
 
         private string? ValidatePhoto(IFormFile photo)
