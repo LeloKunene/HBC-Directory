@@ -48,6 +48,9 @@ namespace HBCDirectory.Pages
         public int? EditFamilyId { get; set; }
         public Family? EditingFamily { get; set; }
 
+        public int TotalMembers { get; set; }
+        public int TotalFamilies { get; set; }
+
         public async Task OnGetAsync()
         {
             Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
@@ -58,6 +61,9 @@ namespace HBCDirectory.Pages
 
             if (EditFamilyId.HasValue)
                 EditingFamily = Families.FirstOrDefault(f => f.Id == EditFamilyId.Value);
+
+            TotalMembers = Members.Count;
+            TotalFamilies = Families.Count;
         }
 
         private string? ValidatePhoto(IFormFile photo)
