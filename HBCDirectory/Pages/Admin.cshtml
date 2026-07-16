@@ -45,10 +45,33 @@
                 <strong>Renaming: @Model.EditingFamily.FamilyName</strong>
                 <form method="post" asp-page-handler="EditFamily" class="d-flex gap-2 mt-2">
                     <input type="hidden" name="familyId" value="@Model.EditingFamily.Id" />
-                    <input name="familyName" value="@Model.EditingFamily.FamilyName"
-                           class="form-control form-control-sm" style="max-width: 240px" />
+                    <input name="familyName" value="@Model.EditingFamily.FamilyName" class="form-control form-control-sm"
+                           style="max-width: 240px" />
                     <button type="submit" class="btn btn-primary btn-sm">Rename</button>
                     <a asp-page="/Admin" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                </form>
+                <form method="post" enctype="multipart/form-data" asp-page-handler="EditFamily"
+                      class="d-flex align-items-end gap-3 mt-3">
+                    <input type="hidden" name="familyId" value="@Model.EditingFamily.Id" />
+                    <input type="hidden" name="familyName" value="@Model.EditingFamily.FamilyName" />
+
+                    @if (Model.EditingFamily.PhotoFileName != null)
+                    {
+                        <img src="@Model.PhotoUrl(Model.EditingFamily.PhotoFileName)" alt="family photo" class="table-avatar" />
+                    }
+                    else
+                    {
+                        <i class="fa-solid fa-people-roof table-avatar-icon"></i>
+                    }
+
+                    <div class="form-field">
+                        <label class="form-label">New Photo (leave empty to keep current)</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="file" name="photo" accept="image/jpeg,image/png"
+                                   class="form-control form-control-sm" style="max-width: 220px" />
+                            <button type="submit" class="btn btn-outline-primary btn-sm">Upload Photo</button>
+                        </div>
+                    </div>
                 </form>
             </div>
         }

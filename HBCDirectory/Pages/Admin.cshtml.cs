@@ -204,7 +204,7 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        public async Task<IActionResult> OnPostEditFamilyAsync(int familyId, string familyName)
+        public async Task<IActionResult> OnPostEditFamilyAsync(int familyId, string familyName, IFormFile? photo)
         {
             if (string.IsNullOrWhiteSpace(familyName))
             {
@@ -216,10 +216,29 @@ namespace HBCDirectory.Pages
             if (family == null) return NotFound();
 
             var oldName = family.FamilyName;
+            var nameChanged = !oldName.Equals(familyName.Trim(), StringComparison.OrdinalIgnoreCase);
             family.FamilyName = familyName.Trim();
+
+            var photoUpdated = false;
+
+            if (photo != null && photo.Length > 0)
+            {
+                var error = ValidatePhoto(photo);
+                if (error != null) { TempData["Error"] = error; return RedirectToPage(); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Not a valid image."; return RedirectToPage(); }
+
+                if (!string.IsNullOrEmpty(family.PhotoFileName))
+                    await DeletePhotoAsync(family.PhotoFileName);
+
+                family.PhotoFileName = await SavePhotoAsync(photo);
+                photoUpdated = true;
+            }
+
             await _db.SaveChangesAsync();
 
-            TempData["Success"] = $"Family renamed from '{oldName}' to '{family.FamilyName}'.";
+            TempData["Success"] = photoUpdated
+                ? "Photo uploaded successfully."
+                : $"Family renamed from '{oldName}' to '{family.FamilyName}'.";
 
             return RedirectToPage();
         }
