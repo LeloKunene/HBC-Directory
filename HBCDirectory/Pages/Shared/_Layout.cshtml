@@ -42,9 +42,7 @@
                             <li>
                                 <a class="nav-link" asp-area="" asp-page="/Index">Home</a>
                             </li>
-                            <li>
-                                <a class="nav-link" asp-area="" asp-page="/Privacy">Privacy</a>
-                            </li>
+                            
 
                             @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin"))
                             {
@@ -58,6 +56,9 @@
                                     <a class="nav-link" asp-page="/Profile/Index">My Profile</a>
                                 </li>
                             }
+                            <li>
+                                <a class="nav-link" asp-area="" asp-page="/Privacy">Privacy</a>
+                            </li>
                             <li>
                                 <a asp-page="/Login" class="btn btn-logout">Logout</a>
                             </li>

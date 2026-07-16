@@ -1,5 +1,6 @@
 ﻿@page "Index"
 @model IndexModel
+
 @{
     ViewData["Title"] = "Directory";
 }
@@ -19,6 +20,15 @@
             @foreach (var f in Model.Families)
             {
                 <option value="@f.Id">@f.FamilyName</option>
+            }
+        </select>
+    </div>
+    <div class="select-wrap">
+        <select asp-for="role" class="form-select">
+            <option value="">All roles</option>
+            @foreach (var r in AdminModel.AllowedRoles)
+            {
+                <option value="@r">@r</option>
             }
         </select>
     </div>
@@ -70,32 +80,21 @@ else
                             }
                         
                         </div>
-                        
                     }
-                    @if (m.Anniversary.HasValue)
-                    {
-                        <div class="card-text">
-                            <i class="fa-solid fa-gem" style="color: var(--color-dark);"></i>
-                             @m.Anniversary.Value.ToString("MMMM d")
-                            @if (Model.IsUpcoming(m.Anniversary))
-                            {
-                                <span class="badge-upcoming">Upcoming</span>
-                            }
-                        </div>
-                    }
+                     @if (m.Family?.FamilyName != null)
+                        {
+                            <div class="badge-family" title="@m.Family.FamilyName">@(m.Family?.FamilyName ?? "")</div>
+                        }
                    
-                    @if (m.Family?.FamilyName != null)
+                       
+                    @if (!string.IsNullOrEmpty(m.Role))
                     {
-                        <div class="badge-family" title="@m.Family.FamilyName">@(m.Family?.FamilyName ?? "")</div>
+                        <span class="badge-role-circle badge-role-circle--@m.Role.ToLower()"
+                                  title="@m.Role">@m.Role.Substring(0, 1)</span>
                     }
-                    else
-                    {
-                        <div></div>
-                    }
-
                 </div>
-              
             </li>
+            
             <div class="modal fade" id="member-modal-@m.Id" tabindex="-1">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -117,7 +116,13 @@ else
                             <p><strong>Family:</strong> @(m.Family?.FamilyName ?? "—")</p>
                             <p><strong>Phone:</strong> @(m.PhoneNumber ?? "—")</p>
                             <p><strong>Birthday:</strong> @(m.Birthdate?.ToString("MMMM d") ?? "—")</p>
-                            <p><strong>Anniversary:</strong> @(m.Anniversary?.ToString("MMMM d") ?? "—")</p>
+                            <p>
+                                <strong>Anniversary:</strong> @(m.Anniversary?.ToString("MMMM d") ?? "—")
+                                @if (Model.IsUpcoming(m.Anniversary))
+                                {
+                                    <span class="badge-upcoming">Upcoming</span>
+                                }
+                            </p>
                         </div>
                     </div>
                 </div>
