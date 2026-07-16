@@ -773,7 +773,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .alert .btn-close:hover {
   opacity: 1;
 }
-/* Admin section card */
+/* -------------------------- Admin Page ------------ */
 .admin-card {
   background: var(--color-white);
   border: 1px solid var(--color-light-2);
@@ -848,6 +848,31 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .admin-list-item:last-child {
   border-bottom: none;
+}
+
+.admin-stat-card {
+  background: var(--color-dark);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-stat-value {
+  color: var(--color-primary-dark);
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-stat-label {
+  margin-top: 0.5rem;
+  color: var(--color-light);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 /* Table */
