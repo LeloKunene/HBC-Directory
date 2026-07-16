@@ -116,6 +116,25 @@
                     <input name="Anniversary" type="date" class="form-control"
                            value="@Model.EditingMember.Anniversary?.ToString("yyyy-MM-dd")" />
                 </div>
+                <div class="form-field ">
+                    <label class="form-label">Email Address <span class="text-danger">*</span></label>
+                    <input name="Email" type="email" placeholder="member@email.com" class="form-control" 
+                           value="@Model.EditingMember.Email" required />
+                    <div class="form-text">Login username. A welcome email will be sent.</div>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">
+                        Role <span class="text-danger">*</span>
+                    </label>
+                    <select name="role" class="form-select">
+                        <option value="">-- none --</option>
+                        @foreach (var role in AdminModel.AllowedRoles)
+                        {
+                            <option value="@role" selected="@(Model.EditingMember.Role == role)">@role</option>
+                        }
+                    </select>
+                </div>
+
 
                 <div class="form-field">
                     <label class="form-label">Phone</label>
@@ -123,7 +142,7 @@
                 </div>
                 <div class="form-field">
                     <label class="form-label">Family</label>
-                    <select name="FamilyId" class="form-select">
+                    <select name="FamilyId" class="form-select" value="@Model.EditingMember.Family">
                         <option value="">-- none --</option>
                         @foreach (var f in Model.Families)
                         {
@@ -131,7 +150,7 @@
                         }
                     </select>
                 </div>
-
+                
                 <div class="form-field form-field--full">
                     <label class="form-label">New Photo (leave empty to keep current)</label>
                     <input type="file" name="Photo" class="form-control" accept="image/jpeg,image/png" />
@@ -160,10 +179,23 @@
                 <input name="Surname" placeholder="Surname" class="form-control" required />
             </div>
 
-            <div class="form-field form-field--full">
+            <div class="form-field ">
                 <label class="form-label">Email Address <span class="text-danger">*</span></label>
                 <input name="Email" type="email" placeholder="member@email.com" class="form-control" required />
-                <div class="form-text">Used as their login username. A welcome email will be sent automatically.</div>
+                <div class="form-text">Login username. A welcome email will be sent.</div>
+            </div>
+
+            <div class="form-field">
+                <label class="form-label">
+                    Role <span class="text-danger">*</span>
+                </label>
+                <select name="role" class="form-select">
+                    <option value="">-- none --</option>
+                    @foreach (var role in AdminModel.AllowedRoles)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </select>  
             </div>
 
             <div class="form-field">
@@ -216,6 +248,7 @@
                         <th>Family</th>
                         <th>Birthdate</th>
                         <th>Anniversary</th>
+                        <th>Role</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -236,6 +269,7 @@
                             <td>@(m.Family?.FamilyName ?? "—")</td>
                             <td>@(m.Birthdate?.ToString("yyyy-MM-dd") ?? "—")</td>
                             <td>@(m.Anniversary?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            <td>@(m.Role ?? "—")</td>
                             <td class="text-end">
                                 <a asp-page="/Admin" asp-route-editMemberId="@m.Id"
                                    class="btn btn-outline-primary btn-sm me-1">Edit</a>

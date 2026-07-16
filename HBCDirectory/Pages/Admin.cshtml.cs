@@ -244,52 +244,7 @@ namespace HBCDirectory.Pages
         }
 
 
-<<<<<<< HEAD
-=======
-            try
-            {
-                var member = new Member
-                {
-                    Name = CapitalizeFirst(name.Trim()),
-                    Surname = CapitalizeFirst(surname.Trim()),
-                    Birthdate = birthdate,
-                    Anniversary = anniversary,
-                    PhoneNumber = phoneNumber.Trim(),
-                    FamilyId = familyId,
-                    Role = string.IsNullOrEmpty(role) ? null : role,
-                };
 
-                if (photo != null && photo.Length > 0)
-                {
-                    var error = ValidatePhoto(photo);
-                    if (error != null)
-                    {
-                        TempData["Error"] = error;
-                        return RedirectToPage();
-                    }
-
-                    if (!await IsImageAsync(photo))
-                    {
-                        TempData["Error"] = "Not a valid image.";
-                        return RedirectToPage();
-                    }
-
-                    member.PhotoFileName = await SavePhotoAsync(photo);
-                }
-
-                _db.Members.Add(member);
-                await _db.SaveChangesAsync();
-
-                TempData["Success"] = $"Member '{member.Name} {member.Surname}' successfully added";
-            }
-            catch (Exception)
-            {
-                TempData["Error"] = $"Could not add member '{name} {surname}' — something went wrong. Please try again.";
-            }
-
-            return RedirectToPage();
-        }
->>>>>>> 20cc336 (Add forgotten comma)
 
         public async Task<IActionResult> OnPostEditMemberAsync(
             int memberId, string name, string surname, DateTime? birthdate, string? role,

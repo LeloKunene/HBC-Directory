@@ -380,6 +380,7 @@ a:hover {
   flex-direction: row;
   align-items: stretch;
   cursor: pointer;
+  position: relative;
 
   /* col-12: full width by default */
   flex: 0 0 100%;
@@ -821,6 +822,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-weight: 600;
 }
 /* Family name badge on member card */
+
 .badge-family {
   margin-top: auto;
   align-self: flex-start;
@@ -842,6 +844,43 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   display: inline-block;
 }
 
+/* Small circular role initial badge (E / D / M) */
+.badge-role-circle {
+  position: absolute;
+  bottom: 1rem;
+  right: 3rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Elder - dark/gold */
+.badge-role-circle--elder {
+  background: var(--color-dark);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+/* Deacon - gold */
+.badge-role-circle--deacon {
+  background: rgba(198, 151, 96, 0.9);
+  color: var(--color-dark);
+  border: 1px solid var(--color-primary);
+}
+
+/* Member - light */
+.badge-role-circle--member {
+  background: rgba(198, 151, 96, 0.15);
+  color: var(--color-dark-gold);
+  border: 1px solid rgba(198, 151, 96, 0.3);
+}
 /* Upcoming birthday/anniversary */
 .badge-upcoming {
   width: 0.5rem;
