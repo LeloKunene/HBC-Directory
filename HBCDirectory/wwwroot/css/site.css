@@ -520,6 +520,178 @@ a:hover {
   background: var(--color-light);
   border-radius: 1rem;
 }
+
+.family-group {
+  margin-bottom: 4rem;
+}
+
+.family-group-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-top: 2px solid var(--color-primary);
+  border-bottom: 2px dashed var(--color-beige);
+}
+
+.family-group-photo {
+  flex: 0 0 4.5rem;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-light);
+  border: 2px solid var(--color-light);
+}
+
+.family-group-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+.family-group-photo i {
+  font-size: 2rem;
+  color: var(--color-dark);
+}
+
+.family-group-photo--clickable {
+  position: relative;
+  cursor: zoom-in;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.family-group-photo--clickable::after {
+  content: "\f065";
+  /* Font Awesome magnifying glass */
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+
+  position: absolute;
+  top: 6.5px;
+  right: 8px;
+
+  width: 18px;
+  height: 18px;
+
+  border-radius: 50%;
+  background: rgba(32, 34, 34, 0.8);
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 0.65rem;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.family-group-photo--clickable:hover {
+  transform: scale(1.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.family-group-name {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-dark);
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+.family-group-photo--unassigned {
+  background: var(--color-light);
+  border-color: var(--color-light-2);
+}
+
+.family-group-photo--unassigned i {
+  color: var(--color-dark);
+}
+
+.family-photo-modal .modal-header {
+  border-bottom: none;
+  padding: 0.75rem 1rem;
+}
+
+.family-photo-modal .modal-title {
+  font-size: 1rem;
+}
+
+.family-photo-modal .modal-dialog {
+  max-width: 800px;
+  width: 90vw;
+  margin: 5vh auto;
+  display: flex;
+}
+
+.family-photo-modal .modal-content {
+  width: 100%;
+  background: var(--color-dark);
+  border: none;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.family-photo-modal .modal-header {
+  border-bottom: none;
+  flex: 0 0 auto;
+  padding: 0.75rem 1rem;
+}
+
+.family-photo-modal .modal-title {
+  color: var(--color-primary);
+  font-size: 1rem;
+}
+
+.family-photo-modal .modal-body {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.family-photo-full {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  border-radius: 0.25rem;
+}
+
+@media (max-width: 576px) {
+  .family-photo-modal .modal-dialog {
+    max-width: 100vw;
+    width: 100vw;
+    height: 100dvh;
+    margin: 0;
+  }
+
+  .family-photo-modal .modal-content {
+    border-radius: 0;
+  }
+
+  .family-photo-modal .modal-header {
+    padding: 0.6rem 0.85rem;
+  }
+
+  .family-photo-full {
+    max-height: 100%;
+  }
+}
 .section-warm {
   background: var(--color-light);
   border: 1px solid var(--color-light-2);

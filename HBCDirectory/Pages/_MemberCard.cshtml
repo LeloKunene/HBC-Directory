@@ -1,0 +1,89 @@
+@model HBCDirectory.Models.Member
+@inject HBCDirectory.Services.PhotoService Photos
+@{
+    bool IsUpcoming(DateTime? date)
+    {
+        if (!date.HasValue) return false;
+        var today = DateTime.Today;
+        var thisYear = new DateTime(today.Year, date.Value.Month, date.Value.Day);
+        var diff = (thisYear - today).TotalDays;
+        if (diff < 0) diff = (thisYear.AddYears(1) - today).TotalDays;
+        return diff >= 0 && diff <= 14;
+    }
+}
+
+<li class="member-card" data-bs-toggle="modal" data-bs-target="#member-modal-@Model.Id">
+    <div class="member-card-photo">
+        @if (Model.PhotoFileName != null)
+        {
+            <img src="@Photos.Url(Model.PhotoFileName)" alt="photo" />
+        }
+        else
+        {
+            <i class="fa-solid fa-circle-user"></i>
+        }
+    </div>
+    <div class="member-card-info">
+        <strong class="member-name">@Model.Name @Model.Surname</strong>
+        @if (Model.PhoneNumber != null)
+        {
+            <div class="card-text">
+                <i class="fa-solid fa-phone" style="color: var(--color-dark);"></i>
+                <span>@Model.PhoneNumber</span>
+            </div>
+        }
+        @if (Model.Birthdate.HasValue)
+        {
+            <div class="card-text">
+                <i class="fa-solid fa-cake" style="color: var(--color-dark);"></i>
+                <span>@Model.Birthdate.Value.ToString("MMMM d")</span>
+                @if (IsUpcoming(Model.Birthdate))
+                {
+                    <span class="badge-upcoming">Upcoming</span>
+                }
+            </div>
+        }
+        @if (Model.Family?.FamilyName != null)
+        {
+            <div class="badge-family" title="@Model.Family.FamilyName">@(Model.Family?.FamilyName ?? "")</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.Role))
+        {
+            <span class="badge-role-circle badge-role-circle--@Model.Role.ToLower()"
+                  title="@Model.Role">@Model.Role.Substring(0, 1)</span>
+        }
+    </div>
+</li>
+
+<div class="modal fade" id="member-modal-@Model.Id" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Model.Name @Model.Surname</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="member-modal-photo">
+                    @if (Model.PhotoFileName != null)
+                    {
+                        <img src="@Photos.Url(Model.PhotoFileName)" alt="photo" />
+                    }
+                    else
+                    {
+                        <i class="fa-solid fa-circle-user"></i>
+                    }
+                </div>
+                <p><strong>Family:</strong> @(Model.Family?.FamilyName ?? "—")</p>
+                <p><strong>Phone:</strong> @(Model.PhoneNumber ?? "—")</p>
+                <p><strong>Birthday:</strong> @(Model.Birthdate?.ToString("MMMM d") ?? "—")</p>
+                <p>
+                    <strong>Anniversary:</strong> @(Model.Anniversary?.ToString("MMMM d") ?? "—")
+                    @if (IsUpcoming(Model.Anniversary))
+                    {
+                        <span class="badge-upcoming">Upcoming</span>
+                    }
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
