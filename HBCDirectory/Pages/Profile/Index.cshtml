@@ -50,9 +50,9 @@
                 </div>
 
                 <div class="form-field">
-                    <label class="form-label">Role</label>
-                    @* Members cannot change their own role — admin-only *@
-                    <input class="form-control" value="@(Model.CurrentMember.Role ?? "—")" readonly disabled />
+                    <label class="form-label">Church Office</label>
+                    @* Members cannot change their own church office — admin-only *@
+                    <input class="form-control" value="@(Model.CurrentMember.ChurchOffice ?? "—")" readonly disabled />
                 </div>
 
                 <div class="form-field form-field--full">

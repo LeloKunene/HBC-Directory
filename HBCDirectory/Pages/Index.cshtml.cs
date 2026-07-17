@@ -45,7 +45,7 @@ namespace HBCDirectory.Pages
                 query = query.Where(m => m.FamilyId == familyId.Value);
 
             if (!string.IsNullOrEmpty(role))
-                query = query.Where(m => m.Role == role);
+                query = query.Where(m => m.ChurchOffice == role);
 
             Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
             Members = await query.OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();

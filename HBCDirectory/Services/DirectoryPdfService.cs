@@ -307,9 +307,9 @@ namespace HBCDirectory.Services
                             .Text($"{member.Name} {member.Surname}")
                             .Bold().FontSize(8.5f).FontColor(Dark).LineHeight(1.2f);
 
-                        if (!string.IsNullOrEmpty(member.Role))
+                        if (!string.IsNullOrEmpty(member.ChurchOffice))
                             info.Item().PaddingTop(2)
-                                .Text(member.Role.ToUpper())
+                                .Text(member.ChurchOffice.ToUpper())
                                 .FontSize(7).FontColor(Mustard).Bold().LetterSpacing(0.06f);
 
                         if (!string.IsNullOrEmpty(member.PhoneNumber))

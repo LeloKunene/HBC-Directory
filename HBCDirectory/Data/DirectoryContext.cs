@@ -7,21 +7,23 @@ namespace HBCDirectory.Data
     {
         public DirectoryContext(DbContextOptions<DirectoryContext> options) : base(options) { }
 
-        public DbSet<Family> Families => Set<Family>();
-        public DbSet<Member> Members => Set<Member>();
-        public DbSet<MemberAccount> MemberAccounts => Set<MemberAccount>();
+        public DbSet<Family>           Families           => Set<Family>();
+        public DbSet<Member>           Members            => Set<Member>();
+        public DbSet<MemberAccount>    MemberAccounts     => Set<MemberAccount>();
         public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+        public DbSet<StaffRole>        StaffRoles         => Set<StaffRole>();
+        public DbSet<StaffAssignment>  StaffAssignments   => Set<StaffAssignment>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Deleting a Family cascade-deletes all its Members
+            // Family → Members (deleting a family deletes all its members)
             modelBuilder.Entity<Member>()
                 .HasOne(m => m.Family)
                 .WithMany(f => f.Members)
                 .HasForeignKey(m => m.FamilyId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Deleting a Member cascade-deletes their account
+            // Member → MemberAccount (deleting a member deletes their account)
             modelBuilder.Entity<MemberAccount>()
                 .HasOne(a => a.Member)
                 .WithMany()
@@ -33,15 +35,24 @@ namespace HBCDirectory.Data
                 .HasIndex(a => a.MemberId)
                 .IsUnique();
 
-            // Usernames (emails) must be unique
+            // Usernames (emails) must be unique across accounts
             modelBuilder.Entity<MemberAccount>()
                 .HasIndex(a => a.Username)
                 .IsUnique();
 
-            // Member emails must be unique
-            modelBuilder.Entity<Member>()
-                .HasIndex(m => m.Email)
-                .IsUnique();
+            // StaffAssignment → Member
+            modelBuilder.Entity<StaffAssignment>()
+                .HasOne(sa => sa.Member)
+                .WithMany()
+                .HasForeignKey(sa => sa.MemberId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // StaffAssignment → StaffRole
+            modelBuilder.Entity<StaffAssignment>()
+                .HasOne(sa => sa.StaffRole)
+                .WithMany(sr => sr.Assignments)
+                .HasForeignKey(sa => sa.StaffRoleId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

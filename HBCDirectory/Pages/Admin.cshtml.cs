@@ -1,6 +1,6 @@
+using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.Runtime;
 using HBCDirectory.Data;
 using HBCDirectory.Models;
 using HBCDirectory.Services;
@@ -8,423 +8,375 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace HBCDirectory.Pages
 {
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class AdminModel : PageModel
     {
         private readonly DirectoryContext _db;
-        private readonly PhotoService _photos;
-        private readonly IConfiguration _config;
-        private readonly TokenService _tokens;
-        private readonly EmailService _email;
-
-        private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
-        private const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2 MB
-
-        public static readonly string[] AllowedRoles = { "Member", "Deacon", "Elder" };
+        private readonly IConfiguration   _config;
+        private readonly PhotoService      _photos;
+        private readonly TokenService      _tokens;
+        private readonly EmailService      _email;
 
         public AdminModel(DirectoryContext db, IConfiguration config, PhotoService photos,
-                        TokenService tokens, EmailService email)
+                          TokenService tokens, EmailService email)
         {
-            _db = db;
-            _config = config;
-            _photos = photos;
-            _tokens = tokens;
-            _email  = email;
+            _db = db; _config = config; _photos = photos; _tokens = tokens; _email = email;
         }
 
-        public string PhotoUrl(string? fileName) => _photos.Url(fileName);
-
-        public List<Family> Families { get; set; } = new();
-        public List<Member> Members { get; set; } = new();
-
-        public int TotalMembers { get; set; }
+        public List<Member>          Members          { get; set; } = new();
+        public List<Family>          Families         { get; set; } = new();
+        public List<StaffRole>       StaffRoles       { get; set; } = new();
+        public List<StaffAssignment> StaffAssignments { get; set; } = new();
+        public int TotalMembers  { get; set; }
         public int TotalFamilies { get; set; }
-
-        public List<Member> UpcomingBirthdays { get; set; } = new();
-        public List<Member> UpcomingAnniversaries { get; set; } = new();
-
-        private static string CapitalizeFirst(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input)) return input;
-            return char.ToUpper(input[0]) + input.Substring(1);
-        }
-        [BindProperty(SupportsGet = true)]
-        public int? EditMemberId { get; set; }
-        public Member? EditingMember { get; set; }
-
-        [BindProperty(SupportsGet = true)]
-        public int? EditFamilyId { get; set; }
-        public Family? EditingFamily { get; set; }
-
-        private static bool IsWithinDays(DateTime? date, int days)
-        {
-            if (!date.HasValue) return false;
-            var today = DateTime.Today;
-            var thisYear = new DateTime(today.Year, date.Value.Month, date.Value.Day);
-            if (thisYear < today) thisYear = thisYear.AddYears(1);
-            return (thisYear - today).TotalDays <= days;
-        }
-
-        private static DateTime NextOccurrence(DateTime date)
-        {
-            var today = DateTime.Today;
-            var next = new DateTime(today.Year, date.Month, date.Day);
-            if (next < today) next = next.AddYears(1);
-            return next;
-        }
+        public string PhotoUrl(string? f) => _photos.Url(f);
 
         public async Task OnGetAsync()
         {
-            Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
-            Members = await _db.Members.Include(m => m.Family).OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
-
-            if (EditMemberId.HasValue)
-                EditingMember = Members.FirstOrDefault(m => m.Id == EditMemberId.Value);
-
-            if (EditFamilyId.HasValue)
-                EditingFamily = Families.FirstOrDefault(f => f.Id == EditFamilyId.Value);
-
-            TotalMembers = Members.Count;
+            Members = await _db.Members.Include(m => m.Family)
+                .OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
+            Families = await _db.Families.Include(f => f.Members)
+                .OrderBy(f => f.FamilyName).ToListAsync();
+            StaffRoles = await _db.StaffRoles.OrderBy(sr => sr.DisplayOrder).ToListAsync();
+            StaffAssignments = await _db.StaffAssignments
+                .Include(sa => sa.Member).Include(sa => sa.StaffRole)
+                .OrderBy(sa => sa.DisplayOrder).ToListAsync();
+            TotalMembers  = Members.Count;
             TotalFamilies = Families.Count;
-
-            UpcomingBirthdays = Members
-                .Where(m => IsWithinDays(m.Birthdate, 30))
-                .OrderBy(m => NextOccurrence(m.Birthdate!.Value))
-                .ToList();
-
-            UpcomingAnniversaries = Members
-                .Where(m => IsWithinDays(m.Anniversary, 30))
-                .OrderBy(m => NextOccurrence(m.Anniversary!.Value))
-                .ToList();
         }
 
-        private string? ValidatePhoto(IFormFile photo)
-        {
-            if (photo.Length > MaxFileSizeBytes)
-                return $"Photo must be smaller than 2MB. Your file is {photo.Length / 1024 / 1024}MB.";
-
-            var ext = Path.GetExtension(photo.FileName).ToLowerInvariant();
-            if (!AllowedExtensions.Contains(ext))
-                return $"Only JPG and PNG files are allowed. Got: {ext}";
-
-            return null; // null means valid
-        }
-
-        /** Checks the actual bytes at the start of the file to confirm it is a real image.
-        This is called "magic bytes" checking. It protects against someone renaming
-        malware.exe to malware.jpg to bypass the extension check above.*/
-        private static async Task<bool> IsImageAsync(IFormFile file)
-        {
-            var header = new byte[4];
-            using var stream = file.OpenReadStream();
-            await stream.ReadAsync(header, 0, 4);
-            if (header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF) return true;
-            if (header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47) return true;
-            return false;
-        }
-
-        /** Saves an uploaded photo to wwwroot/uploads and returns the generated filename.
-            We use Guid.NewGuid() to generate a random filename so two members uploading
-            the same file don't overwrite each other.*/
-        private async Task<string> SavePhotoAsync(IFormFile photo)
-        {
-            var fileName = Guid.NewGuid().ToString() + 
-                        Path.GetExtension(photo.FileName).ToLowerInvariant();
-
-            var credentials = new BasicAWSCredentials(
-                _config["R2:AccessKeyId"],
-                _config["R2:SecretAccessKey"]);
-
-            var config = new AmazonS3Config
-            {
-                ServiceURL = _config["R2:Endpoint"],
-                ForcePathStyle = true
-            };
-
-            using var client = new AmazonS3Client(credentials, config);
-            using var stream = photo.OpenReadStream();
-
-            await client.PutObjectAsync(new PutObjectRequest
-            {
-                BucketName = _config["R2:BucketName"],
-                Key = fileName,
-                InputStream = stream,
-                ContentType = photo.ContentType,
-                DisablePayloadSigning = true
-            });
-
-            return fileName;
-        }
-
-        private async Task DeletePhotoAsync(string fileName)
-        {
-            try
-            {
-                var credentials = new BasicAWSCredentials(
-                    _config["R2:AccessKeyId"],
-                    _config["R2:SecretAccessKey"]);
-
-                var config = new AmazonS3Config
-                {
-                    ServiceURL = _config["R2:Endpoint"],
-                    ForcePathStyle = true
-                };
-
-                using var client = new AmazonS3Client(credentials, config);
-
-                await client.DeleteObjectAsync(new DeleteObjectRequest
-                {
-                    BucketName = _config["R2:BucketName"],
-                    Key = fileName
-                });
-
-                Console.WriteLine($"Deleted from R2: {fileName}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"R2 delete failed for {fileName}: {ex.Message}");
-            }
-        }
-
-        public async Task<IActionResult> OnPostAddFamilyAsync(string familyName)
-        {
-            if (string.IsNullOrWhiteSpace(familyName))
-            {
-                TempData["Error"] = "Family name cannot be empty.";
-                return RedirectToPage();
-            }
-
-            _db.Families.Add(new Family { FamilyName = CapitalizeFirst(familyName.Trim()) });
-            await _db.SaveChangesAsync();
-            TempData["Success"] = $"Family '{familyName.Trim()}' successfully added.";
-
-            return RedirectToPage();
-        }
-
-        public async Task<IActionResult> OnPostEditFamilyAsync(int familyId, string familyName, IFormFile? photo)
-        {
-            if (string.IsNullOrWhiteSpace(familyName))
-            {
-                TempData["Error"] = "Family name cannot be empty.";
-                return RedirectToPage();
-            }
-
-            var family = await _db.Families.FindAsync(familyId);
-            if (family == null) return NotFound();
-
-            var oldName = family.FamilyName;
-            var nameChanged = !oldName.Equals(familyName.Trim(), StringComparison.OrdinalIgnoreCase);
-            family.FamilyName = familyName.Trim();
-
-            var photoUpdated = false;
-
-            if (photo != null && photo.Length > 0)
-            {
-                var error = ValidatePhoto(photo);
-                if (error != null) { TempData["Error"] = error; return RedirectToPage(); }
-                if (!await IsImageAsync(photo)) { TempData["Error"] = "Not a valid image."; return RedirectToPage(); }
-
-                if (!string.IsNullOrEmpty(family.PhotoFileName))
-                    await DeletePhotoAsync(family.PhotoFileName);
-
-                family.PhotoFileName = await SavePhotoAsync(photo);
-                photoUpdated = true;
-            }
-
-            await _db.SaveChangesAsync();
-
-            TempData["Success"] = photoUpdated
-                ? "Photo uploaded successfully."
-                : $"Family renamed from '{oldName}' to '{family.FamilyName}'.";
-
-            return RedirectToPage();
-        }
-
-        public async Task<IActionResult> OnPostDeleteFamilyAsync(int familyId)
-        {
-            var family = await _db.Families.FindAsync(familyId);
-            var familyName = family.FamilyName;
-
-            if (family != null)
-            {
-                
-                _db.Families.Remove(family);
-                await _db.SaveChangesAsync();
-                TempData["Success"] = $"Family '{familyName}' successfully deleted.";
-            }
-            else
-            {
-                TempData["Error"] = $"Could not delete family '{familyName}'.";
-            }
-            return RedirectToPage();
-        }
-
-
-
-
-        public async Task<IActionResult> OnPostEditMemberAsync(
-            int memberId, string name, string surname, DateTime? birthdate, string? role,
-            DateTime? anniversary, string? phoneNumber, int? familyId, IFormFile? photo)
-        {
-            // FindAsync looks up a record by primary key. Returns null if not found.
-            var member = await _db.Members.FindAsync(memberId);
-            if (member == null) return NotFound();
-
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
-            {
-                TempData["Error"] = "Name and surname are required.";
-                return RedirectToPage();
-            }
-
-            // Update the scalar fields
-            member.Name = name.Trim();
-            member.Surname = surname.Trim();
-            member.Birthdate = birthdate;
-            member.Anniversary = anniversary;
-            member.PhoneNumber = phoneNumber?.Trim();
-            member.FamilyId = familyId;
-            member.Role = string.IsNullOrEmpty(role) ? "Member" : role;
-
-            // Only replace the photo if the user actually uploaded a new one
-            if (photo != null && photo.Length > 0)
-            {
-                var error = ValidatePhoto(photo);
-                if (error != null) { TempData["Error"] = error; return RedirectToPage(); }
-                if (!await IsImageAsync(photo)) { TempData["Error"] = "Not a valid image."; return RedirectToPage(); }
-
-                // Delete the old photo file from disk so we don't accumulate orphaned files
-                if (!string.IsNullOrEmpty(member.PhotoFileName))
-                    await DeletePhotoAsync(member.PhotoFileName);
-
-                member.PhotoFileName = await SavePhotoAsync(photo);
-            }
-
-            await _db.SaveChangesAsync();
-            TempData["Success"] = $"Member {member.Name} {member.Surname} updated.";
-            return RedirectToPage();
-        }
-
-        public async Task<IActionResult> OnPostDeleteMemberAsync(int memberId)
-        {
-            var member = await _db.Members.FindAsync(memberId);
-            var memberName = member.Name;
-            var memberSurname = member.Surname;
-
-            if (member != null)
-            {
-                // Delete the photo file from disk when the member is deleted
-                if (!string.IsNullOrEmpty(member.PhotoFileName))  
-                {
-                    await DeletePhotoAsync(member.PhotoFileName);
-                }
-                _db.Members.Remove(member);
-                await _db.SaveChangesAsync();
-                TempData["Success"] = $"Member '{memberName} {memberSurname}' successfully deleted";
-            }
-            else
-            {
-                TempData["Error"] = $"Could not delete member '{memberName} {memberSurname}'.";
-            }
-            return RedirectToPage();
-        }
-
+        // ── Add Member ────────────────────────────────────────────────────────
         public async Task<IActionResult> OnPostAddMemberAsync(
-            string name, string surname, string email, DateTime? birthdate,
-            DateTime? anniversary, string phoneNumber, int? familyId,
-            string? role, IFormFile? photo)
+            string name, string surname, string? email,
+            string memberType, string? memberStatus, string? churchOffice,
+            DateTime? birthdate, DateTime? anniversary,
+            string? phoneNumber, int? familyId, IFormFile? photo)
         {
-            // ── Validation ────────────────────────────────────────────────────────────
-            if (string.IsNullOrWhiteSpace(name)        ||
-                string.IsNullOrWhiteSpace(surname)      ||
-                string.IsNullOrWhiteSpace(email)        ||
-                !birthdate.HasValue                     ||
-                string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                TempData["Error"] = "Name, surname, email, birthdate, and phone number are all required.";
-                return RedirectToPage("/Admin");
-            }
+            memberType = string.IsNullOrWhiteSpace(memberType) ? "Adult" : memberType;
+            bool isAdult = memberType == "Adult";
 
-            // Check email uniqueness
-            var emailTaken = await _db.Members.AnyAsync(m => m.Email == email.Trim().ToLower());
-            if (emailTaken)
+            if (isAdult && string.IsNullOrWhiteSpace(email))
+            { TempData["Error"] = "Email is required for adults."; return RedirectToPage(); }
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
+            { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
+
+            if (isAdult && !string.IsNullOrWhiteSpace(email))
             {
-                TempData["Error"] = $"A member with email '{email}' already exists.";
-                return RedirectToPage("/Admin");
+                var lower = email.Trim().ToLower();
+                if (await _db.Members.AnyAsync(m => m.Email == lower))
+                { TempData["Error"] = $"Email '{email}' already exists."; return RedirectToPage(); }
             }
 
             try
             {
-                // ── Create member ─────────────────────────────────────────────────────
                 var member = new Member
                 {
-                    Name        = CapitalizeFirst(name.Trim()),
-                    Surname     = CapitalizeFirst(surname.Trim()),
-                    Email       = email.Trim().ToLower(),
+                    Name         = CapFirst(name),
+                    Surname      = CapFirst(surname),
+                    Email        = isAdult ? email!.Trim().ToLower() : null,
+                    MemberType   = memberType,
+                    MemberStatus = isAdult ? (memberStatus ?? "Member") : null,
+                    ChurchOffice = isAdult && memberStatus == "Member"
+                                    ? (string.IsNullOrEmpty(churchOffice) ? null : churchOffice)
+                                    : null,
                     Birthdate   = birthdate,
                     Anniversary = anniversary,
-                    PhoneNumber = phoneNumber.Trim(),
-                    FamilyId    = familyId,
-                    Role        = string.IsNullOrEmpty(role) ? null : role,
+                    PhoneNumber = phoneNumber?.Trim(),
+                    FamilyId    = familyId
                 };
 
-                if (photo != null && photo.Length > 0)
+                if (photo is { Length: > 0 })
                 {
                     var err = ValidatePhoto(photo);
-                    if (err != null) { TempData["Error"] = err; return RedirectToPage("/Admin"); }
-                    if (!await IsImageAsync(photo)) { TempData["Error"] = "Not a valid image."; return RedirectToPage("/Admin"); }
+                    if (err != null) { TempData["Error"] = err; return RedirectToPage(); }
+                    if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return RedirectToPage(); }
                     member.PhotoFileName = await SavePhotoAsync(photo);
                 }
 
                 _db.Members.Add(member);
                 await _db.SaveChangesAsync();
 
-                // ── Auto-create MemberAccount with temp password ──────────────────────
-                var tempPassword = GenerateTempPassword();
-
-                var account = new MemberAccount
+                if (isAdult && !string.IsNullOrEmpty(member.Email))
                 {
-                    MemberId     = member.Id,
-                    Username     = member.Email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(tempPassword)
-                };
+                    var tmp  = GenerateTempPassword();
+                    _db.MemberAccounts.Add(new MemberAccount
+                    {
+                        MemberId     = member.Id,
+                        Username     = member.Email,
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(tmp)
+                    });
+                    await _db.SaveChangesAsync();
 
-                _db.MemberAccounts.Add(account);
-                await _db.SaveChangesAsync();
+                    var token = await _tokens.CreateTokenAsync(member.Email, TimeSpan.FromHours(24));
+                    var link  = $"{Request.Scheme}://{Request.Host}/ResetPassword?token={token}";
+                    await _email.SendWelcomeEmailAsync(member.Email, member.DisplayName, tmp, link);
+                }
 
-                // ── Generate reset token (24hr expiry for welcome email) ──────────────
-                var token       = await _tokens.CreateTokenAsync(member.Email, TimeSpan.FromHours(24));
-                var baseUrl     = $"{Request.Scheme}://{Request.Host}";
-                var resetLink   = $"{baseUrl}/ResetPassword?token={token}";
-
-                // ── Send welcome email ────────────────────────────────────────────────
-                await _email.SendWelcomeEmailAsync(
-                    toEmail:           member.Email,
-                    memberName:        $"{member.Name} {member.Surname}",
-                    temporaryPassword: tempPassword,
-                    resetPasswordLink: resetLink
-                );
-
-                TempData["Success"] = $"Member '{member.Name} {member.Surname}' added and welcome email sent to {member.Email}.";
+                TempData["Success"] = $"'{member.DisplayName}' added.";
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                TempData["Error"] = "Could not add member — something went wrong. Please try again.";
-            }
-
-            return RedirectToPage("/Admin");
+            catch (Exception ex) { Console.WriteLine(ex.Message); TempData["Error"] = "Could not add member."; }
+            return RedirectToPage();
         }
 
-        // ── Helper — generates a readable 12-character temp password ─────────────────
+        // ── Edit Member ───────────────────────────────────────────────────────
+        public async Task<IActionResult> OnPostEditMemberAsync(
+            int id, string name, string surname, string? email,
+            string memberType, string? memberStatus, string? churchOffice,
+            DateTime? birthdate, DateTime? anniversary, string? phoneNumber,
+            int? familyId, IFormFile? photo,
+            bool showPhone, bool showBirthdate, bool showAnniversary)
+        {
+            var m = await _db.Members.FindAsync(id);
+            if (m == null) return NotFound();
+
+            bool isAdult = memberType == "Adult";
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
+            { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
+
+            m.Name         = CapFirst(name);
+            m.Surname      = CapFirst(surname);
+            m.MemberType   = memberType;
+            m.MemberStatus = isAdult ? (memberStatus ?? "Member") : null;
+            m.ChurchOffice = isAdult && memberStatus == "Member"
+                              ? (string.IsNullOrEmpty(churchOffice) ? null : churchOffice)
+                              : null;
+            m.Birthdate   = birthdate;
+            m.Anniversary = anniversary;
+            m.PhoneNumber = phoneNumber?.Trim();
+            m.FamilyId    = familyId;
+            m.ShowPhone        = showPhone;
+            m.ShowBirthdate    = showBirthdate;
+            m.ShowAnniversary  = showAnniversary;
+
+            if (isAdult && !string.IsNullOrWhiteSpace(email))
+            {
+                var newEmail = email.Trim().ToLower();
+                if (newEmail != m.Email)
+                {
+                    if (await _db.Members.AnyAsync(x => x.Email == newEmail && x.Id != id))
+                    { TempData["Error"] = $"Email '{email}' is already in use."; return RedirectToPage(); }
+                    m.Email = newEmail;
+                    var acct = await _db.MemberAccounts.FirstOrDefaultAsync(a => a.MemberId == id);
+                    if (acct != null) acct.Username = newEmail;
+                }
+            }
+
+            if (photo is { Length: > 0 })
+            {
+                if (!string.IsNullOrEmpty(m.PhotoFileName)) await DeleteFromR2Async(m.PhotoFileName);
+                var err = ValidatePhoto(photo);
+                if (err != null) { TempData["Error"] = err; return RedirectToPage(); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return RedirectToPage(); }
+                m.PhotoFileName = await SavePhotoAsync(photo);
+            }
+
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"'{m.DisplayName}' updated.";
+            return RedirectToPage();
+        }
+
+        // ── Delete Member ─────────────────────────────────────────────────────
+        public async Task<IActionResult> OnPostDeleteMemberAsync(int id)
+        {
+            var m = await _db.Members.FindAsync(id);
+            if (m == null) return NotFound();
+            if (!string.IsNullOrEmpty(m.PhotoFileName)) await DeleteFromR2Async(m.PhotoFileName);
+            _db.Members.Remove(m);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Member deleted.";
+            return RedirectToPage();
+        }
+
+        // ── Add Family ────────────────────────────────────────────────────────
+        public async Task<IActionResult> OnPostAddFamilyAsync(
+            string familyName, string? address, string? familyPhone,
+            string? additionalNotes, IFormFile? photo)
+        {
+            if (string.IsNullOrWhiteSpace(familyName))
+            { TempData["Error"] = "Family name is required."; return RedirectToPage(); }
+
+            var f = new Family
+            {
+                FamilyName      = CapFirst(familyName),
+                Address         = address?.Trim(),
+                FamilyPhone     = familyPhone?.Trim(),
+                AdditionalNotes = additionalNotes?.Trim()
+            };
+
+            if (photo is { Length: > 0 })
+            {
+                var err = ValidatePhoto(photo);
+                if (err != null) { TempData["Error"] = err; return RedirectToPage(); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return RedirectToPage(); }
+                f.PhotoFileName = await SavePhotoAsync(photo);
+            }
+
+            _db.Families.Add(f);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Family '{f.FamilyName}' created.";
+            return RedirectToPage();
+        }
+
+        // ── Edit Family ───────────────────────────────────────────────────────
+        public async Task<IActionResult> OnPostEditFamilyAsync(
+            int id, string familyName, string? address, string? familyPhone,
+            string? additionalNotes, IFormFile? photo)
+        {
+            var f = await _db.Families.FindAsync(id);
+            if (f == null) return NotFound();
+            if (string.IsNullOrWhiteSpace(familyName))
+            { TempData["Error"] = "Family name is required."; return RedirectToPage(); }
+
+            f.FamilyName      = CapFirst(familyName);
+            f.Address         = address?.Trim();
+            f.FamilyPhone     = familyPhone?.Trim();
+            f.AdditionalNotes = additionalNotes?.Trim();
+
+            if (photo is { Length: > 0 })
+            {
+                if (!string.IsNullOrEmpty(f.PhotoFileName)) await DeleteFromR2Async(f.PhotoFileName);
+                var err = ValidatePhoto(photo);
+                if (err != null) { TempData["Error"] = err; return RedirectToPage(); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return RedirectToPage(); }
+                f.PhotoFileName = await SavePhotoAsync(photo);
+            }
+
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Family '{f.FamilyName}' updated.";
+            return RedirectToPage();
+        }
+
+        // ── Delete Family ─────────────────────────────────────────────────────
+        public async Task<IActionResult> OnPostDeleteFamilyAsync(int id)
+        {
+            // Adults → individual members (unlink)
+            var adults = await _db.Members
+                .Where(m => m.FamilyId == id && m.MemberType == "Adult").ToListAsync();
+            foreach (var a in adults) a.FamilyId = null;
+            await _db.SaveChangesAsync();
+
+            // Children → deleted via cascade
+            var family = await _db.Families.Include(f => f.Members)
+                .FirstOrDefaultAsync(f => f.Id == id);
+            if (family == null) return NotFound();
+            if (!string.IsNullOrEmpty(family.PhotoFileName))
+                await DeleteFromR2Async(family.PhotoFileName);
+
+            _db.Families.Remove(family);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Family deleted. Adults moved to Individual Members.";
+            return RedirectToPage();
+        }
+
+        // ── Staff Role Management ─────────────────────────────────────────────
+        public async Task<IActionResult> OnPostAddStaffRoleAsync(string roleName)
+        {
+            if (string.IsNullOrWhiteSpace(roleName))
+            { TempData["Error"] = "Role name is required."; return RedirectToPage(); }
+            var maxOrd = await _db.StaffRoles.AnyAsync()
+                ? await _db.StaffRoles.MaxAsync(sr => sr.DisplayOrder) : 0;
+            _db.StaffRoles.Add(new StaffRole { RoleName = roleName.Trim(), DisplayOrder = maxOrd + 1 });
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Staff role '{roleName}' created.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostDeleteStaffRoleAsync(int id)
+        {
+            var role = await _db.StaffRoles.FindAsync(id);
+            if (role == null) return NotFound();
+            _db.StaffRoles.Remove(role);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Staff role deleted.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostAssignStaffAsync(
+            int memberId, int staffRoleId, string? bio, int displayOrder)
+        {
+            var existing = await _db.StaffAssignments.FirstOrDefaultAsync(sa => sa.MemberId == memberId);
+            if (existing != null) _db.StaffAssignments.Remove(existing);
+            _db.StaffAssignments.Add(new StaffAssignment
+            {
+                MemberId = memberId, StaffRoleId = staffRoleId,
+                Bio = bio?.Trim(), DisplayOrder = displayOrder
+            });
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Staff assignment saved.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostRemoveStaffAsync(int id)
+        {
+            var sa = await _db.StaffAssignments.FindAsync(id);
+            if (sa == null) return NotFound();
+            _db.StaffAssignments.Remove(sa);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Staff assignment removed.";
+            return RedirectToPage();
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        private static string CapFirst(string s)
+        { s = s.Trim(); return s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..]; }
+
+        private static string? ValidatePhoto(IFormFile p)
+        {
+            var ok = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            var ext = Path.GetExtension(p.FileName).ToLowerInvariant();
+            if (!ok.Contains(ext)) return "Photo must be JPG, PNG, or WEBP.";
+            if (p.Length > 5 * 1024 * 1024) return "Photo must be under 5 MB.";
+            return null;
+        }
+
+        private static async Task<bool> IsImageAsync(IFormFile p)
+        {
+            var buf = new byte[4];
+            using var s = p.OpenReadStream();
+            _ = await s.ReadAsync(buf.AsMemory(0, 4));
+            return (buf[0] == 0xFF && buf[1] == 0xD8) ||
+                   (buf[0] == 0x89 && buf[1] == 0x50) ||
+                   (buf[0] == 0x52 && buf[1] == 0x49);
+        }
+
+        private async Task<string> SavePhotoAsync(IFormFile p)
+        {
+            var fn  = Guid.NewGuid() + Path.GetExtension(p.FileName).ToLowerInvariant();
+            var cred = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
+            var cfg  = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
+            using var client = new AmazonS3Client(cred, cfg);
+            using var stream = p.OpenReadStream();
+            await client.PutObjectAsync(new PutObjectRequest
+            {
+                BucketName = _config["R2:BucketName"], Key = fn,
+                InputStream = stream, ContentType = p.ContentType, DisablePayloadSigning = true
+            });
+            return fn;
+        }
+
+        private async Task DeleteFromR2Async(string fn)
+        {
+            try
+            {
+                var cred = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
+                var cfg  = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
+                using var client = new AmazonS3Client(cred, cfg);
+                await client.DeleteObjectAsync(_config["R2:BucketName"], fn);
+                Console.WriteLine($"Deleted from R2: {fn}");
+            }
+            catch (Exception ex) { Console.WriteLine($"R2 delete failed: {ex.Message}"); }
+        }
+
         private static string GenerateTempPassword()
         {
             const string chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-            var random = new byte[12];
-            System.Security.Cryptography.RandomNumberGenerator.Fill(random);
-            return new string(random.Select(b => chars[b % chars.Length]).ToArray());
+            var rnd = new byte[12];
+            RandomNumberGenerator.Fill(rnd);
+            return new string(rnd.Select(b => chars[b % chars.Length]).ToArray());
         }
     }
 }

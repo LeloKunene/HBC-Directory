@@ -12,8 +12,7 @@
     }
 }
 
-<li class="member-card" data-name="@Model.Name.ToLower() @Model.Surname.ToLower()" data-bs-toggle="modal"
-    data-bs-target="#member-modal-@Model.Id">
+<li class="member-card" data-bs-toggle="modal" data-bs-target="#member-modal-@Model.Id">
     <div class="member-card-photo">
         @if (Model.PhotoFileName != null)
         {
@@ -48,10 +47,10 @@
         {
             <div class="badge-family" title="@Model.Family.FamilyName">@(Model.Family?.FamilyName ?? "")</div>
         }
-        @if (!string.IsNullOrEmpty(Model.Role))
+        @if (!string.IsNullOrEmpty(Model.ChurchOffice))
         {
-            <span class="badge-role-circle badge-role-circle--@Model.Role.ToLower()"
-                  title="@Model.Role">@Model.Role.Substring(0, 1)</span>
+            <span class="badge-role-circle badge-role-circle--@Model.ChurchOffice.ToLower()"
+                  title="@Model.ChurchOffice">@Model.ChurchOffice.Substring(0, 1)</span>
         }
     </div>
 </li>

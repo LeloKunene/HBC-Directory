@@ -1,20 +1,30 @@
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace HBCDirectory.Models
 {
     public class Family
     {
         public int Id { get; set; }
-
-        [Required]
         public string FamilyName { get; set; } = string.Empty;
+        public string? PhotoFileName { get; set; }
+        public string? Address { get; set; }
+        public string? FamilyPhone { get; set; }
+        public string? AdditionalNotes { get; set; }
 
-        // Navigation property, lets EF Core load members with Include()
         public ICollection<Member> Members { get; set; } = new List<Member>();
 
-        // Family group photo stored in R2
-        public string? PhotoFileName { get; set; }
+        [NotMapped]
+        public IEnumerable<Member> Adults =>
+            Members.Where(m => m.MemberType == "Adult")
+                   .OrderBy(m => m.Surname).ThenBy(m => m.Name);
 
+        [NotMapped]
+        public IEnumerable<Member> Children =>
+            Members.Where(m => m.MemberType == "Child")
+                   .OrderBy(m => m.Birthdate);
+
+        [NotMapped]
+        public bool HasLeadership =>
+            Members.Any(m => m.ChurchOffice is "Elder" or "Deacon");
     }
 }
