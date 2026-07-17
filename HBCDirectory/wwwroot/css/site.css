@@ -1113,6 +1113,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   text-transform: uppercase;
   font-weight: 600;
 }
+
+.password-toggle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  z-index: 10;
+  padding: 0.25rem;
+}
 /* Family name badge on member card */
 
 .badge-family {
