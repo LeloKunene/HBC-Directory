@@ -19,7 +19,7 @@ namespace HBCDirectory.Pages
             _photos = photos;
         }
 
-        // ── Data for the directory ────────────────────────────────────────────
+        //  Data for the directory 
         // Leadership — Elders and Deacons featured at the top
         public List<Member> Leadership { get; set; } = new();
 
@@ -39,7 +39,7 @@ namespace HBCDirectory.Pages
 
         public string PhotoUrl(string? f) => _photos.Url(f);
 
-        // ── Upcoming birthdays (next 30 days) ────────────────────────────────
+        //  Upcoming birthdays (next 30 days) 
         public List<Member> UpcomingBirthdays { get; set; } = new();
 
         public async Task OnGetAsync(string? q, string? status, string? office)
@@ -48,21 +48,21 @@ namespace HBCDirectory.Pages
             StatusFilter = status;
             OfficeFilter = office;
 
-            // ── Leadership ────────────────────────────────────────────────────
+            //  Leadership 
             Leadership = await _db.Members
                 .Include(m => m.Family)
                 .Where(m => m.ChurchOffice == "Elder" || m.ChurchOffice == "Deacon")
                 .OrderBy(m => m.ChurchOffice).ThenBy(m => m.Surname).ThenBy(m => m.Name)
                 .ToListAsync();
 
-            // ── Staff ─────────────────────────────────────────────────────────
+            //  Staff 
             StaffAssignments = await _db.StaffAssignments
                 .Include(sa => sa.Member).ThenInclude(m => m.Family)
                 .Include(sa => sa.StaffRole)
                 .OrderBy(sa => sa.DisplayOrder)
                 .ToListAsync();
 
-            // ── Families (alphabetical) ───────────────────────────────────────
+            //  Families (alphabetical) 
             var familiesQ = _db.Families
                 .Include(f => f.Members)
                 .OrderBy(f => f.FamilyName)
@@ -70,7 +70,7 @@ namespace HBCDirectory.Pages
 
             Families = await familiesQ.ToListAsync();
 
-            // ── Individual members (adults with no family) ────────────────────
+            //  Individual members (adults with no family) 
             var individualsQ = _db.Members
                 .Where(m => m.FamilyId == null && m.MemberType == "Adult")
                 .OrderBy(m => m.Surname).ThenBy(m => m.Name)
@@ -83,7 +83,7 @@ namespace HBCDirectory.Pages
 
             IndividualMembers = await individualsQ.ToListAsync();
 
-            // ── Upcoming birthdays ────────────────────────────────────────────
+            //  Upcoming birthdays 
             var today    = DateTime.Today;
             var in30days = today.AddDays(30);
             var allMembers = await _db.Members
@@ -102,7 +102,7 @@ namespace HBCDirectory.Pages
                 .ToList();
         }
 
-        // ── Search helpers ────────────────────────────────────────────────────
+        //  Search helpers 
         public bool FamilyMatchesSearch(Family f)
         {
             if (string.IsNullOrEmpty(Q)) return true;

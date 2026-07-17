@@ -6,7 +6,7 @@
     ViewData["Title"] = "Directory";
 }
 
-<!-- ── Birthday notification bell ────────────────────────── -->
+<!--  Birthday notification bell  -->
 @if (Model.UpcomingBirthdays.Any())
 {
     <div class="birthday-bar">
@@ -19,7 +19,7 @@
     </div>
 }
 
-<!-- ── Search bar ────────────────────────────────────────── -->
+<!--  Search bar  -->
 <div class="dir-search-bar">
     <form method="get" class="dir-search-form">
         <div class="dir-search-input-wrap">
@@ -356,7 +356,7 @@ else
 
 @section Scripts {
 <script>
-// ── Family modal ─────────────────────────────────────────────
+//  Family modal 
 document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     const data = JSON.parse(btn.getAttribute('data-family') || '{}');
@@ -431,7 +431,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
         ? `<div class="dir-modal-section-label">Children</div><div class="dir-modal-children-row">${ch}</div>` : '';
 });
 
-// ── Member modal ─────────────────────────────────────────────
+//  Member modal 
 document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     const get = k => btn.getAttribute('data-' + k) || '';

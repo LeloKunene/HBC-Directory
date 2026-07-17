@@ -64,7 +64,7 @@ namespace HBCDirectory.Pages
             if (StaffAssignments.Any()) Stats.Add(("Staff", StaffAssignments.Count));
         }
 
-        // ── Add Member ────────────────────────────────────────────────────────
+        //  Add Member 
         public async Task<IActionResult> OnPostAddMemberAsync(
             string name, string surname, string? email,
             string memberType, string? memberStatus, string? churchOffice,
@@ -137,7 +137,7 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        // ── Edit Member ───────────────────────────────────────────────────────
+        //  Edit Member 
         public async Task<IActionResult> OnPostEditMemberAsync(
             int id, string name, string surname, string? email,
             string memberType, string? memberStatus, string? churchOffice,
@@ -194,7 +194,7 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        // ── Delete Member ─────────────────────────────────────────────────────
+        //  Delete Member 
         public async Task<IActionResult> OnPostDeleteMemberAsync(int id)
         {
             var m = await _db.Members.FindAsync(id);
@@ -206,7 +206,7 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        // ── Add Family ────────────────────────────────────────────────────────
+        //  Add Family 
         public async Task<IActionResult> OnPostAddFamilyAsync(
             string familyName, string? address, string? familyPhone,
             string? additionalNotes, IFormFile? photo)
@@ -236,7 +236,7 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        // ── Edit Family ───────────────────────────────────────────────────────
+        //  Edit Family 
         public async Task<IActionResult> OnPostEditFamilyAsync(
             int id, string familyName, string? address, string? familyPhone,
             string? additionalNotes, IFormFile? photo)
@@ -265,7 +265,7 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        // ── Delete Family ─────────────────────────────────────────────────────
+        //  Delete Family 
         public async Task<IActionResult> OnPostDeleteFamilyAsync(int id)
         {
             // Adults → individual members (unlink)
@@ -287,7 +287,7 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        // ── Staff Role Management ─────────────────────────────────────────────
+        //  Staff Role Management 
         public async Task<IActionResult> OnPostAddStaffRoleAsync(string roleName)
         {
             if (string.IsNullOrWhiteSpace(roleName))
@@ -335,7 +335,7 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        // ── Helpers ───────────────────────────────────────────────────────────
+        //  Helpers 
         private static string CapFirst(string s)
         { s = s.Trim(); return s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..]; }
 

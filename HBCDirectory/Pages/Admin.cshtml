@@ -20,7 +20,7 @@
     </div>
 }
 
-<!-- ── Stats ──────────────────────────────────────────── -->
+<!--  Stats  -->
 <div class="row g-3 mb-4">
     @foreach (var stat in Model.Stats)
     {
@@ -570,7 +570,7 @@
 
 @section Scripts {
 <script>
-// ── Add form: show/hide fields by MemberType ──────────────────
+//  Add form: show/hide fields by MemberType 
 function updateAddForm() {
     const type   = document.getElementById('add-memberType').value;
     const status = document.getElementById('add-memberStatus').value;
@@ -584,7 +584,7 @@ function updateAddForm() {
     document.getElementById('add-email').required = isAdult;
 }
 
-// ── Edit form: show/hide fields by MemberType ─────────────────
+//  Edit form: show/hide fields by MemberType 
 function updateEditForm() {
     const type   = document.getElementById('edit-memberType').value;
     const status = document.getElementById('edit-memberStatus').value;
@@ -597,7 +597,7 @@ function updateEditForm() {
     document.getElementById('edit-anniversaryField').style.display  = isAdult ? '' : 'none';
 }
 
-// ── Populate Edit Member modal ────────────────────────────────
+//  Populate Edit Member modal 
 document.getElementById('editMemberModal').addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     const get = attr => btn.getAttribute('data-' + attr) || '';
@@ -626,7 +626,7 @@ document.getElementById('editMemberModal').addEventListener('show.bs.modal', e =
     updateEditForm();
 });
 
-// ── Populate Edit Family modal ────────────────────────────────
+//  Populate Edit Family modal 
 document.getElementById('editFamilyModal').addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
     document.getElementById('edit-fid').value     = btn.getAttribute('data-id');

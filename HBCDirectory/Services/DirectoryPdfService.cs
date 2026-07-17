@@ -59,7 +59,7 @@ namespace HBCDirectory.Services
 
             return Document.Create(container =>
             {
-                // ── Cover page ────────────────────────────────────────────────────
+                //  Cover page 
                 container.Page(cover =>
                 {
                     cover.Size(PageSizes.A4);
@@ -136,7 +136,7 @@ namespace HBCDirectory.Services
                     });
                 });
 
-                // ── Directory pages ───────────────────────────────────────────────
+                //  Directory pages 
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4);
