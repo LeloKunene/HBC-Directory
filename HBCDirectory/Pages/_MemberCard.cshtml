@@ -12,7 +12,8 @@
     }
 }
 
-<li class="member-card" data-bs-toggle="modal" data-bs-target="#member-modal-@Model.Id">
+<li class="member-card" data-name="@Model.Name.ToLower() @Model.Surname.ToLower()" data-bs-toggle="modal"
+    data-bs-target="#member-modal-@Model.Id">
     <div class="member-card-photo">
         @if (Model.PhotoFileName != null)
         {

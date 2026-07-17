@@ -17,7 +17,7 @@
 <form method="get" class="d-flex gap-2 mb-4 align-items-center flex-wrap" role="search">
 
     <div class="search-bar-wrap">
-        <input asp-for="q" class="form-control search-bar" placeholder="Search by name or surname" />
+        <input asp-for="q" id="member-search" class="form-control search-bar" placeholder="Search by name or surname" />
         <button type="submit" class="search-icon-btn" aria-label="Search">
             <i class="fa-solid fa-magnifying-glass"></i>
         </button>
@@ -54,7 +54,8 @@
 </form>
 
 
-<div class="offcanvas offcanvas-end upcoming-offcanvas" tabindex="-1" id="upcomingOffcanvas" aria-labelledby="upcomingOffcanvasLabel">
+<div class="offcanvas offcanvas-end upcoming-offcanvas" tabindex="-1" id="upcomingOffcanvas"
+     aria-labelledby="upcomingOffcanvasLabel">
     <div class="offcanvas-header">
         <h5 class="offcanvas-title" id="upcomingOffcanvasLabel">Upcoming Dates</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -108,70 +109,90 @@
 }
 else
 {
-    @foreach (var group in groupedMembers)
-    {
-        var family = group.First().Family!;
-        <div class="family-group">
-            <div class="family-group-header">
-                @if (family.PhotoFileName != null)
-                {
-                    <div class="family-group-photo family-group-photo--clickable" data-bs-toggle="modal"
-                         data-bs-target="#family-modal-@family.Id">
-                        <img src="@Model.PhotoUrl(family.PhotoFileName)" alt="@family.FamilyName family photo" />
-                    </div>
-                }
-                else
-                {
-                    <div class="family-group-photo">
-                        <i class="fa-solid fa-people-roof" ></i>
-                    </div>
-                }
-                <h3 class="family-group-name">@family.FamilyName</h3>
+    <div id="member-grid">
+        @foreach (var group in groupedMembers)
+        {
+            var family = group.First().Family!;
+            <div class="family-group">
+                <div class="family-group-header">
+                    @if (family.PhotoFileName != null)
+                    {
+                        <div class="family-group-photo family-group-photo--clickable" data-bs-toggle="modal"
+                             data-bs-target="#family-modal-@family.Id">
+                            <img src="@Model.PhotoUrl(family.PhotoFileName)" alt="@family.FamilyName family photo" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="family-group-photo">
+                            <i class="fa-solid fa-people-roof"></i>
+                        </div>
+                    }
+                    <h3 class="family-group-name">@family.FamilyName</h3>
+                </div>
+
+                <ul class="member-list member-list--index">
+                    @foreach (var m in group.OrderBy(m => m.Surname).ThenBy(m => m.Name))
+                    {
+                        @await Html.PartialAsync("_MemberCard", m)
+                    }
+                </ul>
             </div>
 
-            <ul class="member-list member-list--index">
-                @foreach (var m in group.OrderBy(m => m.Surname).ThenBy(m => m.Name))
-                {
-                    @await Html.PartialAsync("_MemberCard", m)
-                }
-            </ul>
-        </div>
-
-        @if (family.PhotoFileName != null)
-        {
-            <div class="modal fade family-photo-modal" id="family-modal-@family.Id" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">@family.FamilyName</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <img src="@Model.PhotoUrl(family.PhotoFileName)" alt="@family.FamilyName family photo"
-                                 class="family-photo-full" />
+            @if (family.PhotoFileName != null)
+            {
+                <div class="modal fade family-photo-modal" id="family-modal-@family.Id" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">@family.FamilyName</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <img src="@Model.PhotoUrl(family.PhotoFileName)" alt="@family.FamilyName family photo"
+                                     class="family-photo-full" />
+                            </div>
                         </div>
                     </div>
                 </div>
+            }
+        }
+
+        @if (unassignedMembers.Any())
+        {
+            <div class="family-group family-group--unassigned">
+                <div class="family-group-header">
+                    <div class="family-group-photo family-group-photo--unassigned">
+                        <i class="fa-solid fa-user-group"></i>
+                    </div>
+                    <h3 class="family-group-name">Unassigned</h3>
+                </div>
+
+                <ul class="member-list member-list--index">
+                    @foreach (var m in unassignedMembers.OrderBy(m => m.Surname).ThenBy(m => m.Name))
+                    {
+                        @await Html.PartialAsync("_MemberCard", m)
+                    }
+                </ul>
             </div>
         }
-    }
-
-    @if (unassignedMembers.Any())
-    {
-        <div class="family-group family-group--unassigned">
-            <div class="family-group-header">
-                <div class="family-group-photo family-group-photo--unassigned">
-                    <i class="fa-solid fa-user-group"></i>
-                </div>
-                <h3 class="family-group-name">Unassigned</h3>
-            </div>
-
-            <ul class="member-list member-list--index">
-                @foreach (var m in unassignedMembers.OrderBy(m => m.Surname).ThenBy(m => m.Name))
-                {
-                    @await Html.PartialAsync("_MemberCard", m)
-                }
-            </ul>
-        </div>
-    }
+    </div>
 }
+<script>
+    document.getElementById('member-search').addEventListener('input', function () {
+        const query = this.value.toLowerCase().trim();
+        const grid = document.getElementById('member-grid');
+        if (!grid) return;
+
+        grid.querySelectorAll('.member-card').forEach(card => {
+            const name = card.dataset.name ?? '';
+            card.style.display = name.includes(query) ? '' : 'none';
+        });
+
+        grid.querySelectorAll('.family-group').forEach(group => {
+            const hasVisible = Array.from(group.querySelectorAll('.member-card'))
+                .some(card => card.style.display !== 'none');
+            group.style.display = hasVisible ? '' : 'none';
+        });
+    });
+</script>
