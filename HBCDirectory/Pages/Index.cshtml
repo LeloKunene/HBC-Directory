@@ -2,8 +2,6 @@
 @model IndexModel
 
 @{
-    ViewData["Title"] = "Directory";
-
     var groupedMembers = Model.Members
         .Where(m => m.FamilyId != null && m.Family != null)
         .GroupBy(m => m.FamilyId)
