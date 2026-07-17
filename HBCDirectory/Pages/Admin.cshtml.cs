@@ -31,6 +31,10 @@ namespace HBCDirectory.Pages
         public List<Family>          Families         { get; set; } = new();
         public List<StaffRole>       StaffRoles       { get; set; } = new();
         public List<StaffAssignment> StaffAssignments { get; set; } = new();
+        public List<Group>         Groups         { get; set; } = new();
+        public List<MemberGroup>   MemberGroups   { get; set; } = new();
+        public List<PendingUpdate> PendingUpdates { get; set; } = new();
+        public List<ChangeLog>     RecentChanges  { get; set; } = new();
 
         // Drives the stat-card row on the dashboard — add/remove entries here
         // and the grid re-flows automatically, no markup changes needed.
@@ -48,6 +52,14 @@ namespace HBCDirectory.Pages
             StaffAssignments = await _db.StaffAssignments
                 .Include(sa => sa.Member).Include(sa => sa.StaffRole)
                 .OrderBy(sa => sa.DisplayOrder).ToListAsync();
+            Groups = await _db.Groups.OrderBy(g => g.DisplayOrder).ToListAsync();
+            MemberGroups = await _db.MemberGroups
+                .Include(mg => mg.Member).Include(mg => mg.Group).ToListAsync();
+            PendingUpdates = await _db.PendingUpdates.Include(p => p.Member)
+                .Where(p => !p.IsApproved && !p.IsRejected)
+                .OrderBy(p => p.SubmittedAt).ToListAsync();
+            RecentChanges = await _db.ChangeLogs
+                .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
 
             var adults   = Members.Count(m => m.MemberType == "Adult");
             var children = Members.Count(m => m.MemberType == "Child");
@@ -132,6 +144,7 @@ namespace HBCDirectory.Pages
                 }
 
                 TempData["Success"] = $"'{member.DisplayName}' added.";
+                await LogChangeAsync("Member", member.Id, member.DisplayName, "Created");
             }
             catch (Exception ex) { Console.WriteLine(ex.Message); TempData["Error"] = "Could not add member."; }
             return RedirectToPage();
@@ -190,6 +203,7 @@ namespace HBCDirectory.Pages
             }
 
             await _db.SaveChangesAsync();
+            await LogChangeAsync("Member", m.Id, m.DisplayName, "Updated");
             TempData["Success"] = $"'{m.DisplayName}' updated.";
             return RedirectToPage();
         }
@@ -199,9 +213,11 @@ namespace HBCDirectory.Pages
         {
             var m = await _db.Members.FindAsync(id);
             if (m == null) return NotFound();
+            var memberName = m.DisplayName;
             if (!string.IsNullOrEmpty(m.PhotoFileName)) await DeleteFromR2Async(m.PhotoFileName);
             _db.Members.Remove(m);
             await _db.SaveChangesAsync();
+            await LogChangeAsync("Member", id, memberName, "Deleted");
             TempData["Success"] = "Member deleted.";
             return RedirectToPage();
         }
@@ -393,6 +409,120 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
+        public async Task<IActionResult> OnPostAddGroupAsync(string groupName, string? description)
+        {
+            if (string.IsNullOrWhiteSpace(groupName))
+            { TempData["Error"] = "Group name is required."; return RedirectToPage(); }
+
+            var maxOrd = await _db.Groups.AnyAsync()
+                ? await _db.Groups.MaxAsync(g => g.DisplayOrder) : 0;
+
+            _db.Groups.Add(new Group
+            {
+                Name = groupName.Trim(),
+                Description = description?.Trim(),
+                DisplayOrder = maxOrd + 1
+            });
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Group '{groupName}' created.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostDeleteGroupAsync(int id)
+        {
+            var group = await _db.Groups.FindAsync(id);
+            if (group == null) return NotFound();
+            _db.Groups.Remove(group);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Group deleted.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostAddMemberToGroupAsync(int memberId, int groupId)
+        {
+            var exists = await _db.MemberGroups
+                .AnyAsync(mg => mg.MemberId == memberId && mg.GroupId == groupId);
+            if (!exists)
+            {
+                _db.MemberGroups.Add(new MemberGroup { MemberId = memberId, GroupId = groupId });
+                await _db.SaveChangesAsync();
+            }
+            TempData["Success"] = "Member added to group.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostRemoveMemberFromGroupAsync(int id)
+        {
+            var mg = await _db.MemberGroups.FindAsync(id);
+            if (mg == null) return NotFound();
+            _db.MemberGroups.Remove(mg);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Member removed from group.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostApprovePendingAsync(int id)
+        {
+            var pending = await _db.PendingUpdates
+                .Include(p => p.Member)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (pending == null) return NotFound();
+
+            var member = pending.Member;
+            var oldName = member.DisplayName;
+
+            try
+            {
+                var changes = System.Text.Json.JsonDocument.Parse(pending.ChangesJson).RootElement;
+                if (changes.TryGetProperty("name",          out var n)) member.Name          = n.GetString()!;
+                if (changes.TryGetProperty("surname",        out var s)) member.Surname       = s.GetString()!;
+                if (changes.TryGetProperty("phoneNumber",    out var p)) member.PhoneNumber   = p.GetString();
+                if (changes.TryGetProperty("showPhone",      out var sp)) member.ShowPhone     = sp.GetBoolean();
+                if (changes.TryGetProperty("showBirthdate",  out var sb)) member.ShowBirthdate = sb.GetBoolean();
+                if (changes.TryGetProperty("showAnniversary",out var sa)) member.ShowAnniversary = sa.GetBoolean();
+            }
+            catch (Exception ex) { Console.WriteLine($"PendingUpdate parse error: {ex.Message}"); }
+
+            // Apply pending photo if any
+            if (!string.IsNullOrEmpty(pending.PendingPhotoFileName))
+            {
+                if (!string.IsNullOrEmpty(member.PhotoFileName))
+                    await DeleteFromR2Async(member.PhotoFileName);
+                member.PhotoFileName = pending.PendingPhotoFileName;
+            }
+
+            pending.IsApproved = true;
+            pending.ReviewedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            await LogChangeAsync("Member", member.Id, member.DisplayName, "Updated",
+                $"Profile update approved (was: {oldName})");
+
+            TempData["Success"] = $"Update for '{member.DisplayName}' approved.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostRejectPendingAsync(int id, string? reviewNote)
+        {
+            var pending = await _db.PendingUpdates
+                .Include(p => p.Member)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (pending == null) return NotFound();
+
+            // Delete the pending photo from R2 if it was uploaded
+            if (!string.IsNullOrEmpty(pending.PendingPhotoFileName))
+                await DeleteFromR2Async(pending.PendingPhotoFileName);
+
+            pending.IsRejected = true;
+            pending.ReviewedAt = DateTime.UtcNow;
+            pending.ReviewNote = reviewNote?.Trim();
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"Update for '{pending.Member.DisplayName}' rejected.";
+            return RedirectToPage();
+        }
+
+
         //  Helpers 
         private static string CapFirst(string s)
         { s = s.Trim(); return s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..]; }
@@ -450,6 +580,22 @@ namespace HBCDirectory.Pages
             var rnd = new byte[12];
             RandomNumberGenerator.Fill(rnd);
             return new string(rnd.Select(b => chars[b % chars.Length]).ToArray());
+        }
+
+        private async Task LogChangeAsync(
+            string entityType, int entityId, string entityName, string action, string? notes = null)
+        {
+            _db.ChangeLogs.Add(new ChangeLog
+            {
+                ChangedAt  = DateTime.UtcNow,
+                ChangedBy  = User.Identity?.Name ?? "admin",
+                EntityType = entityType,
+                EntityId   = entityId,
+                EntityName = entityName,
+                Action     = action,
+                Notes      = notes
+            });
+            await _db.SaveChangesAsync();
         }
     }
 }

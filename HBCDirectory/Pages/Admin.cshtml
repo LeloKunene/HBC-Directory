@@ -1,4 +1,5 @@
 @page
+@using System.Text.Json
 @model HBCDirectory.Pages.AdminModel
 @{
     ViewData["Title"] = "Admin";
@@ -425,6 +426,223 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     GROUPS / MINISTRY MEMBERSHIPS
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+    <h4 class="mb-3">Groups & Ministries</h4>
+    <div class="row g-4">
+
+        <!-- Create group -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Create Group</h6>
+                <form method="post" asp-page-handler="AddGroup">
+                    <div class="mb-2">
+                        <label class="form-label">Group Name</label>
+                        <input name="groupName" class="form-control" required
+                               placeholder="e.g. Iron Men, Heritage Ladies..." />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Description (optional)</label>
+                        <input name="description" class="form-control" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Create Group</button>
+                </form>
+                <ul class="list-group list-group-flush mt-3">
+                    @foreach (var g in Model.Groups)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>@g.Name</span>
+                            <form method="post" asp-page-handler="DeleteGroup"
+                                  onsubmit="return confirm('Delete group @g.Name?')">
+                                <input type="hidden" name="id" value="@g.Id" />
+                                <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                            </form>
+                        </li>
+                    }
+                    @if (!Model.Groups.Any())
+                    {
+                        <li class="list-group-item px-0 text-muted small">No groups yet.</li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <!-- Add member to group -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Add Member to Group</h6>
+                <form method="post" asp-page-handler="AddMemberToGroup">
+                    <div class="mb-2">
+                        <label class="form-label">Member</label>
+                        <select name="memberId" class="form-select">
+                            @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
+                            {
+                                <option value="@m.Id">@m.Surname, @m.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Group</label>
+                        <select name="groupId" class="form-select">
+                            @foreach (var g in Model.Groups)
+                            {
+                                <option value="@g.Id">@g.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Add to Group</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Current group memberships -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Group Memberships</h6>
+                @if (!Model.MemberGroups.Any())
+                {
+                    <p class="text-muted small">No assignments yet.</p>
+                }
+                else
+                {
+                    @foreach (var g in Model.Groups)
+                    {
+                        var groupMembers = Model.MemberGroups.Where(mg => mg.GroupId == g.Id).ToList();
+                        if (!groupMembers.Any()) continue;
+                        <p class="small fw-bold text-uppercase" style="color:var(--dir-gold);letter-spacing:.06em;margin-bottom:4px;">@g.Name</p>
+                        @foreach (var mg in groupMembers)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">@mg.Member.Surname, @mg.Member.Name</span>
+                                <form method="post" asp-page-handler="RemoveMemberFromGroup">
+                                    <input type="hidden" name="id" value="@mg.Id" />
+                                    <button type="submit" class="btn btn-xs btn-outline-danger"
+                                            style="font-size:10px;padding:1px 6px;">✕</button>
+                                </form>
+                            </div>
+                        }
+                        <hr style="border-color:#ede8df;margin:8px 0;" />
+                    }
+                }
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PENDING MEMBER UPDATES (Approval Queue)
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">
+            Pending Member Updates
+            @if (Model.PendingUpdates.Any())
+            {
+                <span class="badge bg-warning text-dark ms-2">@Model.PendingUpdates.Count</span>
+            }
+        </h4>
+    </div>
+    @if (!Model.PendingUpdates.Any())
+    {
+        <p class="text-muted">No pending updates. Members' profile change submissions will appear here.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Submitted</th>
+                        <th>Proposed changes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.PendingUpdates)
+                    {
+                        <tr>
+                            <td><strong>@p.Member.DisplayName</strong></td>
+                            <td class="text-muted small">@p.SubmittedAt.ToString("d MMM yyyy HH:mm")</td>
+                            <td class="small">
+                                @{
+                                    var doc = System.Text.Json.JsonDocument.Parse(p.ChangesJson).RootElement;
+                                    var changesList = new List<string>();
+                                    if (doc.TryGetProperty("name", out var nm)) changesList.Add($"Name: {nm.GetString()}");
+                                    if (doc.TryGetProperty("surname", out var sn)) changesList.Add($"Surname: {sn.GetString()}");
+                                    if (doc.TryGetProperty("phoneNumber", out var ph)) changesList.Add($"Phone: {ph.GetString()}");
+                                }
+                                @string.Join(", ", changesList)
+                                @if (!string.IsNullOrEmpty(p.PendingPhotoFileName))
+                                {
+                                    <span class="badge bg-info text-dark ms-1">New photo</span>
+                                }
+                            </td>
+                            <td>
+                                <form method="post" asp-page-handler="ApprovePending" class="d-inline">
+                                    <input type="hidden" name="id" value="@p.Id" />
+                                    <button type="submit" class="btn btn-xs btn-outline-success">Approve</button>
+                                </form>
+                                <form method="post" asp-page-handler="RejectPending" class="d-inline ms-1"
+                                      onsubmit="return confirm('Reject this update?')">
+                                    <input type="hidden" name="id" value="@p.Id" />
+                                    <button type="submit" class="btn btn-xs btn-outline-danger">Reject</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     CHANGE HISTORY (Audit Log)
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+    <h4 class="mb-3">Recent Changes</h4>
+    @if (!Model.RecentChanges.Any())
+    {
+        <p class="text-muted">No changes recorded yet. Actions will appear here once LogChangeAsync is wired up.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>When</th>
+                        <th>Who</th>
+                        <th>What</th>
+                        <th>Action</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.RecentChanges)
+                    {
+                        <tr>
+                            <td class="text-muted small">@c.ChangedAt.ToString("d MMM HH:mm")</td>
+                            <td class="small">@c.ChangedBy</td>
+                            <td>@c.EntityName <span class="text-muted small">(@c.EntityType)</span></td>
+                            <td>
+                                <span class="badge @(c.Action == "Deleted" ? "bg-danger" : c.Action == "Created" ? "bg-success" : "bg-secondary")">
+                                    @c.Action
+                                </span>
+                            </td>
+                            <td class="text-muted small">@c.Notes</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
 
 <!-- ══════════════════════════════════════════════════════

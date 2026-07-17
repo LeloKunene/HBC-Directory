@@ -13,45 +13,58 @@ namespace HBCDirectory.Data
         public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
         public DbSet<StaffRole>        StaffRoles         => Set<StaffRole>();
         public DbSet<StaffAssignment>  StaffAssignments   => Set<StaffAssignment>();
+        public DbSet<Group>         Groups         => Set<Group>();
+        public DbSet<MemberGroup>   MemberGroups   => Set<MemberGroup>();
+        public DbSet<PendingUpdate> PendingUpdates => Set<PendingUpdate>();
+        public DbSet<ChangeLog>     ChangeLogs     => Set<ChangeLog>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Family → Members (deleting a family deletes all its members)
+            // Family → Members cascade
             modelBuilder.Entity<Member>()
                 .HasOne(m => m.Family)
                 .WithMany(f => f.Members)
                 .HasForeignKey(m => m.FamilyId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Member → MemberAccount (deleting a member deletes their account)
+            // Member → MemberAccount cascade
             modelBuilder.Entity<MemberAccount>()
                 .HasOne(a => a.Member)
                 .WithMany()
                 .HasForeignKey(a => a.MemberId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // One account per member
             modelBuilder.Entity<MemberAccount>()
-                .HasIndex(a => a.MemberId)
-                .IsUnique();
-
-            // Usernames (emails) must be unique across accounts
+                .HasIndex(a => a.MemberId).IsUnique();
             modelBuilder.Entity<MemberAccount>()
-                .HasIndex(a => a.Username)
-                .IsUnique();
+                .HasIndex(a => a.Username).IsUnique();
 
-            // StaffAssignment → Member
+            // Staff
             modelBuilder.Entity<StaffAssignment>()
-                .HasOne(sa => sa.Member)
-                .WithMany()
+                .HasOne(sa => sa.Member).WithMany()
                 .HasForeignKey(sa => sa.MemberId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            // StaffAssignment → StaffRole
             modelBuilder.Entity<StaffAssignment>()
-                .HasOne(sa => sa.StaffRole)
-                .WithMany(sr => sr.Assignments)
+                .HasOne(sa => sa.StaffRole).WithMany(sr => sr.Assignments)
                 .HasForeignKey(sa => sa.StaffRoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Groups ↔ Members (many-to-many via MemberGroup)
+            modelBuilder.Entity<MemberGroup>()
+                .HasOne(mg => mg.Member).WithMany()
+                .HasForeignKey(mg => mg.MemberId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<MemberGroup>()
+                .HasOne(mg => mg.Group).WithMany(g => g.MemberGroups)
+                .HasForeignKey(mg => mg.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<MemberGroup>()
+                .HasIndex(mg => new { mg.MemberId, mg.GroupId }).IsUnique();
+
+            // PendingUpdate → Member
+            modelBuilder.Entity<PendingUpdate>()
+                .HasOne(p => p.Member).WithMany()
+                .HasForeignKey(p => p.MemberId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

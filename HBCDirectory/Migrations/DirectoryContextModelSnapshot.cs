@@ -22,6 +22,44 @@ namespace HBCDirectory.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("HBCDirectory.Models.ChangeLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ChangedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ChangeLogs");
+                });
+
             modelBuilder.Entity("HBCDirectory.Models.Family", b =>
                 {
                     b.Property<int>("Id")
@@ -49,6 +87,29 @@ namespace HBCDirectory.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Families");
+                });
+
+            modelBuilder.Entity("HBCDirectory.Models.Group", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Groups");
                 });
 
             modelBuilder.Entity("HBCDirectory.Models.Member", b =>
@@ -141,6 +202,30 @@ namespace HBCDirectory.Migrations
                     b.ToTable("MemberAccounts");
                 });
 
+            modelBuilder.Entity("HBCDirectory.Models.MemberGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("MemberId", "GroupId")
+                        .IsUnique();
+
+                    b.ToTable("MemberGroups");
+                });
+
             modelBuilder.Entity("HBCDirectory.Models.PasswordResetToken", b =>
                 {
                     b.Property<int>("Id")
@@ -169,6 +254,46 @@ namespace HBCDirectory.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PasswordResetTokens");
+                });
+
+            modelBuilder.Entity("HBCDirectory.Models.PendingUpdate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChangesJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRejected")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PendingPhotoFileName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReviewNote")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MemberId");
+
+                    b.ToTable("PendingUpdates");
                 });
 
             modelBuilder.Entity("HBCDirectory.Models.StaffAssignment", b =>
@@ -241,6 +366,36 @@ namespace HBCDirectory.Migrations
                     b.Navigation("Member");
                 });
 
+            modelBuilder.Entity("HBCDirectory.Models.MemberGroup", b =>
+                {
+                    b.HasOne("HBCDirectory.Models.Group", "Group")
+                        .WithMany("MemberGroups")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HBCDirectory.Models.Member", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("HBCDirectory.Models.PendingUpdate", b =>
+                {
+                    b.HasOne("HBCDirectory.Models.Member", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+                });
+
             modelBuilder.Entity("HBCDirectory.Models.StaffAssignment", b =>
                 {
                     b.HasOne("HBCDirectory.Models.Member", "Member")
@@ -263,6 +418,11 @@ namespace HBCDirectory.Migrations
             modelBuilder.Entity("HBCDirectory.Models.Family", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("HBCDirectory.Models.Group", b =>
+                {
+                    b.Navigation("MemberGroups");
                 });
 
             modelBuilder.Entity("HBCDirectory.Models.StaffRole", b =>
