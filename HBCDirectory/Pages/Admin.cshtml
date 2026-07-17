@@ -294,7 +294,18 @@
                                     data-familyname="@f.FamilyName"
                                     data-address="@f.Address"
                                     data-familyphone="@f.FamilyPhone"
-                                    data-notes="@f.AdditionalNotes">
+                                    data-notes="@f.AdditionalNotes"
+                                    data-members='@System.Text.Json.JsonSerializer.Serialize(f.Members.Select(m => new {
+                                        id = m.Id,
+                                        name = m.Name,
+                                        surname = m.Surname,
+                                        type = m.MemberType,
+                                        status = m.MemberStatus,
+                                        office = m.ChurchOffice,
+                                        birthdate = m.Birthdate.HasValue
+                                            ? m.Birthdate.Value.ToString("d MMM yyyy")
+                                            : (string?)null
+                                    }))'>
                                 Edit
                             </button>
                             <form method="post" asp-page-handler="DeleteFamily" class="d-inline"
@@ -526,44 +537,111 @@
 <!-- ══════════════════════════════════════════════════════
      EDIT FAMILY MODAL
 ════════════════════════════════════════════════════════ -->
+<!-- Hidden antiforgery token for dynamically generated forms -->
+<form id="af-token-form" method="post" style="display:none">
+    @Html.AntiForgeryToken()
+</form>
+
 <div class="modal fade" id="editFamilyModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Family</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header" style="background:var(--dir-dark);border-bottom:2px solid var(--dir-mustard);">
+                <h5 class="modal-title" id="edit-family-title"
+                    style="color:var(--dir-mustard);font-family:'Montserrat',sans-serif;">
+                    Edit Family
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post" asp-page-handler="EditFamily" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <input type="hidden" name="id" id="edit-fid" />
-                    <div class="form-grid">
-                        <div class="form-field form-field--full">
-                            <label class="form-label">Family Name</label>
-                            <input name="familyName" id="edit-fname" class="form-control" required />
+            <div class="modal-body p-0">
+                <div class="row g-0" style="min-height:480px;">
+
+                    <!-- ── LEFT: Family details ──────────────────────── -->
+                    <div class="col-md-6" style="padding:24px;border-right:1px solid var(--dir-light2);">
+                        <p style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dir-gold);margin-bottom:16px;">Family Details</p>
+                        <form method="post" asp-page-handler="EditFamily" enctype="multipart/form-data">
+                            <input type="hidden" name="id" id="edit-fid" />
+                            <div class="form-grid">
+                                <div class="form-field form-field--full">
+                                    <label class="form-label">Family Name <span class="text-danger">*</span></label>
+                                    <input name="familyName" id="edit-fname" class="form-control" required />
+                                </div>
+                                <div class="form-field form-field--full">
+                                    <label class="form-label">Address</label>
+                                    <input name="address" id="edit-faddress" class="form-control"
+                                           placeholder="Street, suburb" />
+                                </div>
+                                <div class="form-field">
+                                    <label class="form-label">Family Phone</label>
+                                    <input name="familyPhone" id="edit-fphone" class="form-control"
+                                           placeholder="+27 ..." />
+                                </div>
+                                <div class="form-field">
+                                    <label class="form-label">Group Photo</label>
+                                    <input name="photo" type="file" class="form-control" accept="image/*" />
+                                </div>
+                                <div class="form-field form-field--full">
+                                    <label class="form-label">Additional Notes</label>
+                                    <textarea name="additionalNotes" id="edit-fnotes"
+                                              class="form-control" rows="2"
+                                              placeholder="e.g. Joined 2021..."></textarea>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 mt-3">
+                                <button type="submit" class="btn btn-primary">Save details</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ── RIGHT: Family members ─────────────────────── -->
+                    <div class="col-md-6" style="padding:24px;background:#fafaf8;">
+                        <p style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dir-gold);margin-bottom:4px;">Family Members</p>
+                        <p style="font-size:12px;color:#888;margin-bottom:16px;">Changes save immediately when you use the buttons below.</p>
+
+                        <!-- Adults -->
+                        <div id="fm-adults-wrap">
+                            <p style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dir-mustard);margin-bottom:8px;">Adults</p>
+                            <div id="fm-adults-list"></div>
                         </div>
-                        <div class="form-field form-field--full">
-                            <label class="form-label">Address</label>
-                            <input name="address" id="edit-faddress" class="form-control" />
+
+                        <hr style="border-color:var(--dir-light2);margin:16px 0;" />
+
+                        <!-- Children -->
+                        <div id="fm-children-wrap">
+                            <p style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dir-mustard);margin-bottom:8px;">Children</p>
+                            <div id="fm-children-list"></div>
                         </div>
-                        <div class="form-field">
-                            <label class="form-label">Family Phone</label>
-                            <input name="familyPhone" id="edit-fphone" class="form-control" />
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Group Photo</label>
-                            <input name="photo" type="file" class="form-control" accept="image/*" />
-                        </div>
-                        <div class="form-field form-field--full">
-                            <label class="form-label">Additional Notes</label>
-                            <textarea name="additionalNotes" id="edit-fnotes" class="form-control" rows="2"></textarea>
+
+                        <!-- Add Child form -->
+                        <div style="margin-top:16px;padding:14px;background:white;border:0.5px dashed var(--dir-beige);border-radius:8px;">
+                            <p style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dir-gold);margin-bottom:10px;">+ Add Child</p>
+                            <form method="post" asp-page-handler="AddChild" enctype="multipart/form-data">
+                                <input type="hidden" name="familyId" id="add-child-familyid" />
+                                <div class="form-grid" style="gap:8px;">
+                                    <div class="form-field">
+                                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                                        <input name="name" class="form-control form-control-sm" required />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">Surname <span class="text-danger">*</span></label>
+                                        <input name="surname" class="form-control form-control-sm" required />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">Birthdate</label>
+                                        <input name="birthdate" type="date" class="form-control form-control-sm" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">Photo</label>
+                                        <input name="photo" type="file" class="form-control form-control-sm" accept="image/*" />
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary mt-2">Add Child</button>
+                            </form>
                         </div>
                     </div>
+
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save changes</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
@@ -629,12 +707,95 @@ document.getElementById('editMemberModal').addEventListener('show.bs.modal', e =
 //  Populate Edit Family modal 
 document.getElementById('editFamilyModal').addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
-    document.getElementById('edit-fid').value     = btn.getAttribute('data-id');
-    document.getElementById('edit-fname').value   = btn.getAttribute('data-familyname') || '';
+
+    document.getElementById('edit-fid').value      = btn.getAttribute('data-id') || '';
+    document.getElementById('edit-fname').value    = btn.getAttribute('data-familyname') || '';
     document.getElementById('edit-faddress').value = btn.getAttribute('data-address') || '';
-    document.getElementById('edit-fphone').value  = btn.getAttribute('data-familyphone') || '';
-    document.getElementById('edit-fnotes').value  = btn.getAttribute('data-notes') || '';
+    document.getElementById('edit-fphone').value   = btn.getAttribute('data-familyphone') || '';
+    document.getElementById('edit-fnotes').value   = btn.getAttribute('data-notes') || '';
+    document.getElementById('edit-family-title').textContent =
+        'Edit — ' + (btn.getAttribute('data-familyname') || 'Family');
+
+    // Family ID for the Add Child form
+    const fid = btn.getAttribute('data-id') || '';
+    document.getElementById('add-child-familyid').value = fid;
+
+    // Anti-forgery token for remove-child forms
+    const afInput = document.querySelector('#af-token-form input[name="__RequestVerificationToken"]');
+    const afToken = afInput ? afInput.value : '';
+
+    // Right panel
+    let members = [];
+    try { members = JSON.parse(btn.getAttribute('data-members') || '[]'); } catch(e) {}
+
+    const adults   = members.filter(m => m.type === 'Adult');
+    const children = members.filter(m => m.type === 'Child');
+
+    // Adults list
+    let adultsHtml = '';
+    if (adults.length === 0) {
+        adultsHtml = '<p style="font-size:12px;color:#888;font-style:italic;">No adults assigned.</p>';
+    } else {
+        adults.forEach(a => {
+            const badge = a.office
+                ? `<span style="font-size:9px;font-weight:700;background:#202222;color:#c69760;padding:2px 7px;border-radius:20px;letter-spacing:.05em;">${a.office}</span>`
+                : (a.status ? `<span style="font-size:9px;font-weight:700;background:#ede8df;color:#202222;padding:2px 7px;border-radius:20px;">${a.status}</span>` : '');
+            adultsHtml += `
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:0.5px solid #ede8df;border-radius:6px;margin-bottom:6px;">
+                    <div style="flex:1;">
+                        <span style="font-size:13px;font-weight:500;color:#202222;">${a.name} ${a.surname}</span>
+                        &nbsp;${badge}
+                    </div>
+                    <button type="button" class="btn btn-xs btn-outline-secondary"
+                            style="font-size:10px;padding:2px 8px;"
+                            title="Edit this member"
+                            onclick="openEditMemberFromFamily(${a.id})">
+                        Edit
+                    </button>
+                </div>`;
+        });
+    }
+    document.getElementById('fm-adults-list').innerHTML = adultsHtml;
+
+    // Children list
+    let childrenHtml = '';
+    if (children.length === 0) {
+        childrenHtml = '<p style="font-size:12px;color:#888;font-style:italic;">No children added yet.</p>';
+    } else {
+        children.forEach(c => {
+            const bd = c.birthdate ? ` &nbsp;<span style="font-size:11px;color:#888;">🎂 ${c.birthdate}</span>` : '';
+            childrenHtml += `
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:0.5px solid #ede8df;border-radius:6px;margin-bottom:6px;">
+                    <div style="flex:1;">
+                        <span style="font-size:13px;font-weight:500;color:#202222;">${c.name} ${c.surname}</span>${bd}
+                    </div>
+                    <form method="post" style="margin:0;"
+                          action="?handler=RemoveChild"
+                          onsubmit="return confirm('Remove ${c.name}? This cannot be undone.')">
+                        <input type="hidden" name="id" value="${c.id}" />
+                        <input type="hidden" name="__RequestVerificationToken" value="${afToken}" />
+                        <button type="submit" class="btn btn-xs btn-outline-danger"
+                                style="font-size:10px;padding:2px 8px;">Remove</button>
+                    </form>
+                </div>`;
+        });
+    }
+    document.getElementById('fm-children-list').innerHTML = childrenHtml;
 });
+
+// Finds the member row in the Members table and triggers the Edit button click.
+function openEditMemberFromFamily(memberId) {
+    // Close family modal first
+    const famModal = bootstrap.Modal.getInstance(document.getElementById('editFamilyModal'));
+    if (famModal) famModal.hide();
+
+    // After the family modal closes, open the edit member modal
+    document.getElementById('editFamilyModal').addEventListener('hidden.bs.modal', function onHidden() {
+        this.removeEventListener('hidden.bs.modal', onHidden);
+        const editBtn = document.querySelector(`[data-id="${memberId}"][data-bs-target="#editMemberModal"]`);
+        if (editBtn) editBtn.click();
+    });
+}
 
 // Init
 updateAddForm();

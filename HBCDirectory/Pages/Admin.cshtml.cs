@@ -335,6 +335,64 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
+        // Children: no email, no login account, no MemberStatus, no ChurchOffice.
+        public async Task<IActionResult> OnPostAddChildAsync(
+            int familyId, string name, string surname,
+            DateTime? birthdate, IFormFile? photo)
+        {
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
+            { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
+
+            var family = await _db.Families.FindAsync(familyId);
+            if (family == null) return NotFound();
+
+            var child = new Member
+            {
+                Name         = CapFirst(name),
+                Surname      = CapFirst(surname),
+                Email        = null,
+                MemberType   = "Child",
+                MemberStatus = null,
+                ChurchOffice = null,
+                Birthdate    = birthdate,
+                FamilyId     = familyId
+            };
+
+            if (photo is { Length: > 0 })
+            {
+                var err = ValidatePhoto(photo);
+                if (err != null) { TempData["Error"] = err; return RedirectToPage(); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return RedirectToPage(); }
+                child.PhotoFileName = await SavePhotoAsync(photo);
+            }
+
+            _db.Members.Add(child);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"\'{child.DisplayName}\' added to {family.FamilyName} family.";
+            return RedirectToPage();
+        }
+
+        // To remove an adult from a family, use Edit Member and clear the family field.
+        public async Task<IActionResult> OnPostRemoveChildAsync(int id)
+        {
+            var child = await _db.Members.FindAsync(id);
+            if (child == null) return NotFound();
+
+            if (child.MemberType != "Child")
+            {
+                TempData["Error"] = "To remove an adult from a family use Edit Member.";
+                return RedirectToPage();
+            }
+
+            if (!string.IsNullOrEmpty(child.PhotoFileName))
+                await DeleteFromR2Async(child.PhotoFileName);
+
+            _db.Members.Remove(child);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"\'{child.DisplayName}\' removed.";
+            return RedirectToPage();
+        }
+
         //  Helpers 
         private static string CapFirst(string s)
         { s = s.Trim(); return s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..]; }
