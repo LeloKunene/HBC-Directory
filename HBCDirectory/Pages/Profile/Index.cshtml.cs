@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Text.Json;
 
 namespace HBCDirectory.Pages.Profile
 {
@@ -27,6 +28,7 @@ namespace HBCDirectory.Pages.Profile
 
         public string PhotoUrl(string? fileName) => _photos.Url(fileName);
         public Member? CurrentMember { get; set; }
+        public bool HasPendingUpdate { get; set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -35,6 +37,9 @@ namespace HBCDirectory.Pages.Profile
             if (memberId != null)
             {
                 CurrentMember = await _db.Members.FindAsync(memberId.Value);
+                // Check if there's a pending update waiting for approval
+                HasPendingUpdate = await _db.PendingUpdates
+                    .AnyAsync(p => p.MemberId == memberId.Value && !p.IsApproved && !p.IsRejected);
             }
             else
             {
@@ -67,33 +72,57 @@ namespace HBCDirectory.Pages.Profile
                 return RedirectToPage();
             }
 
-            member.Name             = name.Trim();
-            member.Surname          = surname.Trim();
-            member.PhoneNumber      = phoneNumber?.Trim();
-            member.ShowPhone        = showPhone;
-            member.ShowBirthdate    = showBirthdate;
-            member.ShowAnniversary  = showAnniversary;
+            // If there's already a pending update, reject the old one first
+            var existingPending = await _db.PendingUpdates
+                .FirstOrDefaultAsync(p => p.MemberId == memberId.Value && !p.IsApproved && !p.IsRejected);
+            if (existingPending != null)
+            {
+                existingPending.IsRejected = true;
+                existingPending.ReviewNote = "Superseded by a newer submission";
+            }
 
+            // Build the changes JSON
+            var changes = new
+            {
+                name        = name.Trim(),
+                surname     = surname.Trim(),
+                phoneNumber = phoneNumber?.Trim(),
+                showPhone,
+                showBirthdate,
+                showAnniversary
+            };
+
+            var pending = new PendingUpdate
+            {
+                MemberId    = memberId.Value,
+                ChangesJson = JsonSerializer.Serialize(changes),
+                SubmittedAt = DateTime.UtcNow
+            };
+
+            // Handle photo — store in R2 with a "pending-" prefix so it doesn't replace
+            // the live photo until admin approves
             if (photo != null && photo.Length > 0)
             {
-                var fileName    = Guid.NewGuid().ToString() + Path.GetExtension(photo.FileName).ToLowerInvariant();
+                var fileName    = "pending-" + Guid.NewGuid() + Path.GetExtension(photo.FileName).ToLowerInvariant();
                 var credentials = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
                 var cfg         = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
                 using var client = new AmazonS3Client(credentials, cfg);
                 using var stream = photo.OpenReadStream();
                 await client.PutObjectAsync(new PutObjectRequest
                 {
-                    BucketName           = _config["R2:BucketName"],
-                    Key                  = fileName,
-                    InputStream          = stream,
-                    ContentType          = photo.ContentType,
+                    BucketName            = _config["R2:BucketName"],
+                    Key                   = fileName,
+                    InputStream           = stream,
+                    ContentType           = photo.ContentType,
                     DisablePayloadSigning = true
                 });
-                member.PhotoFileName = fileName;
+                pending.PendingPhotoFileName = fileName;
             }
 
+            _db.PendingUpdates.Add(pending);
             await _db.SaveChangesAsync();
-            TempData["Success"] = "Profile updated successfully.";
+
+            TempData["Success"] = "Your changes have been submitted and are pending admin review. They will appear in the directory once approved.";
             return RedirectToPage();
         }
 
