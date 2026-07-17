@@ -19,7 +19,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/Login";
     });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=hbc.db";
+var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=hbc.db";
 var pgHost = Environment.GetEnvironmentVariable("PGHOST");
 if (!string.IsNullOrEmpty(pgHost))
 {
