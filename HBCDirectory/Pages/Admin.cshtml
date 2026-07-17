@@ -5,13 +5,13 @@
     ViewData["Title"] = "Admin";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
     <h2 class="page-title">Admin Dashboard</h2>
-    <div>
-        <a asp-page="/Directory/Download" class="btn btn-outline-secondary btn-sm me-2">
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-page="/Directory/Download" class="btn btn-outline-secondary btn-sm">
             Download PDF Directory
         </a>
-        <a asp-page="/Index" class="btn btn-outline-secondary btn-sm me-2">View Directory</a>
+        <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">View Directory</a>
     </div>
 </div>
 
@@ -155,16 +155,18 @@
                         <td class="member-name">@f.FamilyName</td>
                         <td>@Model.Members.Count(m => m.FamilyId == f.Id)</td>
                         <td class="text-end">
-                            <a asp-page="/Admin" asp-route-editFamilyId="@f.Id"
-                               class="btn btn-outline-primary btn-sm me-1">Edit</a>
+                            <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                <a asp-page="/Admin" asp-route-editFamilyId="@f.Id"
+                                   class="btn btn-outline-primary btn-sm">Edit</a>
 
-                            <form method="post" asp-page-handler="DeleteFamily" class="d-inline">
-                                <input type="hidden" name="familyId" value="@f.Id" />
-                                <button type="submit" class="btn btn-danger btn-sm"
-                                        onclick="return confirm('Delete @f.FamilyName? All members in this family will also be deleted.')">
-                                    Delete
-                                </button>
-                            </form>
+                                <form method="post" asp-page-handler="DeleteFamily" class="d-inline">
+                                    <input type="hidden" name="familyId" value="@f.Id" />
+                                    <button type="submit" class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Delete @f.FamilyName? All members in this family will also be deleted.')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 }
@@ -358,16 +360,18 @@
                             <td>@(m.Anniversary?.ToString("yyyy-MM-dd") ?? "—")</td>
                             <td>@(m.Role ?? "—")</td>
                             <td class="text-end">
-                                <a asp-page="/Admin" asp-route-editMemberId="@m.Id"
-                                   class="btn btn-outline-primary btn-sm me-1">Edit</a>
+                                <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                    <a asp-page="/Admin" asp-route-editMemberId="@m.Id"
+                                       class="btn btn-outline-primary btn-sm">Edit</a>
 
-                                <form method="post" asp-page-handler="DeleteMember" class="d-inline">
-                                    <input type="hidden" name="memberId" value="@m.Id" />
-                                    <button type="submit" class="btn btn-danger btn-sm"
-                                            onclick="return confirm('Delete @m.Name @m.Surname?')">
-                                        Delete
-                                    </button>
-                                </form>
+                                    <form method="post" asp-page-handler="DeleteMember" class="d-inline">
+                                        <input type="hidden" name="memberId" value="@m.Id" />
+                                        <button type="submit" class="btn btn-danger btn-sm"
+                                                onclick="return confirm('Delete @m.Name @m.Surname?')">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     }

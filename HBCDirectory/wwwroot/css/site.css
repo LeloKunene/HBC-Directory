@@ -1117,6 +1117,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .badge-family {
   margin-top: auto;
+  padding-top: 0.35rem;
   align-self: flex-start;
   background: rgba(198, 151, 96, 0.15);
   color: var(--color-dark-gold);
