@@ -1,0 +1,149 @@
+:root {
+  --dir-dark:    #202222;
+  --dir-gold:    #9a865f;
+  --dir-mustard: #c69760;
+  --dir-light:   #f5f1eb;
+  --dir-light2:  #ede8df;
+  --dir-beige:   #c6b08d;
+  --dir-grey:    #888;
+}
+
+/* Birthday bar */
+.birthday-bar {
+  background: #f0ece4; border-left: 4px solid var(--dir-mustard);
+  padding: 10px 16px; margin-bottom: 16px; border-radius: 4px;
+  font-size: 13px; color: var(--dir-dark); display: flex; gap: 8px; align-items: center;
+}
+
+/* Search */
+.dir-search-bar { margin-bottom: 28px; }
+.dir-search-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.dir-search-input-wrap { position: relative; flex: 2; min-width: 200px; }
+.dir-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--dir-grey); font-size: 13px; }
+.dir-search-input { width: 100%; padding: 9px 12px 9px 34px; border: 1.5px solid var(--dir-light2); border-radius: 6px; font-size: 14px; background: white; }
+.dir-search-input:focus { outline: none; border-color: var(--dir-mustard); }
+.dir-filter-select { height: 38px; padding: 0 10px; border: 1.5px solid var(--dir-light2); border-radius: 6px; font-size: 13px; flex: 1; min-width: 140px; }
+
+/* Section rules */
+.dir-section { margin-bottom: 36px; }
+.dir-section-rule { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.dir-section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dir-mustard); white-space: nowrap; }
+.dir-section-line { flex: 1; border-top: 1px solid var(--dir-beige); }
+.dir-section-count { font-size: 11px; color: var(--dir-grey); white-space: nowrap; }
+
+/* Grid */
+.dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+
+/* Card */
+.dir-card { border-radius: 10px; border: 0.5px solid var(--dir-light2); overflow: hidden; cursor: pointer; transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s; background: white; }
+.dir-card:hover { transform: translateY(-3px); border-color: var(--dir-mustard); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+
+/* Photo areas */
+.dir-card-photo { width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.dir-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+.dir-card-photo--family { background: var(--dir-dark); }
+.dir-card-photo--individual { background: var(--dir-light); }
+.dir-card-photo--dark { background: var(--dir-dark); }
+.dir-card-photo--staff { background: #2a2c2c; }
+
+/* Initials */
+.dir-card-initials { font-size: 32px; font-weight: 500; color: var(--dir-gold); letter-spacing: -1px; }
+.dir-card-family-initial { font-size: 56px; font-weight: 700; color: var(--dir-mustard); font-family: 'Montserrat', sans-serif; }
+
+/* Pills */
+.dir-card-type-pill { position: absolute; top: 8px; left: 8px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
+.dir-card-type-pill--family { background: var(--dir-mustard); color: var(--dir-dark); }
+.dir-card-type-pill--individual { background: var(--dir-light2); color: var(--dir-gold); border: 0.5px solid var(--dir-beige); }
+
+/* Office badge on leadership */
+.dir-card-office-badge { position: absolute; bottom: 8px; right: 8px; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; background: var(--dir-mustard); color: var(--dir-dark); }
+
+/* Card body */
+.dir-card-body { padding: 8px 10px 10px; border-top: 0.5px solid var(--dir-light2); }
+.dir-card-name { font-size: 12px; font-weight: 600; color: var(--dir-dark); margin: 0 0 2px; line-height: 1.3; }
+.dir-card-sub { font-size: 11px; color: var(--dir-grey); margin: 0 0 4px; }
+.dir-card-members { font-size: 11px; color: var(--dir-grey); margin: 4px 0 0; line-height: 1.4; }
+
+/* Avatars */
+.dir-card-avatars { display: flex; margin: 4px 0; }
+.dir-avatar { width: 22px; height: 22px; border-radius: 50%; font-size: 8px; font-weight: 600; display: flex; align-items: center; justify-content: center; margin-left: -5px; border: 1.5px solid white; flex-shrink: 0; }
+.dir-avatar:first-child { margin-left: 0; }
+.dir-avatar--dark { background: var(--dir-dark); color: var(--dir-mustard); }
+.dir-avatar--light { background: var(--dir-light2); color: var(--dir-gold); }
+
+/* Badges */
+.dir-card-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.dir-badge { font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 20px; }
+.dir-badge--member { background: var(--dir-light2); color: var(--dir-dark); border: 0.5px solid var(--dir-beige); }
+.dir-badge--attendant { background: #fef9ee; color: #a07830; border: 0.5px solid #e8c97a; }
+.dir-badge--office { background: var(--dir-dark); color: var(--dir-mustard); }
+
+/* Stat cards */
+.stat-card { background: var(--dir-dark); border-radius: 10px; padding: 20px; text-align: center; }
+.stat-value { font-size: 36px; font-weight: 700; color: var(--dir-mustard); }
+.stat-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dir-gold); }
+
+/* Form cards */
+.form-card { background: white; border: 0.5px solid var(--dir-light2); border-radius: 10px; padding: 20px; }
+.form-card-title { font-size: 13px; font-weight: 600; color: var(--dir-dark); margin: 0 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--dir-light2); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-field { display: flex; flex-direction: column; gap: 4px; }
+.form-field--full { grid-column: 1 / -1; }
+.form-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dir-grey); }
+
+/* Member thumbnails */
+.member-thumb { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.member-thumb-placeholder { width: 36px; height: 36px; border-radius: 50%; background: var(--dir-light); color: var(--dir-gold); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+
+/* Admin badges */
+.badge-type, .badge-status, .badge-office { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
+.badge-adult { background: var(--dir-light2); color: var(--dir-dark); }
+.badge-child { background: #eef5ff; color: #3b6cb7; border: 0.5px solid #bcd0f0; }
+.badge-status { background: #f0f4ec; color: #4a6741; border: 0.5px solid #b3c9ae; }
+.badge-office--elder { background: var(--dir-dark); color: var(--dir-mustard); }
+.badge-office--deacon { background: var(--dir-gold); color: white; }
+.btn-xs { font-size: 11px; padding: 3px 10px; border-radius: 4px; }
+
+/* Modals */
+.dir-modal-header { background: var(--dir-dark); color: white; border-bottom: 2px solid var(--dir-mustard); }
+.dir-modal-header .modal-title { color: var(--dir-mustard); font-family: 'Montserrat', sans-serif; }
+.dir-modal-body { display: flex; gap: 20px; align-items: flex-start; }
+.dir-modal-photo { width: 100px; height: 100px; border-radius: 8px; object-fit: cover; }
+.dir-modal-initials { width: 100px; height: 100px; border-radius: 8px; background: var(--dir-light); color: var(--dir-mustard); font-size: 32px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.dir-modal-info { flex: 1; }
+.dir-modal-row { font-size: 14px; margin-bottom: 8px; }
+.dir-modal-row a { color: var(--dir-gold); text-decoration: none; }
+.dir-modal-row a:hover { text-decoration: underline; }
+.dir-modal-members { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.dir-modal-member { font-size: 14px; }
+.dir-modal-member--child { color: var(--dir-grey); }
+.dir-modal-contact { display: flex; flex-wrap: wrap; gap: 10px; }
+.dir-contact-link { font-size: 13px; color: var(--dir-gold); text-decoration: none; }
+.dir-contact-link:hover { text-decoration: underline; }
+
+/* Family modal — household breakdown */
+.dir-badge--family { background: var(--dir-mustard); color: var(--dir-dark); }
+.dir-modal-section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dir-grey); margin: 16px 0 8px; padding-top: 10px; border-top: 0.5px solid var(--dir-light2); }
+.dir-modal-household:empty, .dir-modal-children:empty { display: none; }
+.dir-modal-person { padding: 8px 0; border-bottom: 0.5px solid var(--dir-light2); }
+.dir-modal-person:last-child { border-bottom: none; }
+.dir-modal-person-name { font-size: 13.5px; font-weight: 600; color: var(--dir-dark); margin: 0 0 4px; }
+.dir-modal-person-contact { font-size: 13px; display: flex; flex-wrap: wrap; gap: 10px; }
+.dir-modal-person-contact a { color: var(--dir-gold); text-decoration: none; }
+.dir-modal-person-contact a:hover { text-decoration: underline; }
+.dir-modal-fallback { color: var(--dir-grey); font-style: italic; }
+.dir-modal-children-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.dir-modal-child-chip { font-size: 12px; background: var(--dir-light); color: var(--dir-gold); padding: 4px 10px; border-radius: 20px; }
+
+/* Admin section */
+.admin-section-header h4 { font-family: 'Montserrat', sans-serif; font-size: 15px; font-weight: 700; color: var(--dir-dark); }
+.admin-section { border-bottom: 1px solid var(--dir-light2); padding-bottom: 32px; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .dir-grid { grid-template-columns: repeat(2, 1fr); }
+  .dir-search-form { flex-direction: column; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-field--full { grid-column: 1; }
+  .dir-modal-body { flex-direction: column; }
+}

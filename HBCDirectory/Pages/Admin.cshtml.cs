@@ -31,8 +31,11 @@ namespace HBCDirectory.Pages
         public List<Family>          Families         { get; set; } = new();
         public List<StaffRole>       StaffRoles       { get; set; } = new();
         public List<StaffAssignment> StaffAssignments { get; set; } = new();
-        public int TotalMembers  { get; set; }
-        public int TotalFamilies { get; set; }
+
+        // Drives the stat-card row on the dashboard — add/remove entries here
+        // and the grid re-flows automatically, no markup changes needed.
+        public List<(string Label, int Value)> Stats { get; set; } = new();
+
         public string PhotoUrl(string? f) => _photos.Url(f);
 
         public async Task OnGetAsync()
@@ -45,8 +48,20 @@ namespace HBCDirectory.Pages
             StaffAssignments = await _db.StaffAssignments
                 .Include(sa => sa.Member).Include(sa => sa.StaffRole)
                 .OrderBy(sa => sa.DisplayOrder).ToListAsync();
-            TotalMembers  = Members.Count;
-            TotalFamilies = Families.Count;
+
+            var adults   = Members.Count(m => m.MemberType == "Adult");
+            var children = Members.Count(m => m.MemberType == "Child");
+            var leaders  = Members.Count(m => m.ChurchOffice is "Elder" or "Deacon");
+
+            Stats = new List<(string, int)>
+            {
+                ("Members",   Members.Count),
+                ("Families",  Families.Count),
+                ("Adults",    adults),
+                ("Children",  children),
+            };
+            if (leaders > 0)            Stats.Add(("Leadership", leaders));
+            if (StaffAssignments.Any()) Stats.Add(("Staff", StaffAssignments.Count));
         }
 
         // ── Add Member ────────────────────────────────────────────────────────

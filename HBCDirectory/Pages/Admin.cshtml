@@ -22,18 +22,15 @@
 
 <!-- ── Stats ──────────────────────────────────────────── -->
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-value">@Model.TotalMembers</div>
-            <div class="stat-label">Members</div>
+    @foreach (var stat in Model.Stats)
+    {
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">@stat.Value</div>
+                <div class="stat-label">@stat.Label</div>
+            </div>
         </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-value">@Model.TotalFamilies</div>
-            <div class="stat-label">Families</div>
-        </div>
-    </div>
+    }
 </div>
 
 <!-- ══════════════════════════════════════════════════════

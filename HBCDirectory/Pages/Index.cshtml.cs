@@ -1,12 +1,13 @@
 using HBCDirectory.Data;
 using HBCDirectory.Models;
 using HBCDirectory.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace HBCDirectory.Pages
 {
+    [Authorize]  // Login required — not public
     public class IndexModel : PageModel
     {
         private readonly DirectoryContext _db;
@@ -17,78 +18,105 @@ namespace HBCDirectory.Pages
             _db = db;
             _photos = photos;
         }
-        public string PhotoUrl(string? fileName) => _photos.Url(fileName);
 
-        [BindProperty(SupportsGet = true)]
-        public string? q { get; set; }
+        // ── Data for the directory ────────────────────────────────────────────
+        // Leadership — Elders and Deacons featured at the top
+        public List<Member> Leadership { get; set; } = new();
 
-        [BindProperty(SupportsGet = true)]
-        public int? familyId { get; set; }
+        // Staff assignments for the staff section
+        public List<StaffAssignment> StaffAssignments { get; set; } = new();
 
-        [BindProperty(SupportsGet = true)]
-        public string? role { get; set; }
-        
+        // All families (sorted alphabetically)
         public List<Family> Families { get; set; } = new();
-        public List<Member> Members { get; set; } = new();
 
+        // Individual members — adults not in any family
+        public List<Member> IndividualMembers { get; set; } = new();
+
+        // Search/filter params
+        public string? Q         { get; set; }
+        public string? StatusFilter { get; set; }
+        public string? OfficeFilter { get; set; }
+
+        public string PhotoUrl(string? f) => _photos.Url(f);
+
+        // ── Upcoming birthdays (next 30 days) ────────────────────────────────
         public List<Member> UpcomingBirthdays { get; set; } = new();
-        public List<Member> UpcomingAnniversaries { get; set; } = new();
 
-        public async Task OnGetAsync()
+        public async Task OnGetAsync(string? q, string? status, string? office)
         {
-            var query = _db.Members.Include(m => m.Family).AsQueryable();
+            Q            = q?.Trim();
+            StatusFilter = status;
+            OfficeFilter = office;
 
-            if (!string.IsNullOrEmpty(q))
-                query = query.Where(m => m.Name.Contains(q) || m.Surname.Contains(q));
+            // ── Leadership ────────────────────────────────────────────────────
+            Leadership = await _db.Members
+                .Include(m => m.Family)
+                .Where(m => m.ChurchOffice == "Elder" || m.ChurchOffice == "Deacon")
+                .OrderBy(m => m.ChurchOffice).ThenBy(m => m.Surname).ThenBy(m => m.Name)
+                .ToListAsync();
 
-            if (familyId.HasValue)
-                query = query.Where(m => m.FamilyId == familyId.Value);
+            // ── Staff ─────────────────────────────────────────────────────────
+            StaffAssignments = await _db.StaffAssignments
+                .Include(sa => sa.Member).ThenInclude(m => m.Family)
+                .Include(sa => sa.StaffRole)
+                .OrderBy(sa => sa.DisplayOrder)
+                .ToListAsync();
 
-            if (!string.IsNullOrEmpty(role))
-                query = query.Where(m => m.ChurchOffice == role);
+            // ── Families (alphabetical) ───────────────────────────────────────
+            var familiesQ = _db.Families
+                .Include(f => f.Members)
+                .OrderBy(f => f.FamilyName)
+                .AsQueryable();
 
-            Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
-            Members = await query.OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
+            Families = await familiesQ.ToListAsync();
 
-            var allMembers = await _db.Members.OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
+            // ── Individual members (adults with no family) ────────────────────
+            var individualsQ = _db.Members
+                .Where(m => m.FamilyId == null && m.MemberType == "Adult")
+                .OrderBy(m => m.Surname).ThenBy(m => m.Name)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(StatusFilter))
+                individualsQ = individualsQ.Where(m => m.MemberStatus == StatusFilter);
+            if (!string.IsNullOrEmpty(OfficeFilter))
+                individualsQ = individualsQ.Where(m => m.ChurchOffice == OfficeFilter);
+
+            IndividualMembers = await individualsQ.ToListAsync();
+
+            // ── Upcoming birthdays ────────────────────────────────────────────
+            var today    = DateTime.Today;
+            var in30days = today.AddDays(30);
+            var allMembers = await _db.Members
+                .Where(m => m.Birthdate.HasValue && m.ShowBirthdate)
+                .ToListAsync();
 
             UpcomingBirthdays = allMembers
-                .Where(m => IsWithinDays(m.Birthdate, 30))
-                .OrderBy(m => NextOccurrence(m.Birthdate!.Value))
+                .Where(m =>
+                {
+                    var bd = m.Birthdate!.Value;
+                    var thisYear = new DateTime(today.Year, bd.Month, bd.Day);
+                    return thisYear >= today && thisYear <= in30days;
+                })
+                .OrderBy(m => m.Birthdate!.Value.Month)
+                .ThenBy(m => m.Birthdate!.Value.Day)
                 .ToList();
-
-            UpcomingAnniversaries = allMembers
-                .Where(m => IsWithinDays(m.Anniversary, 30))
-                .OrderBy(m => NextOccurrence(m.Anniversary!.Value))
-                .ToList();
         }
 
-        private static bool IsWithinDays(DateTime? date, int days)
+        // ── Search helpers ────────────────────────────────────────────────────
+        public bool FamilyMatchesSearch(Family f)
         {
-            if (!date.HasValue) return false;
-            var today = DateTime.Today;
-            var thisYear = new DateTime(today.Year, date.Value.Month, date.Value.Day);
-            if (thisYear < today) thisYear = thisYear.AddYears(1);
-            return (thisYear - today).TotalDays <= days;
+            if (string.IsNullOrEmpty(Q)) return true;
+            var q = Q.ToLower();
+            return f.FamilyName.ToLower().Contains(q) ||
+                   f.Members.Any(m => m.Name.ToLower().Contains(q) ||
+                                      m.Surname.ToLower().Contains(q));
         }
 
-        private static DateTime NextOccurrence(DateTime date)
+        public bool MemberMatchesSearch(Member m)
         {
-            var today = DateTime.Today;
-            var next = new DateTime(today.Year, date.Month, date.Day);
-            if (next < today) next = next.AddYears(1);
-            return next;
-        }
-
-        public bool IsUpcoming(DateTime? date)
-        {
-            if (!date.HasValue) return false;
-            var today = DateTime.Today;
-            var thisYear = new DateTime(today.Year, date.Value.Month, date.Value.Day);
-            var diff = (thisYear - today).TotalDays;
-            // Handle year wrap (e.g., birthday is Jan 5, today is Dec 28)
-            if (diff < 0) diff = (thisYear.AddYears(1) - today).TotalDays;
-            return diff >= 0 && diff <= 14; // within the next 14 days
+            if (string.IsNullOrEmpty(Q)) return true;
+            var q = Q.ToLower();
+            return m.Name.ToLower().Contains(q) || m.Surname.ToLower().Contains(q);
         }
     }
 }
