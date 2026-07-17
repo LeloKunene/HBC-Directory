@@ -45,7 +45,55 @@
         </div>
     </div>
 </div>
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="admin-card">
+            <div class="card-header">Upcoming Birthdays <span class="text-muted small">(next 30 days)</span></div>
+            <div class="card-body">
+                @if (Model.UpcomingBirthdays.Any())
+                {
+                    <ul class="upcoming-list">
+                        @foreach (var m in Model.UpcomingBirthdays)
+                        {
+                            <li class="upcoming-list-item">
+                                <span>@m.Name @m.Surname</span>
+                                <span class="upcoming-date">@m.Birthdate!.Value.ToString("MMMM d")</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">None in the next 30 days</p>
+                }
+            </div>
+        </div>
+    </div>
 
+    <div class="col-md-6">
+        <div class="admin-card">
+            <div class="card-header">Upcoming Anniversaries <span class="text-muted small">(next 30 days)</span></div>
+            <div class="card-body">
+                @if (Model.UpcomingAnniversaries.Any())
+                {
+                    <ul class="upcoming-list">
+                        @foreach (var m in Model.UpcomingAnniversaries)
+                        {
+                            <li class="upcoming-list-item">
+                                <span>@m.Name @m.Surname</span>
+                                <span class="upcoming-date">@m.Anniversary!.Value.ToString("MMMM d")</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">None in the next 30 days</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
 <div class="admin-card">
     <div class="card-header">Families</div>
     <div class="card-body">
