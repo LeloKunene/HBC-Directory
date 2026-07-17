@@ -50,7 +50,7 @@
                                     <a asp-page="/Admin" class="nav-link">Admin</a>
                                 </li>
                             }
-                            @if (User.IsInRole("Member") || User.IsInRole("Admin"))
+                            @if (User.IsInRole("Member"))
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" asp-page="/Profile/Index">My Profile</a>

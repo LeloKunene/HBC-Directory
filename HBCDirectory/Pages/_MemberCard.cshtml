@@ -75,7 +75,13 @@
                 </div>
                 <p><strong>Family:</strong> @(Model.Family?.FamilyName ?? "—")</p>
                 <p><strong>Phone:</strong> @(Model.PhoneNumber ?? "—")</p>
-                <p><strong>Birthday:</strong> @(Model.Birthdate?.ToString("MMMM d") ?? "—")</p>
+                <p>
+                    <strong>Birthday:</strong> @(Model.Birthdate?.ToString("MMMM d") ?? "—")
+                    @if (IsUpcoming(Model.Birthdate))
+                    {
+                        <span class="badge-upcoming">Upcoming</span>
+                    }
+                </p>
                 <p>
                     <strong>Anniversary:</strong> @(Model.Anniversary?.ToString("MMMM d") ?? "—")
                     @if (IsUpcoming(Model.Anniversary))

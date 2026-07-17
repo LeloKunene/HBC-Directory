@@ -42,7 +42,63 @@
             }
         </select>
     </div>
+    @{
+        var upcomingCount = Model.UpcomingBirthdays.Count + Model.UpcomingAnniversaries.Count;
+    }
+    <button type="button" class="upcoming-icon-btn" data-bs-toggle="offcanvas" data-bs-target="#upcomingOffcanvas"
+            aria-controls="upcomingOffcanvas" aria-label="Upcoming birthdays and anniversaries">
+        <i class="fa-solid fa-bell"></i>
+        @if (upcomingCount > 0)
+        {
+            <span class="upcoming-count-badge">@upcomingCount</span>
+        }
+    </button>
 </form>
+
+
+<div class="offcanvas offcanvas-end upcoming-offcanvas" tabindex="-1" id="upcomingOffcanvas" aria-labelledby="upcomingOffcanvasLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="upcomingOffcanvasLabel">Upcoming Dates</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <h6 class="upcoming-modal-heading">Birthdays <span class="text-muted small">(next 30 days)</span></h6>
+        @if (Model.UpcomingBirthdays.Any())
+        {
+            <ul class="upcoming-list">
+                @foreach (var m in Model.UpcomingBirthdays)
+                {
+                    <li class="upcoming-list-item">
+                        <span>@m.Name @m.Surname</span>
+                        <span class="upcoming-date">@m.Birthdate!.Value.ToString("MMMM d")</span>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-muted mb-0">None in the next 30 days</p>
+        }
+
+        <h6 class="upcoming-modal-heading mt-4">Anniversaries <span class="text-muted small">(next 30 days)</span></h6>
+        @if (Model.UpcomingAnniversaries.Any())
+        {
+            <ul class="upcoming-list">
+                @foreach (var m in Model.UpcomingAnniversaries)
+                {
+                    <li class="upcoming-list-item">
+                        <span>@m.Name @m.Surname</span>
+                        <span class="upcoming-date">@m.Anniversary!.Value.ToString("MMMM d")</span>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-muted mb-0">None in the next 30 days</p>
+        }
+    </div>
+</div>
 @if (!Model.Members.Any() && (!string.IsNullOrEmpty(Model.q) || Model.familyId.HasValue ||
 !string.IsNullOrEmpty(Model.role)))
 {

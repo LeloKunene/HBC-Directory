@@ -31,6 +31,9 @@ namespace HBCDirectory.Pages
         public List<Family> Families { get; set; } = new();
         public List<Member> Members { get; set; } = new();
 
+        public List<Member> UpcomingBirthdays { get; set; } = new();
+        public List<Member> UpcomingAnniversaries { get; set; } = new();
+
         public async Task OnGetAsync()
         {
             var query = _db.Members.Include(m => m.Family).AsQueryable();
@@ -46,6 +49,35 @@ namespace HBCDirectory.Pages
 
             Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
             Members = await query.OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
+
+            var allMembers = await _db.Members.OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
+
+            UpcomingBirthdays = allMembers
+                .Where(m => IsWithinDays(m.Birthdate, 30))
+                .OrderBy(m => NextOccurrence(m.Birthdate!.Value))
+                .ToList();
+
+            UpcomingAnniversaries = allMembers
+                .Where(m => IsWithinDays(m.Anniversary, 30))
+                .OrderBy(m => NextOccurrence(m.Anniversary!.Value))
+                .ToList();
+        }
+
+        private static bool IsWithinDays(DateTime? date, int days)
+        {
+            if (!date.HasValue) return false;
+            var today = DateTime.Today;
+            var thisYear = new DateTime(today.Year, date.Value.Month, date.Value.Day);
+            if (thisYear < today) thisYear = thisYear.AddYears(1);
+            return (thisYear - today).TotalDays <= days;
+        }
+
+        private static DateTime NextOccurrence(DateTime date)
+        {
+            var today = DateTime.Today;
+            var next = new DateTime(today.Year, date.Month, date.Day);
+            if (next < today) next = next.AddYears(1);
+            return next;
         }
 
         public bool IsUpcoming(DateTime? date)
