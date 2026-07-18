@@ -328,15 +328,196 @@
   color: #a07830;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   PROFILE PAGE — approval / instant badges
-   ───────────────────────────────────────────────────────────── */
+.stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
 
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--dir-dark);
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+
+.stat-pill-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dir-mustard);
+  font-family: 'Montserrat', sans-serif;
+  line-height: 1;
+}
+
+.stat-pill-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dir-gold);
+}
+
+/* ─── Notifications bar ─── */
+.notification-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #fff8e6;
+  border: 0.5px solid #e8c97a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: #704b0a;
+}
+
+.notification-icon {
+  color: var(--dir-mustard);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* ─── Responsive search bar ─── */
+.dir-search-wrap {
+  margin-bottom: 20px;
+}
+
+.dir-search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dir-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dir-search-input-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.dir-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--dir-grey);
+  font-size: 13px;
+}
+
+.dir-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  border: 1.5px solid var(--dir-light2);
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+}
+
+.dir-search-input:focus {
+  outline: none;
+  border-color: var(--dir-mustard);
+}
+
+.dir-filter-toggle {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid var(--dir-light2);
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: var(--dir-dark);
+  transition: border-color 0.15s;
+}
+
+.dir-filter-toggle:hover {
+  border-color: var(--dir-mustard);
+}
+
+.filter-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  background: var(--dir-mustard);
+  border-radius: 50%;
+}
+
+.dir-filter-row {
+  display: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.dir-filter-row--open {
+  display: flex;
+}
+
+.dir-filter-select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1.5px solid var(--dir-light2);
+  border-radius: 6px;
+  font-size: 13px;
+  flex: 1;
+  min-width: 130px;
+}
+
+/* Desktop: filters always visible inline */
+@media (min-width: 640px) {
+  .dir-search-form {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .dir-search-row {
+    flex: 2;
+    min-width: 200px;
+  }
+  .dir-filter-toggle {
+    display: none;
+  }
+  .dir-filter-row {
+    display: flex;
+    flex: 3;
+  }
+  .dir-filter-select {
+    min-width: 120px;
+  }
+}
+
+.pending-fields-table,
+.table-sm {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 13px;
+  color: var(--dir-dark);
+}
+
+/* ─── Approval / instant badges on profile ─── */
 .approval-badge {
   display: inline-block;
   font-size: 10px;
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 20px;
   background: #fff8e6;
   color: #a07830;
@@ -348,7 +529,7 @@
   display: inline-block;
   font-size: 10px;
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 20px;
   background: #f0f4ec;
   color: #4a6741;

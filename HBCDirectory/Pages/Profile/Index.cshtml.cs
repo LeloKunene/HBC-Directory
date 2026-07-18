@@ -29,6 +29,7 @@ namespace HBCDirectory.Pages.Profile
         public string PhotoUrl(string? fileName) => _photos.Url(fileName);
         public Member? CurrentMember { get; set; }
         public bool HasPendingUpdate { get; set; }
+        public List<HBCDirectory.Models.MemberGroup> MemberGroups { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -51,6 +52,14 @@ namespace HBCDirectory.Pages.Profile
 
             ApprovalConfig = await _db.ApprovalSettings.FindAsync(1) ?? new ApprovalSettings();
 
+            if (memberId != null && CurrentMember != null)
+            {
+                MemberGroups = await _db.MemberGroups
+                    .Include(mg => mg.Group)
+                    .Where(mg => mg.MemberId == memberId.Value)
+                    .ToListAsync();
+            }
+
             if (CurrentMember == null) return NotFound();
             return Page();
         }
@@ -58,8 +67,8 @@ namespace HBCDirectory.Pages.Profile
         public ApprovalSettings ApprovalConfig { get; set; } = new();
 
         public async Task<IActionResult> OnPostAsync(
-            string name, string surname, string? phoneNumber,
-            bool showPhone, bool showBirthdate, bool showAnniversary,
+            string name, string surname, string? phoneNumber, string? address,
+            bool showPhone, bool showAddress,
             IFormFile? photo)
         {
             var memberId = GetMemberId();
@@ -85,12 +94,14 @@ namespace HBCDirectory.Pages.Profile
                 member.Surname = surname.Trim();
             }
             if (!settings.RequireApprovalForPhone)
+            {
                 member.PhoneNumber = phoneNumber?.Trim();
+                member.Address     = address?.Trim();
+            }
             if (!settings.RequireApprovalForPrivacy)
             {
-                member.ShowPhone       = showPhone;
-                member.ShowBirthdate   = showBirthdate;
-                member.ShowAnniversary = showAnniversary;
+                member.ShowPhone   = showPhone;
+                member.ShowAddress = showAddress;
             }
             await _db.SaveChangesAsync();
 
@@ -102,12 +113,14 @@ namespace HBCDirectory.Pages.Profile
                 pendingFields["surname"] = surname.Trim();
             }
             if (settings.RequireApprovalForPhone)
+            {
                 pendingFields["phoneNumber"] = phoneNumber?.Trim();
+                pendingFields["address"]     = address?.Trim();
+            }
             if (settings.RequireApprovalForPrivacy)
             {
-                pendingFields["showPhone"]       = showPhone;
-                pendingFields["showBirthdate"]   = showBirthdate;
-                pendingFields["showAnniversary"] = showAnniversary;
+                pendingFields["showPhone"]   = showPhone;
+                pendingFields["showAddress"] = showAddress;
             }
 
             bool hasPhoto = photo != null && photo.Length > 0;

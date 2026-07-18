@@ -39,8 +39,8 @@ namespace HBCDirectory.Pages
 
         public string PhotoUrl(string? f) => _photos.Url(f);
 
-        //  Upcoming birthdays (next 30 days) 
-        public List<Member> UpcomingBirthdays { get; set; } = new();
+        public List<Member> UpcomingBirthdays    { get; set; } = new();
+        public List<Member> UpcomingAnniversaries { get; set; } = new();
 
         public async Task OnGetAsync(string? q, string? status, string? office)
         {
@@ -83,22 +83,31 @@ namespace HBCDirectory.Pages
 
             IndividualMembers = await individualsQ.ToListAsync();
 
-            //  Upcoming birthdays 
             var today    = DateTime.Today;
             var in30days = today.AddDays(30);
-            var allMembers = await _db.Members
-                .Where(m => m.Birthdate.HasValue && m.ShowBirthdate)
-                .ToListAsync();
+
+            var allMembers = await _db.Members.ToListAsync();
 
             UpcomingBirthdays = allMembers
+                .Where(m => m.Birthdate.HasValue && m.ShowBirthdate)
                 .Where(m =>
                 {
                     var bd = m.Birthdate!.Value;
-                    var thisYear = new DateTime(today.Year, bd.Month, bd.Day);
-                    return thisYear >= today && thisYear <= in30days;
+                    try { var t = new DateTime(today.Year, bd.Month, bd.Day); return t >= today && t <= in30days; }
+                    catch { return false; }
                 })
-                .OrderBy(m => m.Birthdate!.Value.Month)
-                .ThenBy(m => m.Birthdate!.Value.Day)
+                .OrderBy(m => m.Birthdate!.Value.Month).ThenBy(m => m.Birthdate!.Value.Day)
+                .ToList();
+
+            UpcomingAnniversaries = allMembers
+                .Where(m => m.Anniversary.HasValue && m.ShowAnniversary)
+                .Where(m =>
+                {
+                    var a = m.Anniversary!.Value;
+                    try { var t = new DateTime(today.Year, a.Month, a.Day); return t >= today && t <= in30days; }
+                    catch { return false; }
+                })
+                .OrderBy(m => m.Anniversary!.Value.Month).ThenBy(m => m.Anniversary!.Value.Day)
                 .ToList();
         }
 

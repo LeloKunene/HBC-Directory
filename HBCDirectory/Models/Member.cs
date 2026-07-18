@@ -29,13 +29,16 @@ namespace HBCDirectory.Models
 
         public DateTime? Birthdate { get; set; }
         public DateTime? Anniversary { get; set; }
+        public DateTime? DateJoined   { get; set; }
         public string? PhoneNumber { get; set; }
+        public string? Address     { get; set; }
         public string? PhotoFileName { get; set; }
 
         public int? FamilyId { get; set; }
         public Family? Family { get; set; }
 
         public bool ShowPhone { get; set; } = true;
+        public bool ShowAddress    { get; set; } = true;
         public bool ShowBirthdate { get; set; } = true;
         public bool ShowAnniversary { get; set; } = true;
 

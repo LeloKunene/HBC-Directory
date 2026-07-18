@@ -22,14 +22,12 @@
 }
 
 <!--  Stats  -->
-<div class="row g-3 mb-4">
+<div class="stats-row mb-3">
     @foreach (var stat in Model.Stats)
     {
-        <div class="col-6 col-md-3">
-            <div class="stat-card">
-                <div class="stat-value">@stat.Value</div>
-                <div class="stat-label">@stat.Label</div>
-            </div>
+        <div class="stat-pill">
+            <span class="stat-pill-value">@stat.Value</span>
+            <span class="stat-pill-label">@stat.Label</span>
         </div>
     }
 </div>
@@ -99,6 +97,14 @@
                         <label class="form-label">Phone</label>
                         <input name="phoneNumber" class="form-control" placeholder="+27 ..." />
                     </div>
+                    <div class="form-field" id="add-dateJoinedField">
+                        <label class="form-label">Date Became Member</label>
+                        <input name="dateJoined" type="date" class="form-control" />
+                    </div>
+                    <div class="form-field form-field--full" id="add-addressField">
+                        <label class="form-label">Address <span class="text-muted small">(individual members only)</span></label>
+                        <input name="address" class="form-control" placeholder="Street, suburb" />
+                    </div>
                     <div class="form-field">
                         <label class="form-label">Family</label>
                         <select name="familyId" class="form-select">
@@ -112,6 +118,12 @@
                     <div class="form-field form-field--full">
                         <label class="form-label">Photo</label>
                         <input name="photo" type="file" class="form-control" accept="image/*" />
+                    </div>
+                    <div class="form-field form-field--full">
+                        <p class="small text-muted">
+                            <i class="fa-solid fa-circle-info me-1"></i>
+                            Care Group assignment is managed via the Groups &amp; Ministries section below.
+                        </p>
                     </div>
                 </div>
 
@@ -129,10 +141,10 @@
                     <th>Photo</th>
                     <th>Name</th>
                     <th>Type</th>
-                    <th>Status</th>
-                    <th>Office</th>
+                    <th>Status / Office</th>
                     <th>Family</th>
                     <th>Phone</th>
+                    <th>Joined</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -156,13 +168,12 @@
                                 @m.MemberType
                             </span>
                         </td>
+
                         <td>
                             @if (!string.IsNullOrEmpty(m.MemberStatus))
                             {
                                 <span class="badge-status">@m.MemberStatus</span>
                             }
-                        </td>
-                        <td>
                             @if (!string.IsNullOrEmpty(m.ChurchOffice))
                             {
                                 <span class="badge-office badge-office--@m.ChurchOffice.ToLower()">@m.ChurchOffice</span>
@@ -170,6 +181,7 @@
                         </td>
                         <td>@(m.Family?.FamilyName ?? "—")</td>
                         <td>@(m.PhoneNumber ?? "—")</td>
+                        <td class="text-muted small">@(m.DateJoined?.ToString("MMM yyyy") ?? "—")</td>
                         <td>
                             <button class="btn btn-xs btn-outline-primary"
                                     data-bs-toggle="modal"
@@ -186,8 +198,11 @@
                                     data-phone="@m.PhoneNumber"
                                     data-familyid="@m.FamilyId"
                                     data-showphone="@m.ShowPhone.ToString().ToLower()"
+                                    data-showaddress="@m.ShowAddress.ToString().ToLower()"
                                     data-showbirthdate="@m.ShowBirthdate.ToString().ToLower()"
-                                    data-showanniversary="@m.ShowAnniversary.ToString().ToLower()">
+                                    data-showanniversary="@m.ShowAnniversary.ToString().ToLower()"
+                                    data-datejoined="@(m.DateJoined?.ToString("yyyy-MM-dd"))"
+                                    data-address="@m.Address">
                                 Edit
                             </button>
                             <form method="post" asp-page-handler="DeleteMember" class="d-inline"
@@ -326,7 +341,9 @@
      STAFF SECTION
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5">
-    <h4 class="mb-3">Staff</h4>
+<div class="admin-section-header mb-3">
+    <h4 class="mb-0">Staff</h4>
+</div>
 
     <div class="row g-4">
         <!-- Staff Roles -->
@@ -432,7 +449,9 @@
      GROUPS / MINISTRY MEMBERSHIPS
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5">
-    <h4 class="mb-3">Groups & Ministries</h4>
+<div class="admin-section-header mb-3">
+    <h4 class="mb-0">Groups & Ministries</h4>
+</div>
     <div class="row g-4">
 
         <!-- Create group -->
@@ -521,7 +540,7 @@
                                 <form method="post" asp-page-handler="RemoveMemberFromGroup">
                                     <input type="hidden" name="id" value="@mg.Id" />
                                     <button type="submit" class="btn btn-xs btn-outline-danger"
-                                            style="font-size:10px;padding:1px 6px;"><i class="fa-solid fa-xmark"></i></button>
+                                            style="font-size:10px;padding:1px 6px;">✕</button>
                                 </form>
                             </div>
                         }
@@ -646,13 +665,11 @@
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5">
     <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">
-            Pending Member Updates
-            @if (Model.PendingUpdates.Any())
-            {
-                <span class="badge bg-warning text-dark ms-2">@Model.PendingUpdates.Count</span>
-            }
-        </h4>
+        <h4 class="mb-0"> Pending Member Updates </h4>
+        @if (Model.PendingUpdates.Any())
+        {
+            <span class="badge bg-warning text-dark ms-2">@Model.PendingUpdates.Count</span>
+        }
     </div>
     @if (!Model.PendingUpdates.Any())
     {
@@ -668,6 +685,7 @@
                     string? propName      = doc.TryGetProperty("name",           out var jn)  ? jn.GetString()         : null;
                     string? propSurname   = doc.TryGetProperty("surname",        out var js)  ? js.GetString()         : null;
                     string? propPhone     = doc.TryGetProperty("phoneNumber",    out var jp)  ? jp.GetString()         : null;
+                    string? propAddress   = doc.TryGetProperty("address",       out var jad) ? jad.GetString()        : null;
                     bool?   propShowPhone = doc.TryGetProperty("showPhone",      out var jsp) ? jsp.GetBoolean()       : (bool?)null;
                     bool?   propShowBd    = doc.TryGetProperty("showBirthdate",  out var jsb) ? jsb.GetBoolean()       : (bool?)null;
                     bool?   propShowAnn   = doc.TryGetProperty("showAnniversary",out var jsa) ? jsa.GetBoolean()       : (bool?)null;
@@ -676,10 +694,11 @@
                     bool nameChanged    = propName    != null && propName    != member.Name;
                     bool surnameChanged = propSurname != null && propSurname != member.Surname;
                     bool phoneChanged   = propPhone   != null && propPhone   != member.PhoneNumber;
+                    bool addressChanged = propAddress != null && propAddress != member.Address;
                     bool spChanged      = propShowPhone.HasValue && propShowPhone.Value != member.ShowPhone;
                     bool sbChanged      = propShowBd.HasValue   && propShowBd.Value    != member.ShowBirthdate;
                     bool saChanged      = propShowAnn.HasValue  && propShowAnn.Value   != member.ShowAnniversary;
-                    
+
                 <div class="pending-update-card">
                     <!-- Header -->
                     <div class="pending-update-header">
@@ -733,6 +752,7 @@
                                 <tr><td class="field-label">Name</td><td>@member.Name</td></tr>
                                 <tr><td class="field-label">Surname</td><td>@member.Surname</td></tr>
                                 <tr><td class="field-label">Phone</td><td>@(member.PhoneNumber ?? "—")</td></tr>
+                                <tr><td class="field-label">Address</td><td>@(member.Address ?? "—")</td></tr>
                                 <tr><td class="field-label">Show phone</td><td>@(member.ShowPhone ? "Yes" : "No")</td></tr>
                                 <tr><td class="field-label">Show birthday</td><td>@(member.ShowBirthdate ? "Yes" : "No")</td></tr>
                                 <tr><td class="field-label">Show anniversary</td><td>@(member.ShowAnniversary ? "Yes" : "No")</td></tr>
@@ -778,6 +798,13 @@
                                         @if (phoneChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
                                     </td>
                                 </tr>
+                                <tr class="@(addressChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Address</td>
+                                    <td>
+                                        @(propAddress ?? member.Address ?? "—")
+                                        @if (addressChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
                                 <tr class="@(spChanged ? "field-changed" : "field-unchanged")">
                                     <td class="field-label">Show phone</td>
                                     <td>
@@ -813,7 +840,9 @@
      CHANGE HISTORY (Audit Log)
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5">
-    <h4 class="mb-3">Recent Changes</h4>
+<div class="admin-section-header mb-3">
+    <h4 class="mb-0">Recent Changes</h4>
+</div>
     @if (!Model.RecentChanges.Any())
     {
         <p class="text-muted">No changes recorded yet. Actions will appear here once LogChangeAsync is wired up.</p>
@@ -915,6 +944,14 @@
                             <input name="phoneNumber" id="edit-phone" class="form-control" />
                         </div>
                         <div class="form-field">
+                            <label class="form-label">Date Became Member</label>
+                            <input name="dateJoined" id="edit-dateJoined" type="date" class="form-control" />
+                        </div>
+                        <div class="form-field form-field--full" id="edit-addressField">
+                            <label class="form-label">Address <span class="text-muted small">(individual only)</span></label>
+                            <input name="address" id="edit-address" class="form-control" placeholder="Street, suburb" />
+                        </div>
+                        <div class="form-field">
                             <label class="form-label">Family</label>
                             <select name="familyId" id="edit-familyId" class="form-select">
                                 <option value="">— Individual member —</option>
@@ -930,11 +967,16 @@
                         </div>
                         <div class="form-field form-field--full">
                             <label class="form-label">Privacy</label>
-                            <div class="d-flex gap-3">
+                            <div class="d-flex gap-3 flex-wrap">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="showPhone"
                                            id="edit-showPhone" value="true" />
                                     <label class="form-check-label" for="edit-showPhone">Show phone</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="showAddress"
+                                           id="edit-showAddress" value="true" />
+                                    <label class="form-check-label" for="edit-showAddress">Show address</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="showBirthdate"
@@ -1122,7 +1164,10 @@ document.getElementById('editMemberModal').addEventListener('show.bs.modal', e =
     const fsel = document.getElementById('edit-familyId');
     fsel.value = fid || '';
 
+    document.getElementById('edit-dateJoined').value        = get('datejoined');
+    document.getElementById('edit-address').value           = get('address');
     document.getElementById('edit-showPhone').checked       = get('showphone') === 'true';
+    document.getElementById('edit-showAddress').checked     = get('showaddress') === 'true';
     document.getElementById('edit-showBirthdate').checked   = get('showbirthdate') === 'true';
     document.getElementById('edit-showAnniversary').checked = get('showanniversary') === 'true';
 
@@ -1188,7 +1233,7 @@ document.getElementById('editFamilyModal').addEventListener('show.bs.modal', e =
         childrenHtml = '<p style="font-size:12px;color:#888;font-style:italic;">No children added yet.</p>';
     } else {
         children.forEach(c => {
-            const bd = c.birthdate ? ` &nbsp;<span style="font-size:11px;color:#888;"><i class=\"fa-solid fa-cake-candles\"></i> ${c.birthdate}</span>` : '';
+            const bd = c.birthdate ? ` &nbsp;<span style="font-size:11px;color:#888;">🎂 ${c.birthdate}</span>` : '';
             childrenHtml += `
                 <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:0.5px solid #ede8df;border-radius:6px;margin-bottom:6px;">
                     <div style="flex:1;">

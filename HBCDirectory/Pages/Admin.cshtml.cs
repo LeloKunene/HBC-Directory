@@ -58,12 +58,10 @@ namespace HBCDirectory.Pages
                 .OrderBy(p => p.SubmittedAt).ToListAsync();
             RecentChanges = await _db.ChangeLogs
                 .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
-            ApprovalConfig = await _db.ApprovalSettings.FindAsync(1) ?? new ApprovalSettings();
 
             var adults   = Members.Count(m => m.MemberType == "Adult");
             var children = Members.Count(m => m.MemberType == "Child");
             var leaders  = Members.Count(m => m.ChurchOffice is "Elder" or "Deacon");
-            
 
             Stats = new List<(string, int)>
             {
@@ -73,6 +71,14 @@ namespace HBCDirectory.Pages
                 ("Children",  children),
             };
             if (leaders > 0)            Stats.Add(("Leadership", leaders));
+
+            ApprovalConfig   = await _db.ApprovalSettings.FindAsync(1) ?? new ApprovalSettings();
+            Groups           = await _db.Groups.OrderBy(g => g.DisplayOrder).ToListAsync();
+            MemberGroups     = await _db.MemberGroups.Include(mg => mg.Member).Include(mg => mg.Group).ToListAsync();
+            PendingUpdates   = await _db.PendingUpdates.Include(p => p.Member)
+                                   .Where(p => !p.IsApproved && !p.IsRejected)
+                                   .OrderBy(p => p.SubmittedAt).ToListAsync();
+            RecentChanges    = await _db.ChangeLogs.OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
             if (StaffAssignments.Any()) Stats.Add(("Staff", StaffAssignments.Count));
         }
 
@@ -80,8 +86,8 @@ namespace HBCDirectory.Pages
         public async Task<IActionResult> OnPostAddMemberAsync(
             string name, string surname, string? email,
             string memberType, string? memberStatus, string? churchOffice,
-            DateTime? birthdate, DateTime? anniversary,
-            string? phoneNumber, int? familyId, IFormFile? photo)
+            DateTime? birthdate, DateTime? anniversary, DateTime? dateJoined,
+            string? phoneNumber, string? address, int? familyId, IFormFile? photo)
         {
             memberType = string.IsNullOrWhiteSpace(memberType) ? "Adult" : memberType;
             bool isAdult = memberType == "Adult";
@@ -112,7 +118,9 @@ namespace HBCDirectory.Pages
                                     : null,
                     Birthdate   = birthdate,
                     Anniversary = anniversary,
+                    DateJoined  = dateJoined,
                     PhoneNumber = phoneNumber?.Trim(),
+                    Address     = address?.Trim(),
                     FamilyId    = familyId
                 };
 
@@ -154,9 +162,10 @@ namespace HBCDirectory.Pages
         public async Task<IActionResult> OnPostEditMemberAsync(
             int id, string name, string surname, string? email,
             string memberType, string? memberStatus, string? churchOffice,
-            DateTime? birthdate, DateTime? anniversary, string? phoneNumber,
+            DateTime? birthdate, DateTime? anniversary, DateTime? dateJoined,
+            string? phoneNumber, string? address,
             int? familyId, IFormFile? photo,
-            bool showPhone, bool showBirthdate, bool showAnniversary)
+            bool showPhone, bool showAddress, bool showBirthdate, bool showAnniversary)
         {
             var m = await _db.Members.FindAsync(id);
             if (m == null) return NotFound();
@@ -172,11 +181,14 @@ namespace HBCDirectory.Pages
             m.ChurchOffice = isAdult && memberStatus == "Member"
                               ? (string.IsNullOrEmpty(churchOffice) ? null : churchOffice)
                               : null;
-            m.Birthdate   = birthdate;
-            m.Anniversary = anniversary;
-            m.PhoneNumber = phoneNumber?.Trim();
-            m.FamilyId    = familyId;
-            m.ShowPhone        = showPhone;
+            m.Birthdate    = birthdate;
+            m.Anniversary  = anniversary;
+            m.DateJoined   = dateJoined;
+            m.PhoneNumber  = phoneNumber?.Trim();
+            m.Address      = address?.Trim();
+            m.FamilyId     = familyId;
+            m.ShowPhone    = showPhone;
+            m.ShowAddress  = showAddress;
             m.ShowBirthdate    = showBirthdate;
             m.ShowAnniversary  = showAnniversary;
 
@@ -522,21 +534,16 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
+
         public async Task<IActionResult> OnPostSaveApprovalSettingsAsync(
             bool requireName, bool requirePhone, bool requirePrivacy, bool requirePhoto)
         {
             var settings = await _db.ApprovalSettings.FindAsync(1);
-            if (settings == null)
-            {
-                settings = new ApprovalSettings { Id = 1 };
-                _db.ApprovalSettings.Add(settings);
-            }
-
+            if (settings == null) { settings = new ApprovalSettings { Id = 1 }; _db.ApprovalSettings.Add(settings); }
             settings.RequireApprovalForName    = requireName;
             settings.RequireApprovalForPhone   = requirePhone;
             settings.RequireApprovalForPrivacy = requirePrivacy;
             settings.RequireApprovalForPhoto   = requirePhoto;
-
             await _db.SaveChangesAsync();
             TempData["Success"] = "Approval settings saved.";
             return RedirectToPage();
