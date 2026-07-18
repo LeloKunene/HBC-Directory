@@ -2,34 +2,31 @@
 @using System.Text.Json
 @model HBCDirectory.Pages.AdminModel
 @{
-    ViewData["Title"] = "Admin";
+    ViewData["Title"] = "Admin | ";
     Layout = "_Layout";
 }
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
+<!-- Success/error messages now render as toasts globally — see Pages/Shared/_Layout.cshtml -->
 
-<!--  Stats  -->
-<div class="stats-row mb-3">
-    @foreach (var stat in Model.Stats)
-    {
-        <div class="stat-pill">
-            <span class="stat-pill-value">@stat.Value</span>
-            <span class="stat-pill-label">@stat.Label</span>
-        </div>
-    }
+<!--  Stats + quick actions  -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="stats-row mb-0">
+        @foreach (var stat in Model.Stats)
+        {
+            <div class="stat-pill">
+                <span class="stat-pill-value">@stat.Value</span>
+                <span class="stat-pill-label">@stat.Label</span>
+            </div>
+        }
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-address-book me-1"></i>View Directory
+        </a>
+        <a href="/Directory/Download" class="btn btn-primary btn-sm" target="_blank">
+            <i class="fa-solid fa-file-pdf me-1"></i>Download PDF
+        </a>
+    </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════
@@ -552,6 +549,301 @@
 
     </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════
+     PDF MANAGEMENT SECTION
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">
+            <i class="fa-solid fa-file-pdf me-2" style="color:var(--dir-mustard);"></i>PDF Directory
+        </h4>
+        <form method="post" asp-page-handler="GeneratePdf">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-arrows-rotate me-1"></i>Update PDF
+            </button>
+        </form>
+    </div>
+
+    <!-- Status banner -->
+    <div class="form-card mb-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                @if (Model.PdfConfig.LastGenerated.HasValue)
+                {
+                    <p class="mb-0" style="font-size:13px;">
+                        <i class="fa-solid fa-check-circle me-1" style="color:#4a6741;"></i>
+                        <strong>PDF ready</strong> — last updated
+                        <strong>@Model.PdfConfig.LastGenerated.Value.ToLocalTime().ToString("d MMM yyyy, HH:mm")</strong>
+                    </p>
+                    <p class="mb-0 text-muted small mt-1">
+                        @if (Model.PdfConfig.HasPassword)
+                        {
+                            <span><i class="fa-solid fa-lock me-1"></i>Password protected</span>
+                        }
+                        else
+                        {
+                            <span><i class="fa-solid fa-lock-open me-1"></i>No password</span>
+                        }
+                    </p>
+                }
+                else
+                {
+                    <p class="mb-0 text-muted" style="font-size:13px;">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        No PDF generated yet. Click <strong>Update PDF</strong> to create one.
+                    </p>
+                }
+            </div>
+            @if (Model.PdfConfig.LastGenerated.HasValue)
+            {
+                <a href="/Directory/Download" target="_blank" class="btn btn-outline-secondary btn-sm">
+                    <i class="fa-solid fa-download me-1"></i>Download current PDF
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- Page configuration -->
+    <div class="row g-3">
+        <div class="col-md-7">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">
+                    <i class="fa-solid fa-list-ol me-1"></i>Pages — choose what to include and the order
+                </h6>
+                <form method="post" asp-page-handler="SavePdfSettings" id="pdfSettingsForm">
+                    <div id="pdfPagesList">
+                        @{
+                            var pdfPages = Model.PdfConfig.GetPages().OrderBy(p => p.Order).ToList();
+                        }
+                        @foreach (var pg in pdfPages)
+                        {
+                            <div class="pdf-page-row" data-key="@pg.Key">
+                                <div class="pdf-page-drag" title="Drag to reorder">
+                                    <i class="fa-solid fa-grip-vertical"></i>
+                                </div>
+                                <div class="pdf-page-order">@pg.Order</div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input pdf-page-check"
+                                           type="checkbox" checked="@pg.Enabled"
+                                           data-key="@pg.Key" id="pg-@pg.Key" />
+                                    <label class="form-check-label fw-semibold" for="pg-@pg.Key">
+                                        @(string.IsNullOrEmpty(pg.Label)
+                                            ? (HBCDirectory.Models.PdfSettings.KeyLabels.TryGetValue(pg.Key, out var fb) ? fb : pg.Key)
+                                            : pg.Label)
+                                    </label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <input type="hidden" name="pagesJson" id="pdfPagesJsonInput" />
+                    <input type="hidden" name="removePassword" id="removePasswordInput" value="false" />
+
+                    <!-- Password -->
+                    <div class="mt-3 pt-3" style="border-top:0.5px solid var(--dir-light2);">
+                        <label class="form-label">
+                            <i class="fa-solid fa-lock me-1"></i>PDF Password
+                        </label>
+                        @if (Model.PdfConfig.HasPassword)
+                        {
+                            <div class="d-flex gap-2 align-items-center mb-2">
+                                <span class="text-muted small">
+                                    <i class="fa-solid fa-check me-1" style="color:#4a6741;"></i>
+                                    Password is set
+                                </span>
+                                <button type="button" class="btn btn-xs btn-outline-danger"
+                                        onclick="clearPdfPassword()">Remove password</button>
+                            </div>
+                        }
+                        <div class="input-group">
+                            <input name="password" type="password" class="form-control"
+                                   id="pdfPasswordInput"
+                                   placeholder="@(Model.PdfConfig.HasPassword ? "Enter new password to change..." : "Set a password (optional)...")" />
+                            <button type="button" class="btn btn-outline-secondary"
+                                    onclick="togglePdfPasswordVisibility()">
+                                <i class="fa-solid fa-eye" id="pdfPwEyeIcon"></i>
+                            </button>
+                        </div>
+                        <p class="text-muted small mt-1">
+                            Leave blank to keep current setting.
+                        </p>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-sm mt-3"
+                            onclick="buildPagesJson()">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Save settings
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">
+                    <i class="fa-solid fa-circle-question me-1"></i>How it works
+                </h6>
+                <p class="text-muted small">
+                    The PDF is generated and stored securely in Cloudflare R2.
+                    Members download the stored version instantly — no wait time.
+                </p>
+                <ol class="text-muted small" style="padding-left:1.2rem;">
+                    <li class="mb-2">Configure which pages to include and their order above</li>
+                    <li class="mb-2">Optionally set a password for the PDF</li>
+                    <li class="mb-2">Click <strong>Save settings</strong></li>
+                    <li class="mb-2">Click <strong>Update PDF</strong> to generate and store the new version</li>
+                    <li>Members can download immediately from the directory</li>
+                </ol>
+                <div style="background:#fff8e6;border:0.5px solid #e8c97a;border-radius:6px;padding:10px 12px;font-size:12px;color:#a07830;">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                    After adding new members or making significant changes, click <strong>Update PDF</strong>
+                    so the stored copy stays current.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Drag-and-drop page ordering + form builder *@
+<style>
+.pdf-page-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: white;
+  border: 0.5px solid var(--dir-light2);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  transition: background 0.15s, opacity 0.15s, transform 0.1s;
+}
+.pdf-page-row:hover { background: #fafaf8; }
+.pdf-page-drag {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  cursor: grab;
+  touch-action: none;
+}
+.pdf-page-drag:active { cursor: grabbing; }
+.pdf-page-row--dragging {
+  opacity: 0.4;
+}
+.pdf-page-row--drag-over {
+  border-top: 2px solid var(--dir-mustard);
+}
+.pdf-page-order {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--dir-dark);
+  color: var(--dir-mustard);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+</style>
+
+<script>
+// Drag-and-drop page reordering
+let draggedRow = null;
+
+function initPdfPageDrag() {
+    document.querySelectorAll('#pdfPagesList .pdf-page-row').forEach(row => {
+        const handle = row.querySelector('.pdf-page-drag');
+        if (handle) {
+            handle.addEventListener('mousedown', () => row.setAttribute('draggable', 'true'));
+            handle.addEventListener('touchstart', () => row.setAttribute('draggable', 'true'), { passive: true });
+        }
+        row.addEventListener('mouseup', () => row.setAttribute('draggable', 'false'));
+
+        row.addEventListener('dragstart', e => {
+            draggedRow = row;
+            row.classList.add('pdf-page-row--dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        row.addEventListener('dragend', () => {
+            row.classList.remove('pdf-page-row--dragging');
+            row.setAttribute('draggable', 'false');
+            document.querySelectorAll('#pdfPagesList .pdf-page-row').forEach(r =>
+                r.classList.remove('pdf-page-row--drag-over'));
+            draggedRow = null;
+            updateOrderNumbers();
+        });
+
+        row.addEventListener('dragover', e => {
+            e.preventDefault();
+            if (!draggedRow || draggedRow === row) return;
+            e.dataTransfer.dropEffect = 'move';
+
+            const rect     = row.getBoundingClientRect();
+            const before   = (e.clientY - rect.top) < rect.height / 2;
+            row.parentNode.insertBefore(draggedRow, before ? row : row.nextSibling);
+        });
+
+        row.addEventListener('dragenter', e => {
+            e.preventDefault();
+            if (draggedRow && draggedRow !== row) row.classList.add('pdf-page-row--drag-over');
+        });
+
+        row.addEventListener('dragleave', () => {
+            row.classList.remove('pdf-page-row--drag-over');
+        });
+
+        row.addEventListener('drop', e => {
+            e.preventDefault();
+            row.classList.remove('pdf-page-row--drag-over');
+        });
+    });
+}
+
+function updateOrderNumbers() {
+    document.querySelectorAll('#pdfPagesList .pdf-page-row').forEach((row, i) => {
+        const num = row.querySelector('.pdf-page-order');
+        if (num) num.textContent = i + 1;
+    });
+}
+
+// Init on page load
+document.addEventListener('DOMContentLoaded', initPdfPageDrag);
+
+function buildPagesJson() {
+    const rows  = document.querySelectorAll('#pdfPagesList .pdf-page-row');
+    const pages = Array.from(rows).map((row, i) => ({
+        key:     row.getAttribute('data-key'),
+        label:   row.querySelector('label').textContent.trim(),
+        enabled: row.querySelector('.pdf-page-check').checked,
+        order:   i + 1
+    }));
+    document.getElementById('pdfPagesJsonInput').value = JSON.stringify(pages);
+}
+
+function clearPdfPassword() {
+    document.getElementById('removePasswordInput').value = 'true';
+    document.getElementById('pdfPasswordInput').value = '';
+    buildPagesJson();
+    document.getElementById('pdfSettingsForm').submit();
+}
+
+function togglePdfPasswordVisibility() {
+    const input = document.getElementById('pdfPasswordInput');
+    const icon  = document.getElementById('pdfPwEyeIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-solid fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fa-solid fa-eye';
+    }
+}
+</script>
 
 <!-- ══════════════════════════════════════════════════════
      APPROVAL SETTINGS

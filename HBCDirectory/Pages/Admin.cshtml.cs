@@ -1,6 +1,7 @@
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
+using iText.Kernel.Pdf;
 using HBCDirectory.Data;
 using HBCDirectory.Models;
 using HBCDirectory.Services;
@@ -20,11 +21,12 @@ namespace HBCDirectory.Pages
         private readonly PhotoService      _photos;
         private readonly TokenService      _tokens;
         private readonly EmailService      _email;
+        private readonly DirectoryPdfService _pdfService;
 
         public AdminModel(DirectoryContext db, IConfiguration config, PhotoService photos,
-                          TokenService tokens, EmailService email)
+                          TokenService tokens, EmailService email, DirectoryPdfService pdfService)
         {
-            _db = db; _config = config; _photos = photos; _tokens = tokens; _email = email;
+            _db = db; _config = config; _photos = photos; _tokens = tokens; _email = email; _pdfService = pdfService;
         }
 
         public List<Member>          Members          { get; set; } = new();
@@ -37,6 +39,7 @@ namespace HBCDirectory.Pages
         public List<ChangeLog>     RecentChanges  { get; set; } = new();
         public List<(string Label, int Value)> Stats { get; set; } = new();
         public ApprovalSettings ApprovalConfig { get; set; } = new();
+        public PdfSettings PdfConfig { get; set; } = new();
 
         public string PhotoUrl(string? f) => _photos.Url(f);
 
@@ -58,6 +61,7 @@ namespace HBCDirectory.Pages
                 .OrderBy(p => p.SubmittedAt).ToListAsync();
             RecentChanges = await _db.ChangeLogs
                 .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
+            PdfConfig = await _db.PdfSettings.FindAsync(1) ?? new PdfSettings();
 
             var adults   = Members.Count(m => m.MemberType == "Adult");
             var children = Members.Count(m => m.MemberType == "Child");
@@ -549,6 +553,76 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
+        public async Task<IActionResult> OnPostGeneratePdfAsync()
+        {
+            var settings = await _db.PdfSettings.FindAsync(1);
+            if (settings == null)
+            {
+                settings = new PdfSettings { Id = 1 };
+                _db.PdfSettings.Add(settings);
+            }
+
+            await RegenerateAndCachePdfAsync(settings);
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"PDF generated and stored. Ready to download.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostSavePdfSettingsAsync(
+            string pagesJson, string? password, bool removePassword)
+        {
+            var settings = await _db.PdfSettings.FindAsync(1);
+            if (settings == null) { settings = new PdfSettings { Id = 1 }; _db.PdfSettings.Add(settings); }
+
+            settings.PagesJson = pagesJson;
+            if (removePassword)
+                settings.Password = null;
+            else if (!string.IsNullOrWhiteSpace(password))
+                settings.Password = password.Trim();
+
+            // If a password was just removed and a PDF is already cached in R2,
+            // that cached file was encrypted at generation time — the setting
+            // alone can't strip it, so regenerate it now to match.
+            if (removePassword && settings.R2Key != null)
+            {
+                await RegenerateAndCachePdfAsync(settings);
+                TempData["Success"] = "Password removed. The stored PDF has been updated.";
+            }
+            else
+            {
+                TempData["Success"] = "PDF settings saved. Click 'Update PDF' to apply changes.";
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToPage();
+        }
+
+        private async Task RegenerateAndCachePdfAsync(PdfSettings settings)
+        {
+            var families = await _db.Families
+                .Include(f => f.Members)
+                .OrderBy(f => f.FamilyName)
+                .ToListAsync();
+
+            var unassigned = await _db.Members
+                .Where(m => m.FamilyId == null && m.MemberType == "Adult")
+                .OrderBy(m => m.Surname).ThenBy(m => m.Name)
+                .ToListAsync();
+
+            var pages = settings.GetPages();
+            var bytes = await _pdfService.GenerateAsync(families, unassigned, pages);
+
+            if (settings.HasPassword)
+                bytes = PdfPasswordHelper.AddPassword(bytes, settings.Password!);
+
+            var key = $"pdf/hbc-directory-{DateTime.Today:yyyy-MM-dd}.pdf";
+            await _pdfService.UploadToR2Async(bytes, key);
+
+            settings.R2Key         = key;
+            settings.LastGenerated = DateTime.UtcNow;
+        }
+
         //  Helpers 
         private static string CapFirst(string s)
         { s = s.Trim(); return s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..]; }
@@ -622,6 +696,27 @@ namespace HBCDirectory.Pages
                 Notes      = notes
             });
             await _db.SaveChangesAsync();
+        }
+
+        public static class PdfPasswordHelper
+        {
+            public static byte[] AddPassword(byte[] pdfBytes, string password)
+            {
+                using var input  = new MemoryStream(pdfBytes);
+                using var output = new MemoryStream();
+                var reader = new PdfReader(input);
+                var writerProps = new WriterProperties()
+                    .SetStandardEncryption(
+                        System.Text.Encoding.UTF8.GetBytes(password),
+                        System.Text.Encoding.UTF8.GetBytes(password + "_o"),
+                        EncryptionConstants.ALLOW_PRINTING | EncryptionConstants.ALLOW_COPY,
+                        EncryptionConstants.ENCRYPTION_AES_128
+                    );
+                var writer = new PdfWriter(output, writerProps);
+                var doc    = new PdfDocument(reader, writer);
+                doc.Close();
+                return output.ToArray();
+            }
         }
     }
 }

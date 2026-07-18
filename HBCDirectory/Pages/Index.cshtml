@@ -1,9 +1,9 @@
-@page "Index"
+@page
 @using HBCDirectory.Models
 @using System.Text.Json
 @model HBCDirectory.Pages.IndexModel
 @{
-    ViewData["Title"] = "Directory";
+    ViewData["Title"] = "Home | ";
 }
 
 <!--  Notifications bar  -->
@@ -70,6 +70,31 @@
                 <option value="">All offices</option>
                 <option value="Elder"  selected="@(Model.OfficeFilter == "Elder")">Elders</option>
                 <option value="Deacon" selected="@(Model.OfficeFilter == "Deacon")">Deacons</option>
+            </select>
+            @if (Model.AllAssignedStaffRoles.Any())
+            {
+                <select name="staffrole" class="dir-filter-select" onchange="liveFilter()">
+                    <option value="">All staff roles</option>
+                    @foreach (var r in Model.AllAssignedStaffRoles)
+                    {
+                        <option value="@r" selected="@(Model.StaffRoleFilter == r)">@r</option>
+                    }
+                </select>
+            }
+            @if (Model.AllGroups.Any())
+            {
+                <select name="group" class="dir-filter-select" onchange="liveFilter()">
+                    <option value="">All groups</option>
+                    @foreach (var g in Model.AllGroups)
+                    {
+                        <option value="@g.Name" selected="@(Model.GroupFilter == g.Name)">@g.Name</option>
+                    }
+                </select>
+            }
+            <select name="cardtype" class="dir-filter-select" onchange="liveFilter()">
+                <option value="">Families &amp; individuals</option>
+                <option value="family"     selected="@(Model.CardTypeFilter == "family")">Families only</option>
+                <option value="individual" selected="@(Model.CardTypeFilter == "individual")">Individuals only</option>
             </select>
             <button type="button" class="btn btn-primary btn-sm" onclick="toggleFilters()">Done</button>
             <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="clearFiltersBtn" onclick="clearFilters()">Clear</button>
@@ -287,6 +312,8 @@
                          data-search="@Model.SearchTextFor(f)"
                          data-statuses="@Model.StatusesFor(f)"
                          data-offices="@Model.OfficesFor(f)"
+                         data-staffroles="@string.Join(",", Model.StaffRolesFor(f))"
+                         data-groups="@string.Join(",", Model.GroupsFor(f))"
                          data-photo="@(string.IsNullOrEmpty(f.PhotoFileName) ? "" : Model.PhotoUrl(f.PhotoFileName))">
                         <div class="dir-card-photo dir-card-photo--family">
                             @if (!string.IsNullOrEmpty(f.PhotoFileName))
@@ -353,7 +380,8 @@
                          data-email="@m.Email"
                          data-status="@m.MemberStatus"
                          data-office="@m.ChurchOffice"
-                         data-staffroles="@string.Join(", ", staffRoles)"
+                         data-staffroles="@string.Join(",", staffRoles)"
+                         data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                          data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
                          data-address="@(m.ShowAddress ? m.Address : "")"
                          data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
@@ -645,64 +673,80 @@ function liveFilter() {
 }
 
 function runFilter() {
-    const q      = (document.querySelector('[name="q"]').value || '').trim().toLowerCase();
-    const status = document.querySelector('[name="status"]').value;
-    const office = document.querySelector('[name="office"]').value;
+    const q          = (document.querySelector('[name="q"]').value || '').trim().toLowerCase();
+    const status     = document.querySelector('[name="status"]').value;
+    const office     = document.querySelector('[name="office"]').value;
+    const staffRoleSel = document.querySelector('[name="staffrole"]');
+    const groupSel     = document.querySelector('[name="group"]');
+    const cardTypeSel  = document.querySelector('[name="cardtype"]');
+    const staffRole  = staffRoleSel ? staffRoleSel.value : '';
+    const group      = groupSel     ? groupSel.value     : '';
+    const cardType   = cardTypeSel  ? cardTypeSel.value  : '';
 
-    // Simple non-family grids (Leadership, Staff) — every card is judged on
-    // its own data-status/data-office, and the whole section hides if the
-    // search/filters leave nothing visible inside it.
-    function filterSimpleSection(gridId, sectionId, countId, noResultsId) {
+    function matchCard(card) {
+        const isFamily = card.getAttribute('data-cardtype') === 'family';
+        const search   = card.getAttribute('data-search') || '';
+
+        if (q && !search.includes(q)) return false;
+
+        if (cardType && card.getAttribute('data-cardtype') !== cardType) return false;
+
+        if (staffRole) {
+            const roles = (card.getAttribute('data-staffroles') || '')
+                .split(',').map(r => r.trim()).filter(Boolean);
+            if (!roles.includes(staffRole)) return false;
+        }
+
+        if (group) {
+            const groups = (card.getAttribute('data-groups') || '')
+                .split(',').map(g => g.trim()).filter(Boolean);
+            if (!groups.includes(group)) return false;
+        }
+
+        if (status || office) {
+            if (isFamily) {
+                const statuses = (card.getAttribute('data-statuses') || '').split(',').filter(Boolean);
+                const offices  = (card.getAttribute('data-offices')  || '').split(',').filter(Boolean);
+                if (status && !statuses.includes(status)) return false;
+                if (office && !offices.includes(office))  return false;
+            } else {
+                if (status && card.getAttribute('data-status') !== status) return false;
+                if (office && card.getAttribute('data-office') !== office) return false;
+            }
+        }
+
+        return true;
+    }
+
+    const anyActive = !!(q || status || office || staffRole || group || cardType);
+
+    function filterSection(gridId, sectionId, countId, noResultsId) {
         const grid = document.getElementById(gridId);
         if (!grid) return;
         let visible = 0;
         grid.querySelectorAll('.dir-card').forEach(card => {
-            const search = card.getAttribute('data-search') || '';
-            let match = !q || search.includes(q);
-            if (match && status && card.getAttribute('data-status') !== status) match = false;
-            if (match && office && card.getAttribute('data-office') !== office) match = false;
-            card.style.display = match ? '' : 'none';
-            if (match) visible++;
+            const show = matchCard(card);
+            card.style.display = show ? '' : 'none';
+            if (show) visible++;
         });
         const countEl = document.getElementById(countId);
         if (countEl) countEl.textContent = visible;
         const noResultsEl = document.getElementById(noResultsId);
         if (noResultsEl) noResultsEl.classList.toggle('d-none', visible !== 0);
         const sectionEl = document.getElementById(sectionId);
-        // Only search/filter hides the whole section — manual collapse (which
-        // toggles the grid itself) is independent of this.
-        const searchOrFilterActive = !!(q || status || office);
-        if (sectionEl) sectionEl.style.display = (searchOrFilterActive && visible === 0) ? 'none' : '';
+        if (sectionEl) sectionEl.style.display = (anyActive && visible === 0) ? 'none' : '';
     }
-    filterSimpleSection('leadershipGrid', 'leadershipSection', 'leadershipCount', 'leadershipNoResults');
-    filterSimpleSection('staffGrid', 'staffSection', 'staffCount', 'staffNoResults');
+    filterSection('leadershipGrid', 'leadershipSection', 'leadershipCount', 'leadershipNoResults');
+    filterSection('staffGrid',      'staffSection',      'staffCount',      'staffNoResults');
 
+    // -- main grid ------------------------------------------------------------
     const grid = document.getElementById('allMembersGrid');
     let visibleCount = 0;
-
     if (grid) {
         grid.querySelectorAll('.dir-card').forEach(card => {
-            const isFamily = card.getAttribute('data-cardtype') === 'family';
-            const search   = card.getAttribute('data-search') || '';
-
-            let match = !q || search.includes(q);
-
-            if (match && (status || office)) {
-                if (isFamily) {
-                    // A family matches a status/office filter if ANY member of
-                    // that household has it — otherwise the family disappears.
-                    const statuses = (card.getAttribute('data-statuses') || '').split(',').filter(Boolean);
-                    const offices  = (card.getAttribute('data-offices')  || '').split(',').filter(Boolean);
-                    if (status && !statuses.includes(status)) match = false;
-                    if (office && !offices.includes(office)) match = false;
-                } else {
-                    if (status && card.getAttribute('data-status') !== status) match = false;
-                    if (office && card.getAttribute('data-office') !== office) match = false;
-                }
-            }
-
-            card.style.display = match ? '' : 'none';
-            if (match) visibleCount++;
+            const show = matchCard(card);
+            card.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
         });
     }
 
@@ -712,17 +756,22 @@ function runFilter() {
     const countEl = document.getElementById('allMembersCount');
     if (countEl) countEl.textContent = visibleCount + (visibleCount === 1 ? ' card' : ' cards');
 
+    // Filter dot — shows when any filter besides text search is active
     const dot = document.getElementById('filterDot');
-    if (dot) dot.classList.toggle('d-none', !(status || office));
+    if (dot) dot.classList.toggle('d-none', !(status || office || staffRole || group || cardType));
 
     const clearBtn = document.getElementById('clearFiltersBtn');
-    if (clearBtn) clearBtn.classList.toggle('d-none', !(q || status || office));
+    if (clearBtn) clearBtn.classList.toggle('d-none', !anyActive);
 
-    // Keep the URL shareable/bookmarkable without ever navigating the page.
+    // Sync URL (bookmarkable / shareable)
     const url = new URL(window.location);
-    q ? url.searchParams.set('q', q) : url.searchParams.delete('q');
-    status ? url.searchParams.set('status', status) : url.searchParams.delete('status');
-    office ? url.searchParams.set('office', office) : url.searchParams.delete('office');
+    const setOrDel = (k, v) => v ? url.searchParams.set(k, v) : url.searchParams.delete(k);
+    setOrDel('q',         q);
+    setOrDel('status',    status);
+    setOrDel('office',    office);
+    setOrDel('staffrole', staffRole);
+    setOrDel('group',     group);
+    setOrDel('cardtype',  cardType);
     window.history.replaceState({}, '', url);
 }
 
@@ -730,6 +779,12 @@ function clearFilters() {
     document.querySelector('[name="q"]').value = '';
     document.querySelector('[name="status"]').value = '';
     document.querySelector('[name="office"]').value = '';
+    const sr = document.querySelector('[name="staffrole"]');
+    const gr = document.querySelector('[name="group"]');
+    const ct = document.querySelector('[name="cardtype"]');
+    if (sr) sr.value = '';
+    if (gr) gr.value = '';
+    if (ct) ct.value = '';
     runFilter();
 }
 
@@ -753,10 +808,17 @@ function toggleSection(name) {
 // Auto-open filters if any active, then apply the initial filter pass
 // (covers direct links like /Index?q=Smith&status=Member)
 (function() {
-    const row = document.getElementById('filterRow');
-    const status = document.querySelector('[name="status"]').value;
-    const office = document.querySelector('[name="office"]').value;
-    if (status || office) row.classList.add('dir-filter-row--open');
+    const row      = document.getElementById('filterRow');
+    const status   = document.querySelector('[name="status"]').value;
+    const office   = document.querySelector('[name="office"]').value;
+    const srEl     = document.querySelector('[name="staffrole"]');
+    const grEl     = document.querySelector('[name="group"]');
+    const ctEl     = document.querySelector('[name="cardtype"]');
+    const staffRole= srEl ? srEl.value : '';
+    const group    = grEl ? grEl.value : '';
+    const cardType = ctEl ? ctEl.value : '';
+    if (status || office || staffRole || group || cardType)
+        row.classList.add('dir-filter-row--open');
     runFilter();
 })();
 </script>
