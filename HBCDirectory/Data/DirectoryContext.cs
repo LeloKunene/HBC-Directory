@@ -18,6 +18,7 @@ namespace HBCDirectory.Data
         public DbSet<PendingUpdate>     PendingUpdates     => Set<PendingUpdate>();
         public DbSet<ChangeLog>         ChangeLogs         => Set<ChangeLog>();
         public DbSet<ApprovalSettings>  ApprovalSettings   => Set<ApprovalSettings>();
+        public DbSet<PdfSettings> PdfSettings => Set<PdfSettings>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

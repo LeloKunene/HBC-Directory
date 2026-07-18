@@ -1263,3 +1263,75 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   height: 0.25rem;
   background: var(--color-dark);
 }
+
+/*  Global toast notifications   */
+.app-toast-stack {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(380px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.app-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: white;
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+  font-size: 13.5px;
+  line-height: 1.4;
+  border-left: 4px solid var(--dir-mustard);
+  color: var(--dir-dark);
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: auto;
+}
+
+.app-toast--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.app-toast--leaving {
+  opacity: 0;
+  transform: translateX(24px);
+}
+
+.app-toast--success { border-left-color: #4a8c5f; }
+.app-toast--error   { border-left-color: #c0524a; }
+.app-toast--info    { border-left-color: var(--dir-mustard); }
+
+.app-toast-icon {
+  margin-top: 1px;
+  flex-shrink: 0;
+  font-size: 15px;
+}
+.app-toast--success .app-toast-icon { color: #4a8c5f; }
+.app-toast--error   .app-toast-icon { color: #c0524a; }
+.app-toast--info    .app-toast-icon { color: var(--dir-mustard); }
+
+.app-toast-message { flex: 1; }
+
+.app-toast-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--dir-grey);
+  flex-shrink: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.app-toast-close:hover { color: var(--dir-dark); }
+
+@media (max-width: 576px) {
+  .app-toast-stack { left: 16px; right: 16px; max-width: none; }
+}
