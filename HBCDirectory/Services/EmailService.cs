@@ -18,7 +18,7 @@ namespace HBCDirectory.Services
             _fromEmail = config["FromEmail"]     ?? throw new InvalidOperationException("FromEmail not configured.");
         }
 
-        // ── Generic send ──────────────────────────────────────────────────────────
+        //  Generic send 
 
         public async Task SendAsync(string toEmail, string toName, string subject, string htmlBody)
         {
@@ -35,7 +35,7 @@ namespace HBCDirectory.Services
             await api.SendTransacEmailAsync(email);
         }
 
-        // ── Welcome email — sent when admin adds a new member ─────────────────────
+        //  Welcome email — sent when admin adds a new member 
 
         public async Task SendWelcomeEmailAsync(
             string toEmail,
@@ -53,7 +53,7 @@ namespace HBCDirectory.Services
                 "Welcome to the HBC Member Directory", html);
         }
 
-        // ── Password reset email — sent when member clicks Forgot Password ────────
+        //  Password reset email — sent when member clicks Forgot Password 
 
         public async Task SendPasswordResetEmailAsync(
             string toEmail,
@@ -68,7 +68,7 @@ namespace HBCDirectory.Services
                 "Reset Your HBC Directory Password", html);
         }
 
-        // ── Email templates ───────────────────────────────────────────────────────
+        //  Email templates 
         // Adapted from HBC Library templates, rebranded for the Directory.
 
         private const string WelcomeEmailHtml = @"

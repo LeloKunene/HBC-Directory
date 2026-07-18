@@ -3,6 +3,7 @@ using System;
 using HBCDirectory.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HBCDirectory.Migrations
 {
     [DbContext(typeof(DirectoryContext))]
-    partial class DirectoryContextModelSnapshot : ModelSnapshot
+    [Migration("20260717221105_AddGroupsAndAudit")]
+    partial class AddGroupsAndAudit
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,31 +24,6 @@ namespace HBCDirectory.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("HBCDirectory.Models.ApprovalSettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("RequireApprovalForName")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireApprovalForPhone")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireApprovalForPhoto")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireApprovalForPrivacy")
-                        .HasColumnType("boolean");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ApprovalSettings");
-                });
 
             modelBuilder.Entity("HBCDirectory.Models.ChangeLog", b =>
                 {
@@ -145,9 +123,6 @@ namespace HBCDirectory.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Address")
-                        .HasColumnType("text");
-
                     b.Property<DateTime?>("Anniversary")
                         .HasColumnType("timestamp without time zone");
 
@@ -156,9 +131,6 @@ namespace HBCDirectory.Migrations
 
                     b.Property<string>("ChurchOffice")
                         .HasColumnType("text");
-
-                    b.Property<DateTime?>("DateJoined")
-                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Email")
                         .HasColumnType("text");
@@ -182,9 +154,6 @@ namespace HBCDirectory.Migrations
 
                     b.Property<string>("PhotoFileName")
                         .HasColumnType("text");
-
-                    b.Property<bool>("ShowAddress")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("ShowAnniversary")
                         .HasColumnType("boolean");

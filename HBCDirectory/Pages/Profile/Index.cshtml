@@ -3,7 +3,9 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="page-title">My Profile</h2>
-    <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">Back to Directory</a>
+    <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i>Back to Directory
+    </a>
 </div>
 
 @if (TempData["Success"] != null)
@@ -21,50 +23,167 @@
     </div>
 }
 
+@if (Model.HasPendingUpdate)
+{
+    <div class="alert d-flex align-items-center gap-2" style="background:#fff8e6;border:0.5px solid #e8c97a;color:#a07830;">
+        <i class="fa-solid fa-clock"></i>
+        <span>You have changes pending admin approval. They will appear in the directory once reviewed.</span>
+    </div>
+}
+
 @if (Model.CurrentMember != null)
 {
-    <div class="admin-card">
-        <div class="card-header">Edit My Details</div>
-        <div class="card-body">
+    var cfg = Model.ApprovalConfig;
 
-            <div class="text-center mb-4">
-                <img src="@Model.PhotoUrl(Model.CurrentMember.PhotoFileName)"
-                     alt="Profile photo"
-                     style="width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--color-primary)" />
+    <div class="row g-4">
+
+        <!-- Profile edit card -->
+        <div class="col-md-7">
+            <div class="admin-card">
+                <div class="card-header">Edit My Details</div>
+                <div class="card-body">
+
+                    <div class="text-center mb-4">
+                        <img src="@Model.PhotoUrl(Model.CurrentMember.PhotoFileName)"
+                             alt="Profile photo"
+                             style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:3px solid var(--color-primary)" />
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" class="admin-form-grid">
+
+                        <div class="form-field">
+                            <label class="form-label">
+                                Name
+                                @if (cfg.RequireApprovalForName) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
+                                else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
+                            </label>
+                            <input name="name" class="form-control" value="@Model.CurrentMember.Name" required />
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">
+                                Surname
+                                @if (cfg.RequireApprovalForName) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
+                                else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
+                            </label>
+                            <input name="surname" class="form-control" value="@Model.CurrentMember.Surname" required />
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">
+                                Phone
+                                @if (cfg.RequireApprovalForPhone) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
+                                else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
+                            </label>
+                            <input name="phoneNumber" class="form-control" value="@Model.CurrentMember.PhoneNumber" />
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">
+                                Address
+                                @if (cfg.RequireApprovalForPhone) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
+                                else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
+                            </label>
+                            <input name="address" class="form-control" placeholder="Street, suburb" value="@Model.CurrentMember.Address" />
+                        </div>
+
+                        <div class="form-field form-field--full">
+                            <label class="form-label">
+                                Update Photo
+                                @if (cfg.RequireApprovalForPhoto) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
+                                else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
+                            </label>
+                            <input type="file" name="photo" class="form-control" accept="image/jpeg,image/png" />
+                        </div>
+
+                        <!-- Privacy: only phone and address -->
+                        <div class="form-field form-field--full">
+                            <label class="form-label">
+                                Privacy
+                                @if (cfg.RequireApprovalForPrivacy) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
+                                else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
+                            </label>
+                            <div class="d-flex gap-3 flex-wrap">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="showPhone"
+                                           id="showPhone" value="true" @(Model.CurrentMember.ShowPhone ? "checked" : "") />
+                                    <label class="form-check-label" for="showPhone">Show phone number</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="showAddress"
+                                           id="showAddress" value="true" @(Model.CurrentMember.ShowAddress ? "checked" : "") />
+                                    <label class="form-check-label" for="showAddress">Show address</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-field form-field--full">
+                            <button type="submit" class="btn btn-primary">Save changes</button>
+                            <p class="text-muted small mt-2">
+                                <i class="fa-solid fa-bolt" style="color:#c69760;"></i> <strong>Instant:</strong> applied immediately.
+                                <i class="fa-solid fa-clock ms-2" style="color:#888;"></i> <strong>Review:</strong> sent to admin for approval.
+                            </p>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Info + Groups sidebar -->
+        <div class="col-md-5">
+            <!-- Member info card -->
+            <div class="admin-card mb-3">
+                <div class="card-header">My Information</div>
+                <div class="card-body">
+                    <table style="font-size:13px;width:100%;border-collapse:collapse;">
+                        <tr><td style="padding:5px 0;color:#888;width:120px;">Member status</td>
+                            <td><span class="badge-status">@(Model.CurrentMember.MemberStatus ?? "—")</span></td></tr>
+                        @if (!string.IsNullOrEmpty(Model.CurrentMember.ChurchOffice))
+                        {
+                        <tr><td style="padding:5px 0;color:#888;">Church office</td>
+                            <td><span class="badge-office badge-office--@Model.CurrentMember.ChurchOffice.ToLower()">@Model.CurrentMember.ChurchOffice</span></td></tr>
+                        }
+                        @if (Model.CurrentMember.Birthdate.HasValue)
+                        {
+                        <tr><td style="padding:5px 0;color:#888;">Birthday</td>
+                            <td>@Model.CurrentMember.Birthdate.Value.ToString("MMMM d")</td></tr>
+                        }
+                        @if (Model.CurrentMember.DateJoined.HasValue)
+                        {
+                        <tr><td style="padding:5px 0;color:#888;">Joined</td>
+                            <td>@Model.CurrentMember.DateJoined.Value.ToString("MMMM yyyy")</td></tr>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.CurrentMember.Family?.FamilyName))
+                        {
+                        <tr><td style="padding:5px 0;color:#888;">Family</td>
+                            <td>@Model.CurrentMember.Family!.FamilyName</td></tr>
+                        }
+                    </table>
+                </div>
             </div>
 
-            <form method="post" enctype="multipart/form-data" class="admin-form-grid">
-
-                <div class="form-field">
-                    <label class="form-label">Name</label>
-                    <input name="name" class="form-control" value="@Model.CurrentMember.Name" required />
+            <!-- Groups card -->
+            @if (Model.MemberGroups.Any())
+            {
+                <div class="admin-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-users me-2"></i>My Groups &amp; Ministries
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var mg in Model.MemberGroups)
+                            {
+                                <span style="background:#f0ece4;border:0.5px solid #c6b08d;color:#202222;font-size:12px;font-weight:500;padding:4px 12px;border-radius:20px;">
+                                    <i class="fa-solid fa-circle-dot me-1" style="color:#c69760;font-size:9px;"></i>
+                                    @mg.Group.Name
+                                </span>
+                            }
+                        </div>
+                    </div>
                 </div>
-                <div class="form-field">
-                    <label class="form-label">Surname</label>
-                    <input name="surname" class="form-control" value="@Model.CurrentMember.Surname" required />
-                </div>
-
-                <div class="form-field">
-                    <label class="form-label">Phone</label>
-                    <input name="phoneNumber" class="form-control" value="@Model.CurrentMember.PhoneNumber" />
-                </div>
-
-                <div class="form-field">
-                    <label class="form-label">Role</label>
-                    @* Members cannot change their own role — admin-only *@
-                    <input class="form-control" value="@(Model.CurrentMember.Role ?? "—")" readonly disabled />
-                </div>
-
-                <div class="form-field form-field--full">
-                    <label class="form-label">Update Photo (leave empty to keep current)</label>
-                    <input type="file" name="photo" class="form-control" accept="image/jpeg,image/png" />
-                </div>
-
-                <div class="form-field form-field--full">
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-
-            </form>
+            }
         </div>
+
     </div>
 }

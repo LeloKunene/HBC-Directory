@@ -1,12 +1,13 @@
 using HBCDirectory.Data;
 using HBCDirectory.Models;
 using HBCDirectory.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace HBCDirectory.Pages
 {
+    [Authorize]  // Login required — not public
     public class IndexModel : PageModel
     {
         private readonly DirectoryContext _db;
@@ -17,78 +18,146 @@ namespace HBCDirectory.Pages
             _db = db;
             _photos = photos;
         }
-        public string PhotoUrl(string? fileName) => _photos.Url(fileName);
 
-        [BindProperty(SupportsGet = true)]
-        public string? q { get; set; }
+        //  Data for the directory 
+        // Leadership — Elders and Deacons, shown in a collapsible section up top
+        public List<Member> Leadership { get; set; } = new();
 
-        [BindProperty(SupportsGet = true)]
-        public int? familyId { get; set; }
+        // Staff assignments, shown in their own collapsible section up top
+        public List<StaffAssignment> StaffAssignments { get; set; } = new();
 
-        [BindProperty(SupportsGet = true)]
-        public string? role { get; set; }
-        
+        // All families (sorted alphabetically)
         public List<Family> Families { get; set; } = new();
-        public List<Member> Members { get; set; } = new();
 
-        public List<Member> UpcomingBirthdays { get; set; } = new();
+        // Individual members — adults not in any family
+        public List<Member> IndividualMembers { get; set; } = new();
+
+        // MemberId -> staff role name(s), e.g. "Secretary". Staff are regular
+        // members (shown alphabetically with everyone else, inside their
+        // family if they have one) — this just lets their card/badge show
+        // the role and lets search match on it.
+        public Dictionary<int, List<string>> StaffRoles { get; set; } = new();
+
+        public List<string> StaffRolesFor(int memberId) =>
+            StaffRoles.TryGetValue(memberId, out var roles) ? roles : new List<string>();
+
+        // Search/filter params
+        public string? Q         { get; set; }
+        public string? StatusFilter { get; set; }
+        public string? OfficeFilter { get; set; }
+
+        public string PhotoUrl(string? f) => _photos.Url(f);
+
+        public List<Member> UpcomingBirthdays    { get; set; } = new();
         public List<Member> UpcomingAnniversaries { get; set; } = new();
 
-        public async Task OnGetAsync()
+        public async Task OnGetAsync(string? q, string? status, string? office)
         {
-            var query = _db.Members.Include(m => m.Family).AsQueryable();
+            Q            = q?.Trim();
+            StatusFilter = status;
+            OfficeFilter = office;
 
-            if (!string.IsNullOrEmpty(q))
-                query = query.Where(m => m.Name.Contains(q) || m.Surname.Contains(q));
+            //  Staff role lookup (used to badge/search staff members within the unified list) 
+            StaffAssignments = await _db.StaffAssignments
+                .Include(sa => sa.Member).ThenInclude(m => m.Family)
+                .Include(sa => sa.StaffRole)
+                .OrderBy(sa => sa.DisplayOrder)
+                .ToListAsync();
+            StaffRoles = StaffAssignments
+                .GroupBy(sa => sa.MemberId)
+                .ToDictionary(g => g.Key, g => g.Select(sa => sa.StaffRole.RoleName).ToList());
 
-            if (familyId.HasValue)
-                query = query.Where(m => m.FamilyId == familyId.Value);
+            //  Leadership 
+            Leadership = await _db.Members
+                .Include(m => m.Family)
+                .Where(m => m.ChurchOffice == "Elder" || m.ChurchOffice == "Deacon")
+                .OrderBy(m => m.ChurchOffice).ThenBy(m => m.Surname).ThenBy(m => m.Name)
+                .ToListAsync();
 
-            if (!string.IsNullOrEmpty(role))
-                query = query.Where(m => m.Role == role);
+            //  Families (alphabetical) 
+            var familiesQ = _db.Families
+                .Include(f => f.Members)
+                .OrderBy(f => f.FamilyName)
+                .AsQueryable();
 
-            Families = await _db.Families.OrderBy(f => f.FamilyName).ToListAsync();
-            Members = await query.OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
+            Families = await familiesQ.ToListAsync();
 
-            var allMembers = await _db.Members.OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
+            //  Individual members (adults with no family) 
+            // Note: search/status/office filtering now happens entirely client-side
+            // (instant, no page reload) — see the script block at the bottom of Index.cshtml.
+            // We always load the full set here so the client has everything to filter against.
+            IndividualMembers = await _db.Members
+                .Where(m => m.FamilyId == null && m.MemberType == "Adult")
+                .OrderBy(m => m.Surname).ThenBy(m => m.Name)
+                .ToListAsync();
+
+            var today    = DateTime.Today;
+            var in30days = today.AddDays(30);
+
+            var allMembers = await _db.Members.ToListAsync();
 
             UpcomingBirthdays = allMembers
-                .Where(m => IsWithinDays(m.Birthdate, 30))
-                .OrderBy(m => NextOccurrence(m.Birthdate!.Value))
+                .Where(m => m.Birthdate.HasValue && m.ShowBirthdate)
+                .Where(m =>
+                {
+                    var bd = m.Birthdate!.Value;
+                    try { var t = new DateTime(today.Year, bd.Month, bd.Day); return t >= today && t <= in30days; }
+                    catch { return false; }
+                })
+                .OrderBy(m => m.Birthdate!.Value.Month).ThenBy(m => m.Birthdate!.Value.Day)
                 .ToList();
 
             UpcomingAnniversaries = allMembers
-                .Where(m => IsWithinDays(m.Anniversary, 30))
-                .OrderBy(m => NextOccurrence(m.Anniversary!.Value))
+                .Where(m => m.Anniversary.HasValue && m.ShowAnniversary)
+                .Where(m =>
+                {
+                    var a = m.Anniversary!.Value;
+                    try { var t = new DateTime(today.Year, a.Month, a.Day); return t >= today && t <= in30days; }
+                    catch { return false; }
+                })
+                .OrderBy(m => m.Anniversary!.Value.Month).ThenBy(m => m.Anniversary!.Value.Day)
                 .ToList();
         }
 
-        private static bool IsWithinDays(DateTime? date, int days)
+        //  Client-side search helpers 
+        // Builds the lowercase blob of searchable text embedded in each family
+        // card's data-search attribute, so the browser can filter instantly
+        // without a server round trip.
+        public string SearchTextFor(Family f)
         {
-            if (!date.HasValue) return false;
-            var today = DateTime.Today;
-            var thisYear = new DateTime(today.Year, date.Value.Month, date.Value.Day);
-            if (thisYear < today) thisYear = thisYear.AddYears(1);
-            return (thisYear - today).TotalDays <= days;
+            var parts = new List<string> { f.FamilyName };
+            foreach (var m in f.Members)
+            {
+                parts.Add(m.Name);
+                parts.Add(m.Surname);
+                if (!string.IsNullOrEmpty(m.ChurchOffice)) parts.Add(m.ChurchOffice);
+                parts.AddRange(StaffRolesFor(m.Id));
+            }
+            return string.Join(" ", parts).ToLowerInvariant();
         }
 
-        private static DateTime NextOccurrence(DateTime date)
+        public string SearchTextFor(Member m)
         {
-            var today = DateTime.Today;
-            var next = new DateTime(today.Year, date.Month, date.Day);
-            if (next < today) next = next.AddYears(1);
-            return next;
+            var parts = new List<string> { m.Name, m.Surname };
+            if (!string.IsNullOrEmpty(m.ChurchOffice)) parts.Add(m.ChurchOffice);
+            parts.AddRange(StaffRolesFor(m.Id));
+            return string.Join(" ", parts).ToLowerInvariant();
         }
 
-        public bool IsUpcoming(DateTime? date)
-        {
-            if (!date.HasValue) return false;
-            var today = DateTime.Today;
-            var thisYear = new DateTime(today.Year, date.Value.Month, date.Value.Day);
-            var diff = (thisYear - today).TotalDays;
-            // Handle year wrap (e.g., birthday is Jan 5, today is Dec 28)
-            if (diff < 0) diff = (thisYear.AddYears(1) - today).TotalDays;
-            return diff >= 0 && diff <= 14; // within the next 14 days
-        }
+        // Comma-separated list of distinct MemberStatus values present in the family
+        // (e.g. "Member,Attendant"), used so the status filter can hide a family
+        // that has nobody matching the selected status.
+        public string StatusesFor(Family f) =>
+            string.Join(",", f.Members
+                .Where(m => !string.IsNullOrEmpty(m.MemberStatus))
+                .Select(m => m.MemberStatus)
+                .Distinct());
+
+        // Same idea for ChurchOffice ("Elder"/"Deacon").
+        public string OfficesFor(Family f) =>
+            string.Join(",", f.Members
+                .Where(m => !string.IsNullOrEmpty(m.ChurchOffice))
+                .Select(m => m.ChurchOffice)
+                .Distinct());
     }
 }

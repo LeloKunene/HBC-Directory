@@ -42,7 +42,7 @@ namespace HBCDirectory.Pages
         {
             Token = token;
 
-            // ── Basic validation ──────────────────────────────────────────────────
+            //  Basic validation 
             if (newPassword != confirmPassword)
             {
                 ModelState.AddModelError("", "Passwords do not match.");
@@ -55,7 +55,7 @@ namespace HBCDirectory.Pages
                 return Page();
             }
 
-            // ── Validate token ────────────────────────────────────────────────────
+            //  Validate token 
             var record = await _tokens.ValidateTokenAsync(token);
             if (record == null)
             {
@@ -65,7 +65,7 @@ namespace HBCDirectory.Pages
 
             var newHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
 
-            // ── Apply to member account ───────────────────────────────────────────
+            //  Apply to member account 
             var account = await _db.MemberAccounts
                 .FirstOrDefaultAsync(a => a.Username == record.Email);
 
@@ -90,7 +90,7 @@ namespace HBCDirectory.Pages
                 await _db.SaveChangesAsync();
             }
 
-            // ── Mark token as used ────────────────────────────────────────────────
+            //  Mark token as used 
             await _tokens.MarkUsedAsync(record);
 
             Success = true;

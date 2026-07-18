@@ -33,7 +33,7 @@ namespace HBCDirectory.Pages
 
             var input = username.Trim().ToLower();
 
-            // ── 1. Check admin credentials ────────────────────────────────────────
+            //  1. Check admin credentials 
             var adminUser = _config["AdminCredentials:Username"] ?? "admin";
             var adminPass = _config["AdminCredentials:Password"]
                 ?? throw new InvalidOperationException("AdminCredentials:Password not configured.");
@@ -44,7 +44,7 @@ namespace HBCDirectory.Pages
                 return RedirectToPage("/Admin");
             }
 
-            // ── 2. Check member accounts (username = email) ───────────────────────
+            //  2. Check member accounts (username = email) 
             var account = await _db.MemberAccounts
                 .Include(a => a.Member)
                 .FirstOrDefaultAsync(a => a.Username == input);
@@ -55,7 +55,7 @@ namespace HBCDirectory.Pages
                 return RedirectToPage("/Index");
             }
 
-            // ── 3. Both failed ────────────────────────────────────────────────────
+            //  3. Both failed 
             ErrorMessage = "Invalid email or password.";
             return Page();
         }

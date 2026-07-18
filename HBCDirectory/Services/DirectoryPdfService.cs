@@ -59,7 +59,7 @@ namespace HBCDirectory.Services
 
             return Document.Create(container =>
             {
-                // ── Cover page ────────────────────────────────────────────────────
+                //  Cover page 
                 container.Page(cover =>
                 {
                     cover.Size(PageSizes.A4);
@@ -136,7 +136,7 @@ namespace HBCDirectory.Services
                     });
                 });
 
-                // ── Directory pages ───────────────────────────────────────────────
+                //  Directory pages 
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4);
@@ -193,6 +193,157 @@ namespace HBCDirectory.Services
                                 t.CurrentPageNumber().FontSize(8).FontColor(Dark).Bold();
                                 t.Span(" of ").FontSize(8).FontColor(Grey);
                                 t.TotalPages().FontSize(8).FontColor(Dark).Bold();
+                            });
+                        });
+                    });
+                });
+
+                container.Page(bdPage =>
+                {
+                    bdPage.Size(PageSizes.A4);
+                    bdPage.MarginHorizontal(14, Unit.Millimetre);
+                    bdPage.MarginVertical(14, Unit.Millimetre);
+                    bdPage.DefaultTextStyle(t => t.FontFamily("Arial").FontSize(10).FontColor("#202222"));
+
+                    bdPage.Header().Column(h =>
+                    {
+                        h.Item().Row(row =>
+                        {
+                            row.RelativeItem().Text("Heritage Baptist Church — Birthdays")
+                                .Bold().FontSize(10).FontColor("#202222");
+                            row.ConstantItem(100).AlignRight()
+                                .Text(DateTime.Today.ToString("d MMM yyyy"))
+                                .FontSize(9).FontColor("#9a865f");
+                        });
+                        h.Item().PaddingTop(4).Height(1.5f).Background("#c69760");
+                        h.Item().Height(8);
+                    });
+
+                    bdPage.Content().Column(col =>
+                    {
+                        var byBirthday = allMembers
+                            .Where(m => m.Birthdate.HasValue && m.ShowBirthdate)
+                            .OrderBy(m => m.Birthdate!.Value.Month)
+                            .ThenBy(m => m.Birthdate!.Value.Day)
+                            .ToList();
+
+                        string? currentMonth = null;
+                        foreach (var m in byBirthday)
+                        {
+                            var month = m.Birthdate!.Value.ToString("MMMM");
+                            if (month != currentMonth)
+                            {
+                                if (currentMonth != null) col.Item().Height(8);
+                                col.Item().Text(month.ToUpper())
+                                    .Bold().FontSize(9).FontColor("#c69760")
+                                    .LetterSpacing(0.1f);
+                                col.Item().Height(1.5f).Background("#ede8df");
+                                col.Item().Height(4);
+                                currentMonth = month;
+                            }
+
+                            col.Item().Row(row =>
+                            {
+                                row.RelativeItem().Text($"{m.Name} {m.Surname}")
+                                    .FontSize(10).FontColor("#202222");
+                                row.ConstantItem(60).AlignRight()
+                                    .Text(m.Birthdate!.Value.ToString("MMMM d"))
+                                    .FontSize(10).FontColor("#9a865f");
+                            });
+                            col.Item().Height(0.5f).Background("#f5f1eb");
+                        }
+
+                        if (!byBirthday.Any())
+                            col.Item().Text("No birthdays on file.").FontSize(10).FontColor("#888");
+                    });
+
+                    bdPage.Footer().Column(f =>
+                    {
+                        f.Item().Height(1).Background("#ede8df");
+                        f.Item().PaddingTop(6).Row(row =>
+                        {
+                            row.RelativeItem().Text("Heritage Baptist Church Johannesburg")
+                                .FontSize(8).FontColor("#9a865f");
+                            row.ConstantItem(80).AlignRight().Text(t =>
+                            {
+                                t.Span("Page ").FontSize(8).FontColor("#888");
+                                t.CurrentPageNumber().FontSize(8).FontColor("#202222").Bold();
+                            });
+                        });
+                    });
+                });
+
+                // ── Anniversary page ────────────────────────────────────────────────────────
+                container.Page(annivPage =>
+                {
+                    annivPage.Size(PageSizes.A4);
+                    annivPage.MarginHorizontal(14, Unit.Millimetre);
+                    annivPage.MarginVertical(14, Unit.Millimetre);
+                    annivPage.DefaultTextStyle(t => t.FontFamily("Arial").FontSize(10).FontColor("#202222"));
+
+                    annivPage.Header().Column(h =>
+                    {
+                        h.Item().Row(row =>
+                        {
+                            row.RelativeItem().Text("Heritage Baptist Church — Anniversaries")
+                                .Bold().FontSize(10).FontColor("#202222");
+                            row.ConstantItem(100).AlignRight()
+                                .Text(DateTime.Today.ToString("d MMM yyyy"))
+                                .FontSize(9).FontColor("#9a865f");
+                        });
+                        h.Item().PaddingTop(4).Height(1.5f).Background("#c69760");
+                        h.Item().Height(8);
+                    });
+
+                    annivPage.Content().Column(col =>
+                    {
+                        var byAnniversary = allMembers
+                            .Where(m => m.Anniversary.HasValue && m.ShowAnniversary)
+                            .OrderBy(m => m.Anniversary!.Value.Month)
+                            .ThenBy(m => m.Anniversary!.Value.Day)
+                            .ToList();
+
+                        string? currentMonth = null;
+                        foreach (var m in byAnniversary)
+                        {
+                            var month = m.Anniversary!.Value.ToString("MMMM");
+                            if (month != currentMonth)
+                            {
+                                if (currentMonth != null) col.Item().Height(8);
+                                col.Item().Text(month.ToUpper())
+                                    .Bold().FontSize(9).FontColor("#c69760")
+                                    .LetterSpacing(0.1f);
+                                col.Item().Height(1.5f).Background("#ede8df");
+                                col.Item().Height(4);
+                                currentMonth = month;
+                            }
+
+                            col.Item().Row(row =>
+                            {
+                                row.RelativeItem().Text($"{m.Name} {m.Surname}")
+                                    .FontSize(10).FontColor("#202222");
+                                row.ConstantItem(60).AlignRight()
+                                    .Text(m.Anniversary!.Value.ToString("MMMM d"))
+                                    .FontSize(10).FontColor("#9a865f");
+                            });
+                            col.Item().Height(0.5f).Background("#f5f1eb");
+                        }
+
+                        if (!byAnniversary.Any())
+                            col.Item().Text("No anniversaries on file.").FontSize(10).FontColor("#888");
+                    });
+
+                    annivPage.Footer().Column(f =>
+                    {
+                        f.Item().Height(1).Background("#ede8df");
+                        f.Item().PaddingTop(6).Row(row =>
+                        {
+                            row.RelativeItem().Text("Heritage Baptist Church Johannesburg")
+                                .FontSize(8).FontColor("#9a865f");
+                            row.ConstantItem(80).AlignRight().Text(t =>
+                            {
+                                t.Span("Page ").FontSize(8).FontColor("#888");
+                                t.CurrentPageNumber().FontSize(8).FontColor("#202222").Bold();
                             });
                         });
                     });
@@ -307,9 +458,9 @@ namespace HBCDirectory.Services
                             .Text($"{member.Name} {member.Surname}")
                             .Bold().FontSize(8.5f).FontColor(Dark).LineHeight(1.2f);
 
-                        if (!string.IsNullOrEmpty(member.Role))
+                        if (!string.IsNullOrEmpty(member.ChurchOffice))
                             info.Item().PaddingTop(2)
-                                .Text(member.Role.ToUpper())
+                                .Text(member.ChurchOffice.ToUpper())
                                 .FontSize(7).FontColor(Mustard).Bold().LetterSpacing(0.06f);
 
                         if (!string.IsNullOrEmpty(member.PhoneNumber))

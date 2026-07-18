@@ -3,6 +3,7 @@ using System;
 using HBCDirectory.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HBCDirectory.Migrations
 {
     [DbContext(typeof(DirectoryContext))]
-    partial class DirectoryContextModelSnapshot : ModelSnapshot
+    [Migration("20260717193952_RolesAndStaffRedesign")]
+    partial class RolesAndStaffRedesign
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,69 +24,6 @@ namespace HBCDirectory.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("HBCDirectory.Models.ApprovalSettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("RequireApprovalForName")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireApprovalForPhone")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireApprovalForPhoto")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireApprovalForPrivacy")
-                        .HasColumnType("boolean");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ApprovalSettings");
-                });
-
-            modelBuilder.Entity("HBCDirectory.Models.ChangeLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("ChangedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("ChangedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("EntityId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("EntityName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("EntityType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ChangeLogs");
-                });
 
             modelBuilder.Entity("HBCDirectory.Models.Family", b =>
                 {
@@ -114,29 +54,6 @@ namespace HBCDirectory.Migrations
                     b.ToTable("Families");
                 });
 
-            modelBuilder.Entity("HBCDirectory.Models.Group", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Groups");
-                });
-
             modelBuilder.Entity("HBCDirectory.Models.Member", b =>
                 {
                     b.Property<int>("Id")
@@ -144,9 +61,6 @@ namespace HBCDirectory.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .HasColumnType("text");
 
                     b.Property<DateTime?>("Anniversary")
                         .HasColumnType("timestamp without time zone");
@@ -156,9 +70,6 @@ namespace HBCDirectory.Migrations
 
                     b.Property<string>("ChurchOffice")
                         .HasColumnType("text");
-
-                    b.Property<DateTime?>("DateJoined")
-                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Email")
                         .HasColumnType("text");
@@ -182,9 +93,6 @@ namespace HBCDirectory.Migrations
 
                     b.Property<string>("PhotoFileName")
                         .HasColumnType("text");
-
-                    b.Property<bool>("ShowAddress")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("ShowAnniversary")
                         .HasColumnType("boolean");
@@ -236,30 +144,6 @@ namespace HBCDirectory.Migrations
                     b.ToTable("MemberAccounts");
                 });
 
-            modelBuilder.Entity("HBCDirectory.Models.MemberGroup", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("GroupId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MemberId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GroupId");
-
-                    b.HasIndex("MemberId", "GroupId")
-                        .IsUnique();
-
-                    b.ToTable("MemberGroups");
-                });
-
             modelBuilder.Entity("HBCDirectory.Models.PasswordResetToken", b =>
                 {
                     b.Property<int>("Id")
@@ -288,46 +172,6 @@ namespace HBCDirectory.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PasswordResetTokens");
-                });
-
-            modelBuilder.Entity("HBCDirectory.Models.PendingUpdate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ChangesJson")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsRejected")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("MemberId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PendingPhotoFileName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ReviewNote")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("SubmittedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MemberId");
-
-                    b.ToTable("PendingUpdates");
                 });
 
             modelBuilder.Entity("HBCDirectory.Models.StaffAssignment", b =>
@@ -400,36 +244,6 @@ namespace HBCDirectory.Migrations
                     b.Navigation("Member");
                 });
 
-            modelBuilder.Entity("HBCDirectory.Models.MemberGroup", b =>
-                {
-                    b.HasOne("HBCDirectory.Models.Group", "Group")
-                        .WithMany("MemberGroups")
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("HBCDirectory.Models.Member", "Member")
-                        .WithMany()
-                        .HasForeignKey("MemberId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Group");
-
-                    b.Navigation("Member");
-                });
-
-            modelBuilder.Entity("HBCDirectory.Models.PendingUpdate", b =>
-                {
-                    b.HasOne("HBCDirectory.Models.Member", "Member")
-                        .WithMany()
-                        .HasForeignKey("MemberId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Member");
-                });
-
             modelBuilder.Entity("HBCDirectory.Models.StaffAssignment", b =>
                 {
                     b.HasOne("HBCDirectory.Models.Member", "Member")
@@ -452,11 +266,6 @@ namespace HBCDirectory.Migrations
             modelBuilder.Entity("HBCDirectory.Models.Family", b =>
                 {
                     b.Navigation("Members");
-                });
-
-            modelBuilder.Entity("HBCDirectory.Models.Group", b =>
-                {
-                    b.Navigation("MemberGroups");
                 });
 
             modelBuilder.Entity("HBCDirectory.Models.StaffRole", b =>
