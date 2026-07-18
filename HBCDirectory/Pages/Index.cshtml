@@ -78,6 +78,136 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════
+     LEADERSHIP SECTION (collapsible, participates in search/filter)
+════════════════════════════════════════════════════════ -->
+@if (Model.Leadership.Any())
+{
+    <div class="dir-section" id="leadershipSection">
+        <div class="dir-section-rule dir-section-rule--toggleable" onclick="toggleSection('leadership')">
+            <span class="dir-section-label">Leadership</span>
+            <div class="dir-section-line"></div>
+            <span class="dir-section-count" id="leadershipCount">@Model.Leadership.Count</span>
+            <button type="button" class="dir-section-toggle" id="leadershipToggleBtn" aria-label="Toggle Leadership section">
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+        </div>
+        <div class="dir-grid" id="leadershipGrid">
+            @foreach (var m in Model.Leadership)
+            {
+                var staffRoles = Model.StaffRolesFor(m.Id);
+                <div class="dir-card dir-card--leadership" data-bs-toggle="modal"
+                     data-bs-target="#memberModal"
+                     data-name="@m.DisplayName"
+                     data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
+                     data-email="@m.Email"
+                     data-status="@m.MemberStatus"
+                     data-office="@m.ChurchOffice"
+                     data-staffroles="@string.Join(", ", staffRoles)"
+                     data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                     data-address="@(m.ShowAddress ? m.Address : "")"
+                     data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
+                     data-family="@m.Family?.FamilyName"
+                     data-initials="@m.Name[0]@m.Surname[0]"
+                     data-cardtype="individual"
+                     data-search="@Model.SearchTextFor(m)">
+                    <div class="dir-card-photo dir-card-photo--dark">
+                        @if (!string.IsNullOrEmpty(m.PhotoFileName))
+                        {
+                            <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="@m.DisplayName" />
+                        }
+                        else
+                        {
+                            <span class="dir-card-initials">@m.Name[0]@m.Surname[0]</span>
+                        }
+                        <span class="dir-card-office-badge">@m.ChurchOffice</span>
+                    </div>
+                    <div class="dir-card-body">
+                        <p class="dir-card-name">@m.Surname, @m.Name</p>
+                        @if (!string.IsNullOrEmpty(m.Family?.FamilyName))
+                        {
+                            <p class="dir-card-sub">@m.Family.FamilyName family</p>
+                        }
+                        <div class="dir-card-badges">
+                            <span class="dir-badge dir-badge--member">Member</span>
+                            <span class="dir-badge dir-badge--office">@m.ChurchOffice</span>
+                            @foreach (var role in staffRoles)
+                            {
+                                <span class="dir-badge dir-badge--staff">@role</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <p class="text-center text-muted mt-3 d-none" id="leadershipNoResults">
+            <i class="fa-solid fa-magnifying-glass-minus me-1"></i>No leaders match your search.
+        </p>
+    </div>
+}
+
+<!-- ══════════════════════════════════════════════════════
+     STAFF SECTION (collapsible, participates in search/filter)
+════════════════════════════════════════════════════════ -->
+@if (Model.StaffAssignments.Any())
+{
+    <div class="dir-section" id="staffSection">
+        <div class="dir-section-rule dir-section-rule--toggleable" onclick="toggleSection('staff')">
+            <span class="dir-section-label">Staff</span>
+            <div class="dir-section-line"></div>
+            <span class="dir-section-count" id="staffCount">@Model.StaffAssignments.Count</span>
+            <button type="button" class="dir-section-toggle" id="staffToggleBtn" aria-label="Toggle Staff section">
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+        </div>
+        <div class="dir-grid" id="staffGrid">
+            @foreach (var sa in Model.StaffAssignments)
+            {
+                var m = sa.Member;
+                var staffRoles = Model.StaffRolesFor(m.Id);
+                <div class="dir-card dir-card--staff" data-bs-toggle="modal"
+                     data-bs-target="#memberModal"
+                     data-name="@m.DisplayName"
+                     data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
+                     data-email="@m.Email"
+                     data-status="@m.MemberStatus"
+                     data-office="@m.ChurchOffice"
+                     data-staffroles="@string.Join(", ", staffRoles)"
+                     data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                     data-address="@(m.ShowAddress ? m.Address : "")"
+                     data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
+                     data-family="@m.Family?.FamilyName"
+                     data-initials="@m.Name[0]@m.Surname[0]"
+                     data-cardtype="individual"
+                     data-search="@Model.SearchTextFor(m)">
+                    <div class="dir-card-photo dir-card-photo--staff">
+                        @if (!string.IsNullOrEmpty(m.PhotoFileName))
+                        {
+                            <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="@m.DisplayName" />
+                        }
+                        else
+                        {
+                            <span class="dir-card-initials">@m.Name[0]@m.Surname[0]</span>
+                        }
+                    </div>
+                    <div class="dir-card-body">
+                        <p class="dir-card-name">@m.Surname, @m.Name</p>
+                        <div class="dir-card-badges">
+                            @foreach (var role in staffRoles)
+                            {
+                                <span class="dir-badge dir-badge--staff">@role</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <p class="text-center text-muted mt-3 d-none" id="staffNoResults">
+            <i class="fa-solid fa-magnifying-glass-minus me-1"></i>No staff match your search.
+        </p>
+    </div>
+}
+
+<!-- ══════════════════════════════════════════════════════
      MAIN ALPHABETICAL GRID (everyone — families, individuals,
      leadership, and staff — sorted alphabetically so search and
      filter apply uniformly to the whole directory)
@@ -132,13 +262,19 @@
                             office = a.ChurchOffice,
                             staffRoles = Model.StaffRolesFor(a.Id),
                             phone = a.ShowPhone ? a.PhoneNumber : null,
-                            email = a.Email
+                            email = a.Email,
+                            birthdate = a.ShowBirthdate && a.Birthdate.HasValue
+                                ? a.Birthdate.Value.ToString("d MMM") : null,
+                            photo = string.IsNullOrEmpty(a.PhotoFileName) ? "" : Model.PhotoUrl(a.PhotoFileName),
+                            initials = $"{a.Name.FirstOrDefault()}{a.Surname.FirstOrDefault()}".ToUpper()
                         }),
                         children = children.Select(c => new
                         {
                             name = c.Name,
                             birthdate = c.ShowBirthdate && c.Birthdate.HasValue
-                                ? c.Birthdate.Value.ToString("d MMM") : null
+                                ? c.Birthdate.Value.ToString("d MMM") : null,
+                            photo = string.IsNullOrEmpty(c.PhotoFileName) ? "" : Model.PhotoUrl(c.PhotoFileName),
+                            initials = c.Name.FirstOrDefault().ToString().ToUpper()
                         })
                     };
                     var familyJson = JsonSerializer.Serialize(familyPayload);
@@ -364,22 +500,22 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     // Address
     const addrEl = document.getElementById('fm-address');
     if (data.address) {
-        addrEl.innerHTML = `<a href="https://maps.google.com/?q=${encodeURIComponent(data.address)}" target="_blank"><i class="fa-solid fa-location-dot"></i> ${data.address}</a>`;
+        addrEl.innerHTML = `<a href="https://maps.google.com/?q=${encodeURIComponent(data.address)}" target="_blank"><i class="fa-solid fa-location-dot dir-icon"></i> ${data.address}</a>`;
         addrEl.classList.remove('d-none');
     } else addrEl.classList.add('d-none');
 
     // Anniversary (taken from whichever adult has one on file)
     const annivEl = document.getElementById('fm-anniversary');
     if (data.anniversary) {
-        annivEl.innerHTML = `<i class="fa-solid fa-ring"></i> Anniversary: ${data.anniversary}`;
+        annivEl.innerHTML = `<i class="fa-solid fa-ring dir-icon"></i> Anniversary: ${data.anniversary}`;
         annivEl.classList.remove('d-none');
     } else annivEl.classList.add('d-none');
 
     // Family-level phone — shown as the household's main contact when set
     const famPhoneEl = document.getElementById('fm-familyphone');
     if (data.phone) {
-        famPhoneEl.innerHTML = `<a href="tel:${data.phone}"><i class="fa-solid fa-phone"></i> ${data.phone}</a>
-                                 &nbsp;<a href="https://wa.me/${data.phone.replace(/\D/g, '')}"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>`;
+        famPhoneEl.innerHTML = `<a href="tel:${data.phone}"><i class="fa-solid fa-phone dir-icon"></i> ${data.phone}</a>
+                                 &nbsp;<a href="https://wa.me/${data.phone.replace(/\D/g, '')}"><i class="fa-brands fa-whatsapp dir-icon"></i> WhatsApp</a>`;
         famPhoneEl.classList.remove('d-none');
     } else famPhoneEl.classList.add('d-none');
 
@@ -388,14 +524,23 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     let hh = '';
     adults.forEach(a => {
         let contact = '';
-        if (a.phone) contact += `<a href="tel:${a.phone}"><i class="fa-solid fa-phone"></i> ${a.phone}</a> <a href="https://wa.me/${a.phone.replace(/\D/g, '')}"><i class="fa-brands fa-whatsapp"></i></a> `;
-        if (a.email) contact += `<a href="mailto:${a.email}"><i class="fa-solid fa-envelope"></i> ${a.email}</a>`;
+        if (a.phone) contact += `<a href="tel:${a.phone}"><i class="fa-solid fa-phone dir-icon"></i> ${a.phone}</a> <a href="https://wa.me/${a.phone.replace(/\D/g, '')}"><i class="fa-brands fa-whatsapp dir-icon"></i></a> `;
+        if (a.email) contact += `<a href="mailto:${a.email}"><i class="fa-solid fa-envelope dir-icon"></i> ${a.email}</a>`;
         if (!contact) contact = data.phone
             ? `<span class="dir-modal-fallback">Uses family contact above</span>`
             : `<span class="dir-modal-fallback">No contact on file</span>`;
+        const avatar = a.photo
+            ? `<img class="dir-modal-person-photo" src="${a.photo}" alt="${a.name}" />`
+            : `<div class="dir-modal-person-initials">${a.initials || (a.name || '?')[0]}</div>`;
         hh += `<div class="dir-modal-person">
-                   <p class="dir-modal-person-name">${a.name}${a.office ? ` <span class="dir-badge dir-badge--office">${a.office}</span>` : ''}${(a.staffRoles || []).map(r => ` <span class="dir-badge dir-badge--staff">${r}</span>`).join('')}</p>
-                   <div class="dir-modal-person-contact">${contact}</div>
+                   ${avatar}
+                   <div class="dir-modal-person-body">
+                       <p class="dir-modal-person-name">${a.name}${a.office ? ` <span class="dir-badge dir-badge--office">${a.office}</span>` : ''}${(a.staffRoles || []).map(r => ` <span class="dir-badge dir-badge--staff">${r}</span>`).join('')}</p>
+                       <div class="dir-modal-person-contact">
+                           ${contact}
+                           ${a.birthdate ? `<span><i class="fa-solid fa-cake-candles dir-icon"></i> ${a.birthdate}</span>` : ''}
+                       </div>
+                   </div>
                </div>`;
     });
     document.getElementById('fm-household').innerHTML = hh
@@ -404,7 +549,10 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     // Children
     let ch = '';
     children.forEach(c => {
-        ch += `<span class="dir-modal-child-chip">${c.name}${c.birthdate ? ` <i class="fa-solid fa-cake-candles"></i> ${c.birthdate}` : ''}</span>`;
+        const avatar = c.photo
+            ? `<img class="dir-modal-person-photo dir-modal-person-photo--sm" src="${c.photo}" alt="${c.name}" />`
+            : `<div class="dir-modal-person-initials dir-modal-person-initials--sm">${c.initials || (c.name || '?')[0]}</div>`;
+        ch += `<span class="dir-modal-child-chip">${avatar}${c.name}${c.birthdate ? ` <i class="fa-solid fa-cake-candles dir-icon"></i> ${c.birthdate}` : ''}</span>`;
     });
     document.getElementById('fm-children').innerHTML = ch
         ? `<div class="dir-modal-section-label">Children</div><div class="dir-modal-children-row">${ch}</div>` : '';
@@ -452,25 +600,25 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     // Contact rows
     const phoneEl = document.getElementById('mm-phone');
     if (phone) {
-        phoneEl.innerHTML = `<a href="tel:${phone}"><i class="fa-solid fa-phone"></i> ${phone}</a>
-                              &nbsp;<a href="https://wa.me/${phone.replace(/\D/g,'')}"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>`;
+        phoneEl.innerHTML = `<a href="tel:${phone}"><i class="fa-solid fa-phone dir-icon"></i> ${phone}</a>
+                              &nbsp;<a href="https://wa.me/${phone.replace(/\D/g,'')}"><i class="fa-brands fa-whatsapp dir-icon"></i> WhatsApp</a>`;
         phoneEl.classList.remove('d-none');
     } else { phoneEl.classList.add('d-none'); }
 
     const emailEl = document.getElementById('mm-email');
     if (email) {
-        emailEl.innerHTML = `<a href="mailto:${email}"><i class="fa-solid fa-envelope"></i> ${email}</a>`;
+        emailEl.innerHTML = `<a href="mailto:${email}"><i class="fa-solid fa-envelope dir-icon"></i> ${email}</a>`;
         emailEl.classList.remove('d-none');
     } else { emailEl.classList.add('d-none'); }
 
     const familyEl = document.getElementById('mm-family');
     if (family) {
-        familyEl.innerHTML = `<i class="fa-solid fa-house"></i> ${family} family`;
+        familyEl.innerHTML = `<i class="fa-solid fa-house dir-icon"></i> ${family} family`;
         familyEl.classList.remove('d-none');
     } else { familyEl.classList.add('d-none'); }
 
     const bdEl = document.getElementById('mm-bd');
-    if (bd) { bdEl.innerHTML = `<i class="fa-solid fa-cake-candles"></i> ${bd}`; bdEl.classList.remove('d-none'); }
+    if (bd) { bdEl.innerHTML = `<i class="fa-solid fa-cake-candles dir-icon"></i> ${bd}`; bdEl.classList.remove('d-none'); }
     else { bdEl.classList.add('d-none'); }
 
     // Individual member address
@@ -478,7 +626,7 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     if (addrIndEl) {
         const addr = get('address');
         if (addr) {
-            addrIndEl.innerHTML = `<a href="https://maps.google.com/?q=${encodeURIComponent(addr)}" target="_blank"><i class="fa-solid fa-location-dot"></i> ${addr}</a>`;
+            addrIndEl.innerHTML = `<a href="https://maps.google.com/?q=${encodeURIComponent(addr)}" target="_blank"><i class="fa-solid fa-location-dot dir-icon"></i> ${addr}</a>`;
             addrIndEl.classList.remove('d-none');
         } else { addrIndEl.classList.add('d-none'); }
     }
@@ -500,6 +648,34 @@ function runFilter() {
     const q      = (document.querySelector('[name="q"]').value || '').trim().toLowerCase();
     const status = document.querySelector('[name="status"]').value;
     const office = document.querySelector('[name="office"]').value;
+
+    // Simple non-family grids (Leadership, Staff) — every card is judged on
+    // its own data-status/data-office, and the whole section hides if the
+    // search/filters leave nothing visible inside it.
+    function filterSimpleSection(gridId, sectionId, countId, noResultsId) {
+        const grid = document.getElementById(gridId);
+        if (!grid) return;
+        let visible = 0;
+        grid.querySelectorAll('.dir-card').forEach(card => {
+            const search = card.getAttribute('data-search') || '';
+            let match = !q || search.includes(q);
+            if (match && status && card.getAttribute('data-status') !== status) match = false;
+            if (match && office && card.getAttribute('data-office') !== office) match = false;
+            card.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        const countEl = document.getElementById(countId);
+        if (countEl) countEl.textContent = visible;
+        const noResultsEl = document.getElementById(noResultsId);
+        if (noResultsEl) noResultsEl.classList.toggle('d-none', visible !== 0);
+        const sectionEl = document.getElementById(sectionId);
+        // Only search/filter hides the whole section — manual collapse (which
+        // toggles the grid itself) is independent of this.
+        const searchOrFilterActive = !!(q || status || office);
+        if (sectionEl) sectionEl.style.display = (searchOrFilterActive && visible === 0) ? 'none' : '';
+    }
+    filterSimpleSection('leadershipGrid', 'leadershipSection', 'leadershipCount', 'leadershipNoResults');
+    filterSimpleSection('staffGrid', 'staffSection', 'staffCount', 'staffNoResults');
 
     const grid = document.getElementById('allMembersGrid');
     let visibleCount = 0;
@@ -561,6 +737,17 @@ function clearFilters() {
 function toggleFilters() {
     const row = document.getElementById('filterRow');
     row.classList.toggle('dir-filter-row--open');
+}
+
+// Collapsible Leadership / Staff sections — independent of search filtering.
+// Collapsing just hides the grid; if a search later leaves zero matches the
+// whole section still hides itself regardless of this collapsed state.
+function toggleSection(name) {
+    const grid = document.getElementById(name + 'Grid');
+    const btn  = document.getElementById(name + 'ToggleBtn');
+    if (!grid) return;
+    grid.classList.toggle('dir-grid--collapsed');
+    if (btn) btn.classList.toggle('dir-section-toggle--collapsed');
 }
 
 // Auto-open filters if any active, then apply the initial filter pass

@@ -20,6 +20,12 @@ namespace HBCDirectory.Pages
         }
 
         //  Data for the directory 
+        // Leadership — Elders and Deacons, shown in a collapsible section up top
+        public List<Member> Leadership { get; set; } = new();
+
+        // Staff assignments, shown in their own collapsible section up top
+        public List<StaffAssignment> StaffAssignments { get; set; } = new();
+
         // All families (sorted alphabetically)
         public List<Family> Families { get; set; } = new();
 
@@ -52,13 +58,21 @@ namespace HBCDirectory.Pages
             OfficeFilter = office;
 
             //  Staff role lookup (used to badge/search staff members within the unified list) 
-            var staffAssignments = await _db.StaffAssignments
+            StaffAssignments = await _db.StaffAssignments
+                .Include(sa => sa.Member).ThenInclude(m => m.Family)
                 .Include(sa => sa.StaffRole)
                 .OrderBy(sa => sa.DisplayOrder)
                 .ToListAsync();
-            StaffRoles = staffAssignments
+            StaffRoles = StaffAssignments
                 .GroupBy(sa => sa.MemberId)
                 .ToDictionary(g => g.Key, g => g.Select(sa => sa.StaffRole.RoleName).ToList());
+
+            //  Leadership 
+            Leadership = await _db.Members
+                .Include(m => m.Family)
+                .Where(m => m.ChurchOffice == "Elder" || m.ChurchOffice == "Deacon")
+                .OrderBy(m => m.ChurchOffice).ThenBy(m => m.Surname).ThenBy(m => m.Name)
+                .ToListAsync();
 
             //  Families (alphabetical) 
             var familiesQ = _db.Families

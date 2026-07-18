@@ -31,6 +31,21 @@
 .dir-section-line { flex: 1; border-top: 1px solid var(--dir-beige); }
 .dir-section-count { font-size: 11px; color: var(--dir-grey); white-space: nowrap; }
 
+.dir-section-rule--toggleable { cursor: pointer; user-select: none; }
+.dir-section-toggle {
+  background: none;
+  border: none;
+  color: var(--dir-grey);
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dir-section-toggle i { transition: transform 0.2s ease; }
+.dir-section-toggle--collapsed i { transform: rotate(-90deg); }
+.dir-grid.dir-grid--collapsed { display: none; }
+
 /* Grid */
 .dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
 
@@ -105,6 +120,16 @@
 .badge-office--deacon { background: var(--dir-gold); color: white; }
 .btn-xs { font-size: 11px; padding: 3px 10px; border-radius: 4px; }
 
+/* Card/modal icons — grouped by color, while surrounding text keeps its
+   existing (gold) color. */
+.dir-icon.fa-phone          { color: #202222 !important; } /* Heritage Dark Grey */
+.dir-icon.fa-whatsapp       { color: #808e6b !important; } /* Heritage Olive Green */
+.dir-icon.fa-envelope       { color: #202222 !important; } /* Heritage Dark Grey */
+.dir-icon.fa-house          { color: #202222 !important; } /* Heritage Dark Grey */
+.dir-icon.fa-cake-candles   { color: #202222 !important; } /* Heritage Dark Grey */
+.dir-icon.fa-location-dot   { color: #202222 !important; } /* Heritage Dark Grey */
+.dir-icon.fa-ring           { color: #202222 !important; } /* Heritage Dark Grey */
+
 /* Modals */
 .dir-modal-header { background: var(--dir-dark); color: white; border-bottom: 2px solid var(--dir-mustard); }
 .dir-modal-header .modal-title { color: var(--dir-mustard); font-family: 'Montserrat', sans-serif; }
@@ -112,7 +137,7 @@
 .dir-modal-photo { width: 100px; height: 100px; border-radius: 8px; object-fit: cover; }
 .dir-modal-initials { width: 100px; height: 100px; border-radius: 8px; background: var(--dir-light); color: var(--dir-mustard); font-size: 32px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 .dir-modal-info { flex: 1; }
-.dir-modal-row { font-size: 14px; margin-bottom: 8px; }
+.dir-modal-row { font-size: 14px; margin-bottom: 8px; color: var(--dir-gold); }
 .dir-modal-row a { color: var(--dir-gold); text-decoration: none; }
 .dir-modal-row a:hover { text-decoration: underline; }
 .dir-modal-members { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
@@ -126,15 +151,40 @@
 .dir-badge--family { background: var(--dir-mustard); color: var(--dir-dark); }
 .dir-modal-section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dir-grey); margin: 16px 0 8px; padding-top: 10px; border-top: 0.5px solid var(--dir-light2); }
 .dir-modal-household:empty, .dir-modal-children:empty { display: none; }
-.dir-modal-person { padding: 8px 0; border-bottom: 0.5px solid var(--dir-light2); }
-.dir-modal-person:last-child { border-bottom: none; }
+
+/* Each household member renders as a small card within the family modal */
+.dir-modal-person {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px; margin-bottom: 8px;
+    background: var(--dir-light); border: 0.5px solid var(--dir-light2); border-radius: 8px;
+}
+.dir-modal-person:last-child { margin-bottom: 0; }
+.dir-modal-person-photo {
+    width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+}
+.dir-modal-person-initials {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    background: var(--dir-dark); color: var(--dir-mustard);
+    font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+}
+.dir-modal-person-body { flex: 1; min-width: 0; }
 .dir-modal-person-name { font-size: 13.5px; font-weight: 600; color: var(--dir-dark); margin: 0 0 4px; }
-.dir-modal-person-contact { font-size: 13px; display: flex; flex-wrap: wrap; gap: 10px; }
+.dir-modal-person-contact { font-size: 13px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; color: var(--dir-gold); }
 .dir-modal-person-contact a { color: var(--dir-gold); text-decoration: none; }
 .dir-modal-person-contact a:hover { text-decoration: underline; }
 .dir-modal-fallback { color: var(--dir-grey); font-style: italic; }
-.dir-modal-children-row { display: flex; flex-wrap: wrap; gap: 6px; }
-.dir-modal-child-chip { font-size: 12px; background: var(--dir-light); color: var(--dir-gold); padding: 4px 10px; border-radius: 20px; }
+
+.dir-modal-children-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.dir-modal-child-chip {
+    font-size: 12px; background: var(--dir-light); color: var(--dir-gold);
+    padding: 4px 12px 4px 4px; border-radius: 20px;
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 0.5px solid var(--dir-light2);
+}
+.dir-modal-person-photo--sm, .dir-modal-person-initials--sm {
+    width: 22px; height: 22px; font-size: 10px;
+}
 
 /* Admin section */
 .admin-section-header h4 { font-family: 'Montserrat', sans-serif; font-size: 15px; font-weight: 700; color: var(--dir-dark); }
