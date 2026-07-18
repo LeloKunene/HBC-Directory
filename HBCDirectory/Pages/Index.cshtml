@@ -19,176 +19,80 @@
         {
             <div class="notification-item">
                 <i class="fa-solid fa-cake-candles notification-icon"></i>
-                <span>
-                    <strong>Birthdays:</strong>
-                    @string.Join(", ", bdays.Select(m => $"{m.Name} {m.Surname} ({m.Birthdate!.Value:MMM d})"))
-                </span>
+                <span class="notification-label"><strong>Upcoming birthdays</strong> (next 30 days)</span>
+                <div class="notification-chips">
+                    @foreach (var m in bdays)
+                    {
+                        <span class="notification-chip">@m.DisplayName <em>· @m.Birthdate!.Value.ToString("MMM d")</em></span>
+                    }
+                </div>
             </div>
         }
         @if (annivs.Any())
         {
             <div class="notification-item">
                 <i class="fa-solid fa-ring notification-icon"></i>
-                <span>
-                    <strong>Anniversaries:</strong>
-                    @string.Join(", ", annivs.Select(m => $"{m.Name} &amp; {m.Surname} ({m.Anniversary!.Value:MMM d})"))
-                </span>
+                <span class="notification-label"><strong>Upcoming anniversaries</strong> (next 30 days)</span>
+                <div class="notification-chips">
+                    @foreach (var m in annivs)
+                    {
+                        <span class="notification-chip">@m.DisplayName <em>· @m.Anniversary!.Value.ToString("MMM d")</em></span>
+                    }
+                </div>
             </div>
         }
     </div>
 }
 
-<!--  Search bar  -->
+<!--  Search bar (fully client-side — filters instantly as you type, no page reload) -->
 <div class="dir-search-wrap">
-    <form method="get" class="dir-search-form" id="searchForm">
+    <form class="dir-search-form" id="searchForm" onsubmit="return false;">
         <div class="dir-search-row">
             <div class="dir-search-input-wrap">
                 <i class="fa-solid fa-magnifying-glass dir-search-icon"></i>
-                <input type="text" name="q" value="@Model.Q"
+                <input type="text" name="q" value="@Model.Q" autocomplete="off"
                        class="dir-search-input" placeholder="Search by name..."
-                       oninput="debounceSearch(this.form)" />
+                       oninput="liveFilter()" />
             </div>
             <button type="button" class="dir-filter-toggle" onclick="toggleFilters()"
                     aria-label="Toggle filters">
                 <i class="fa-solid fa-sliders"></i>
-                @if (!string.IsNullOrEmpty(Model.StatusFilter) || !string.IsNullOrEmpty(Model.OfficeFilter))
-                {
-                    <span class="filter-dot"></span>
-                }
+                <span class="filter-dot d-none" id="filterDot"></span>
             </button>
         </div>
         <div class="dir-filter-row" id="filterRow">
-            <select name="status" class="dir-filter-select">
+            <select name="status" class="dir-filter-select" onchange="liveFilter()">
                 <option value="">All statuses</option>
                 <option value="Member"    selected="@(Model.StatusFilter == "Member")">Members</option>
                 <option value="Attendant" selected="@(Model.StatusFilter == "Attendant")">Attendants</option>
             </select>
-            <select name="office" class="dir-filter-select">
+            <select name="office" class="dir-filter-select" onchange="liveFilter()">
                 <option value="">All offices</option>
                 <option value="Elder"  selected="@(Model.OfficeFilter == "Elder")">Elders</option>
                 <option value="Deacon" selected="@(Model.OfficeFilter == "Deacon")">Deacons</option>
             </select>
-            <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-            @if (!string.IsNullOrEmpty(Model.Q) || !string.IsNullOrEmpty(Model.StatusFilter) || !string.IsNullOrEmpty(Model.OfficeFilter))
-            {
-                <a href="/Index" class="btn btn-outline-secondary btn-sm">Clear</a>
-            }
+            <button type="button" class="btn btn-primary btn-sm" onclick="toggleFilters()">Done</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="clearFiltersBtn" onclick="clearFilters()">Clear</button>
         </div>
     </form>
 </div>
 
 <!-- ══════════════════════════════════════════════════════
-     LEADERSHIP SECTION
-════════════════════════════════════════════════════════ -->
-@if (Model.Leadership.Any())
-{
-    <div class="dir-section">
-        <div class="dir-section-rule">
-            <span class="dir-section-label">Leadership</span>
-            <div class="dir-section-line"></div>
-            <span class="dir-section-count">@Model.Leadership.Count</span>
-        </div>
-        <div class="dir-grid">
-            @foreach (var m in Model.Leadership)
-            {
-                <div class="dir-card dir-card--leadership" data-bs-toggle="modal"
-                     data-bs-target="#memberModal"
-                     data-name="@m.DisplayName"
-                     data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
-                     data-email="@m.Email"
-                     data-status="@m.MemberStatus"
-                     data-office="@m.ChurchOffice"
-                     data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
-                     data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
-                     data-family="@m.Family?.FamilyName"
-                     data-initials="@m.Name[0]@m.Surname[0]">
-                    <div class="dir-card-photo dir-card-photo--dark">
-                        @if (!string.IsNullOrEmpty(m.PhotoFileName))
-                        {
-                            <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="@m.DisplayName" />
-                        }
-                        else
-                        {
-                            <span class="dir-card-initials">@m.Name[0]@m.Surname[0]</span>
-                        }
-                        <span class="dir-card-office-badge">@m.ChurchOffice</span>
-                    </div>
-                    <div class="dir-card-body">
-                        <p class="dir-card-name">@m.Surname, @m.Name</p>
-                        @if (!string.IsNullOrEmpty(m.Family?.FamilyName))
-                        {
-                            <p class="dir-card-sub">@m.Family.FamilyName family</p>
-                        }
-                        <div class="dir-card-badges">
-                            <span class="dir-badge dir-badge--member">Member</span>
-                            <span class="dir-badge dir-badge--office">@m.ChurchOffice</span>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-}
-
-<!-- ══════════════════════════════════════════════════════
-     STAFF SECTION
-════════════════════════════════════════════════════════ -->
-@if (Model.StaffAssignments.Any())
-{
-    <div class="dir-section">
-        <div class="dir-section-rule">
-            <span class="dir-section-label">Staff</span>
-            <div class="dir-section-line"></div>
-            <span class="dir-section-count">@Model.StaffAssignments.Count</span>
-        </div>
-        <div class="dir-grid">
-            @foreach (var sa in Model.StaffAssignments)
-            {
-                var m = sa.Member;
-                <div class="dir-card dir-card--staff" data-bs-toggle="modal"
-                     data-bs-target="#memberModal"
-                     data-name="@m.DisplayName"
-                     data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
-                     data-email="@m.Email"
-                     data-status="@sa.StaffRole.RoleName"
-                     data-office=""
-                     data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
-                     data-family="@m.Family?.FamilyName"
-                     data-initials="@m.Name[0]@m.Surname[0]">
-                    <div class="dir-card-photo dir-card-photo--staff">
-                        @if (!string.IsNullOrEmpty(m.PhotoFileName))
-                        {
-                            <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="@m.DisplayName" />
-                        }
-                        else
-                        {
-                            <span class="dir-card-initials">@m.Name[0]@m.Surname[0]</span>
-                        }
-                    </div>
-                    <div class="dir-card-body">
-                        <p class="dir-card-name">@m.Surname, @m.Name</p>
-                        <p class="dir-card-sub">@sa.StaffRole.RoleName</p>
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-}
-
-<!-- ══════════════════════════════════════════════════════
-     MAIN ALPHABETICAL GRID (Families + Individuals mixed)
+     MAIN ALPHABETICAL GRID (everyone — families, individuals,
+     leadership, and staff — sorted alphabetically so search and
+     filter apply uniformly to the whole directory)
 ════════════════════════════════════════════════════════ -->
 @{
     // Build one alphabetical list: families + individuals merged, sorted by surname/familyName
+    // NOTE: nothing is excluded here based on search/status/office — the full set always
+    // renders, and filtering happens instantly client-side (see liveFilter() in Scripts below).
     var allCards = new List<(string SortKey, string CardType, object Data)>();
 
     foreach (var f in Model.Families)
-        if (Model.FamilyMatchesSearch(f))
-            allCards.Add((f.FamilyName.ToUpper(), "family", f));
+        allCards.Add((f.FamilyName.ToUpper(), "family", f));
 
     foreach (var m in Model.IndividualMembers)
-        if (Model.MemberMatchesSearch(m))
-            allCards.Add((m.Surname.ToUpper(), "individual", m));
+        allCards.Add((m.Surname.ToUpper(), "individual", m));
 
     var sortedCards = allCards.OrderBy(c => c.SortKey).ToList();
 }
@@ -197,11 +101,11 @@
 {
     <div class="dir-section">
         <div class="dir-section-rule">
-            <span class="dir-section-label">All Members</span>
+            <span class="dir-section-label">Members</span>
             <div class="dir-section-line"></div>
-            <span class="dir-section-count">@sortedCards.Count cards</span>
+            <span class="dir-section-count" id="allMembersCount">@sortedCards.Count cards</span>
         </div>
-        <div class="dir-grid">
+        <div class="dir-grid" id="allMembersGrid">
             @foreach (var card in sortedCards)
             {
                 if (card.CardType == "family")
@@ -226,6 +130,7 @@
                         {
                             name = a.Name,
                             office = a.ChurchOffice,
+                            staffRoles = Model.StaffRolesFor(a.Id),
                             phone = a.ShowPhone ? a.PhoneNumber : null,
                             email = a.Email
                         }),
@@ -242,6 +147,10 @@
                          data-bs-target="#familyModal"
                          data-familyid="@f.Id"
                          data-family="@familyJson"
+                         data-cardtype="family"
+                         data-search="@Model.SearchTextFor(f)"
+                         data-statuses="@Model.StatusesFor(f)"
+                         data-offices="@Model.OfficesFor(f)"
                          data-photo="@(string.IsNullOrEmpty(f.PhotoFileName) ? "" : Model.PhotoUrl(f.PhotoFileName))">
                         <div class="dir-card-photo dir-card-photo--family">
                             @if (!string.IsNullOrEmpty(f.PhotoFileName))
@@ -273,12 +182,34 @@
                                     <text> · <em>@childrenNames</em></text>
                                 }
                             </p>
+                            @{
+                                var familyBadges = adults
+                                    .Where(a => !string.IsNullOrEmpty(a.ChurchOffice) || Model.StaffRolesFor(a.Id).Any())
+                                    .ToList();
+                            }
+                            @if (familyBadges.Any())
+                            {
+                                <div class="dir-card-badges">
+                                    @foreach (var a in familyBadges)
+                                    {
+                                        @if (!string.IsNullOrEmpty(a.ChurchOffice))
+                                        {
+                                            <span class="dir-badge dir-badge--office">@a.ChurchOffice</span>
+                                        }
+                                        @foreach (var role in Model.StaffRolesFor(a.Id))
+                                        {
+                                            <span class="dir-badge dir-badge--staff">@role</span>
+                                        }
+                                    }
+                                </div>
+                            }
                         </div>
                     </div>
                 }
                 else
                 {
                     var m = (Member)card.Data;
+                    var staffRoles = Model.StaffRolesFor(m.Id);
                     <div class="dir-card dir-card--individual" data-bs-toggle="modal"
                          data-bs-target="#memberModal"
                          data-name="@m.DisplayName"
@@ -286,10 +217,13 @@
                          data-email="@m.Email"
                          data-status="@m.MemberStatus"
                          data-office="@m.ChurchOffice"
+                         data-staffroles="@string.Join(", ", staffRoles)"
                          data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
                          data-address="@(m.ShowAddress ? m.Address : "")"
                          data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
-                         data-initials="@m.Name[0]@m.Surname[0]">
+                         data-initials="@m.Name[0]@m.Surname[0]"
+                         data-cardtype="individual"
+                         data-search="@Model.SearchTextFor(m)">
                         <div class="dir-card-photo dir-card-photo--individual">
                             @if (!string.IsNullOrEmpty(m.PhotoFileName))
                             {
@@ -300,6 +234,10 @@
                                 <span class="dir-card-initials">@m.Name[0]@m.Surname[0]</span>
                             }
                             <span class="dir-card-type-pill dir-card-type-pill--individual">Individual</span>
+                            @if (!string.IsNullOrEmpty(m.ChurchOffice))
+                            {
+                                <span class="dir-card-office-badge">@m.ChurchOffice</span>
+                            }
                         </div>
                         <div class="dir-card-body">
                             <p class="dir-card-name">@m.Surname, @m.Name</p>
@@ -316,12 +254,19 @@
                                 {
                                     <span class="dir-badge dir-badge--office">@m.ChurchOffice</span>
                                 }
+                                @foreach (var role in staffRoles)
+                                {
+                                    <span class="dir-badge dir-badge--staff">@role</span>
+                                }
                             </div>
                         </div>
                     </div>
                 }
             }
         </div>
+        <p class="text-center text-muted mt-4 d-none" id="noResultsMsg">
+            <i class="fa-solid fa-magnifying-glass-minus me-1"></i>No members match your search.
+        </p>
     </div>
 }
 else
@@ -449,7 +394,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
             ? `<span class="dir-modal-fallback">Uses family contact above</span>`
             : `<span class="dir-modal-fallback">No contact on file</span>`;
         hh += `<div class="dir-modal-person">
-                   <p class="dir-modal-person-name">${a.name}${a.office ? ` <span class="dir-badge dir-badge--office">${a.office}</span>` : ''}</p>
+                   <p class="dir-modal-person-name">${a.name}${a.office ? ` <span class="dir-badge dir-badge--office">${a.office}</span>` : ''}${(a.staffRoles || []).map(r => ` <span class="dir-badge dir-badge--staff">${r}</span>`).join('')}</p>
                    <div class="dir-modal-person-contact">${contact}</div>
                </div>`;
     });
@@ -475,6 +420,7 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     const email   = get('email');
     const status  = get('status');
     const office  = get('office');
+    const staffRolesRaw = get('staffroles');
     const bd      = get('birthdate');
     const photo   = get('photo');
     const initials = get('initials');
@@ -496,6 +442,11 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     let badges = '';
     if (status) badges += `<span class="dir-badge dir-badge--${status.toLowerCase()}">${status}</span>`;
     if (office) badges += `<span class="dir-badge dir-badge--office">${office}</span>`;
+    if (staffRolesRaw) {
+        staffRolesRaw.split(',').map(r => r.trim()).filter(Boolean).forEach(role => {
+            badges += `<span class="dir-badge dir-badge--staff">${role}</span>`;
+        });
+    }
     document.getElementById('mm-badges').innerHTML = badges;
 
     // Contact rows
@@ -533,11 +484,77 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     }
 });
 
-// Debounce search submit
-let searchTimer;
-function debounceSearch(form) {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => form.submit(), 400);
+//  Instant, fully client-side search & filter 
+// Everything needed to filter is already in the DOM (data-search / data-status /
+// data-office attributes on each card), so typing never triggers a page reload
+// or a server round trip — we just show/hide cards. Keystrokes are coalesced
+// with requestAnimationFrame so even fast typing stays perfectly smooth.
+
+let filterFrame = null;
+function liveFilter() {
+    if (filterFrame) cancelAnimationFrame(filterFrame);
+    filterFrame = requestAnimationFrame(runFilter);
+}
+
+function runFilter() {
+    const q      = (document.querySelector('[name="q"]').value || '').trim().toLowerCase();
+    const status = document.querySelector('[name="status"]').value;
+    const office = document.querySelector('[name="office"]').value;
+
+    const grid = document.getElementById('allMembersGrid');
+    let visibleCount = 0;
+
+    if (grid) {
+        grid.querySelectorAll('.dir-card').forEach(card => {
+            const isFamily = card.getAttribute('data-cardtype') === 'family';
+            const search   = card.getAttribute('data-search') || '';
+
+            let match = !q || search.includes(q);
+
+            if (match && (status || office)) {
+                if (isFamily) {
+                    // A family matches a status/office filter if ANY member of
+                    // that household has it — otherwise the family disappears.
+                    const statuses = (card.getAttribute('data-statuses') || '').split(',').filter(Boolean);
+                    const offices  = (card.getAttribute('data-offices')  || '').split(',').filter(Boolean);
+                    if (status && !statuses.includes(status)) match = false;
+                    if (office && !offices.includes(office)) match = false;
+                } else {
+                    if (status && card.getAttribute('data-status') !== status) match = false;
+                    if (office && card.getAttribute('data-office') !== office) match = false;
+                }
+            }
+
+            card.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+    }
+
+    const noResults = document.getElementById('noResultsMsg');
+    if (noResults) noResults.classList.toggle('d-none', visibleCount !== 0);
+
+    const countEl = document.getElementById('allMembersCount');
+    if (countEl) countEl.textContent = visibleCount + (visibleCount === 1 ? ' card' : ' cards');
+
+    const dot = document.getElementById('filterDot');
+    if (dot) dot.classList.toggle('d-none', !(status || office));
+
+    const clearBtn = document.getElementById('clearFiltersBtn');
+    if (clearBtn) clearBtn.classList.toggle('d-none', !(q || status || office));
+
+    // Keep the URL shareable/bookmarkable without ever navigating the page.
+    const url = new URL(window.location);
+    q ? url.searchParams.set('q', q) : url.searchParams.delete('q');
+    status ? url.searchParams.set('status', status) : url.searchParams.delete('status');
+    office ? url.searchParams.set('office', office) : url.searchParams.delete('office');
+    window.history.replaceState({}, '', url);
+}
+
+function clearFilters() {
+    document.querySelector('[name="q"]').value = '';
+    document.querySelector('[name="status"]').value = '';
+    document.querySelector('[name="office"]').value = '';
+    runFilter();
 }
 
 // Toggle filter row on mobile
@@ -546,12 +563,14 @@ function toggleFilters() {
     row.classList.toggle('dir-filter-row--open');
 }
 
-// Auto-open filters if any active
+// Auto-open filters if any active, then apply the initial filter pass
+// (covers direct links like /Index?q=Smith&status=Member)
 (function() {
     const row = document.getElementById('filterRow');
     const status = document.querySelector('[name="status"]').value;
     const office = document.querySelector('[name="office"]').value;
     if (status || office) row.classList.add('dir-filter-row--open');
+    runFilter();
 })();
 </script>
 }

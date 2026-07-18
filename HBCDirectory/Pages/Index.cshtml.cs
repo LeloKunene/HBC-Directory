@@ -20,17 +20,20 @@ namespace HBCDirectory.Pages
         }
 
         //  Data for the directory 
-        // Leadership — Elders and Deacons featured at the top
-        public List<Member> Leadership { get; set; } = new();
-
-        // Staff assignments for the staff section
-        public List<StaffAssignment> StaffAssignments { get; set; } = new();
-
         // All families (sorted alphabetically)
         public List<Family> Families { get; set; } = new();
 
         // Individual members — adults not in any family
         public List<Member> IndividualMembers { get; set; } = new();
+
+        // MemberId -> staff role name(s), e.g. "Secretary". Staff are regular
+        // members (shown alphabetically with everyone else, inside their
+        // family if they have one) — this just lets their card/badge show
+        // the role and lets search match on it.
+        public Dictionary<int, List<string>> StaffRoles { get; set; } = new();
+
+        public List<string> StaffRolesFor(int memberId) =>
+            StaffRoles.TryGetValue(memberId, out var roles) ? roles : new List<string>();
 
         // Search/filter params
         public string? Q         { get; set; }
@@ -48,19 +51,14 @@ namespace HBCDirectory.Pages
             StatusFilter = status;
             OfficeFilter = office;
 
-            //  Leadership 
-            Leadership = await _db.Members
-                .Include(m => m.Family)
-                .Where(m => m.ChurchOffice == "Elder" || m.ChurchOffice == "Deacon")
-                .OrderBy(m => m.ChurchOffice).ThenBy(m => m.Surname).ThenBy(m => m.Name)
-                .ToListAsync();
-
-            //  Staff 
-            StaffAssignments = await _db.StaffAssignments
-                .Include(sa => sa.Member).ThenInclude(m => m.Family)
+            //  Staff role lookup (used to badge/search staff members within the unified list) 
+            var staffAssignments = await _db.StaffAssignments
                 .Include(sa => sa.StaffRole)
                 .OrderBy(sa => sa.DisplayOrder)
                 .ToListAsync();
+            StaffRoles = staffAssignments
+                .GroupBy(sa => sa.MemberId)
+                .ToDictionary(g => g.Key, g => g.Select(sa => sa.StaffRole.RoleName).ToList());
 
             //  Families (alphabetical) 
             var familiesQ = _db.Families
@@ -71,17 +69,13 @@ namespace HBCDirectory.Pages
             Families = await familiesQ.ToListAsync();
 
             //  Individual members (adults with no family) 
-            var individualsQ = _db.Members
+            // Note: search/status/office filtering now happens entirely client-side
+            // (instant, no page reload) — see the script block at the bottom of Index.cshtml.
+            // We always load the full set here so the client has everything to filter against.
+            IndividualMembers = await _db.Members
                 .Where(m => m.FamilyId == null && m.MemberType == "Adult")
                 .OrderBy(m => m.Surname).ThenBy(m => m.Name)
-                .AsQueryable();
-
-            if (!string.IsNullOrEmpty(StatusFilter))
-                individualsQ = individualsQ.Where(m => m.MemberStatus == StatusFilter);
-            if (!string.IsNullOrEmpty(OfficeFilter))
-                individualsQ = individualsQ.Where(m => m.ChurchOffice == OfficeFilter);
-
-            IndividualMembers = await individualsQ.ToListAsync();
+                .ToListAsync();
 
             var today    = DateTime.Today;
             var in30days = today.AddDays(30);
@@ -111,21 +105,45 @@ namespace HBCDirectory.Pages
                 .ToList();
         }
 
-        //  Search helpers 
-        public bool FamilyMatchesSearch(Family f)
+        //  Client-side search helpers 
+        // Builds the lowercase blob of searchable text embedded in each family
+        // card's data-search attribute, so the browser can filter instantly
+        // without a server round trip.
+        public string SearchTextFor(Family f)
         {
-            if (string.IsNullOrEmpty(Q)) return true;
-            var q = Q.ToLower();
-            return f.FamilyName.ToLower().Contains(q) ||
-                   f.Members.Any(m => m.Name.ToLower().Contains(q) ||
-                                      m.Surname.ToLower().Contains(q));
+            var parts = new List<string> { f.FamilyName };
+            foreach (var m in f.Members)
+            {
+                parts.Add(m.Name);
+                parts.Add(m.Surname);
+                if (!string.IsNullOrEmpty(m.ChurchOffice)) parts.Add(m.ChurchOffice);
+                parts.AddRange(StaffRolesFor(m.Id));
+            }
+            return string.Join(" ", parts).ToLowerInvariant();
         }
 
-        public bool MemberMatchesSearch(Member m)
+        public string SearchTextFor(Member m)
         {
-            if (string.IsNullOrEmpty(Q)) return true;
-            var q = Q.ToLower();
-            return m.Name.ToLower().Contains(q) || m.Surname.ToLower().Contains(q);
+            var parts = new List<string> { m.Name, m.Surname };
+            if (!string.IsNullOrEmpty(m.ChurchOffice)) parts.Add(m.ChurchOffice);
+            parts.AddRange(StaffRolesFor(m.Id));
+            return string.Join(" ", parts).ToLowerInvariant();
         }
+
+        // Comma-separated list of distinct MemberStatus values present in the family
+        // (e.g. "Member,Attendant"), used so the status filter can hide a family
+        // that has nobody matching the selected status.
+        public string StatusesFor(Family f) =>
+            string.Join(",", f.Members
+                .Where(m => !string.IsNullOrEmpty(m.MemberStatus))
+                .Select(m => m.MemberStatus)
+                .Distinct());
+
+        // Same idea for ChurchOffice ("Elder"/"Deacon").
+        public string OfficesFor(Family f) =>
+            string.Join(",", f.Members
+                .Where(m => !string.IsNullOrEmpty(m.ChurchOffice))
+                .Select(m => m.ChurchOffice)
+                .Distinct());
     }
 }

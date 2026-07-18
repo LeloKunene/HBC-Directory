@@ -77,6 +77,7 @@
 .dir-badge--member { background: var(--dir-light2); color: var(--dir-dark); border: 0.5px solid var(--dir-beige); }
 .dir-badge--attendant { background: #fef9ee; color: #a07830; border: 0.5px solid #e8c97a; }
 .dir-badge--office { background: var(--dir-dark); color: var(--dir-mustard); }
+.dir-badge--staff { background: #eef2ee; color: #3f6b4f; border: 0.5px solid #bcd3c2; }
 
 /* Stat cards */
 .stat-card { background: var(--dir-dark); border-radius: 10px; padding: 20px; text-align: center; }
@@ -378,12 +379,40 @@
   gap: 10px;
   font-size: 13px;
   color: #704b0a;
+  flex-wrap: wrap;
 }
 
 .notification-icon {
   color: var(--dir-mustard);
   margin-top: 2px;
   flex-shrink: 0;
+}
+
+.notification-label {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.notification-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.notification-chip {
+  background: #fffdf7;
+  border: 0.5px solid #e8c97a;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #704b0a;
+  white-space: nowrap;
+}
+
+.notification-chip em {
+  font-style: normal;
+  color: #a07830;
 }
 
 /* ─── Responsive search bar ─── */
