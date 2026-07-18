@@ -35,10 +35,8 @@ namespace HBCDirectory.Pages
         public List<MemberGroup>   MemberGroups   { get; set; } = new();
         public List<PendingUpdate> PendingUpdates { get; set; } = new();
         public List<ChangeLog>     RecentChanges  { get; set; } = new();
-
-        // Drives the stat-card row on the dashboard — add/remove entries here
-        // and the grid re-flows automatically, no markup changes needed.
         public List<(string Label, int Value)> Stats { get; set; } = new();
+        public ApprovalSettings ApprovalConfig { get; set; } = new();
 
         public string PhotoUrl(string? f) => _photos.Url(f);
 
@@ -60,10 +58,12 @@ namespace HBCDirectory.Pages
                 .OrderBy(p => p.SubmittedAt).ToListAsync();
             RecentChanges = await _db.ChangeLogs
                 .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
+            ApprovalConfig = await _db.ApprovalSettings.FindAsync(1) ?? new ApprovalSettings();
 
             var adults   = Members.Count(m => m.MemberType == "Adult");
             var children = Members.Count(m => m.MemberType == "Child");
             var leaders  = Members.Count(m => m.ChurchOffice is "Elder" or "Deacon");
+            
 
             Stats = new List<(string, int)>
             {
@@ -522,6 +522,25 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
+        public async Task<IActionResult> OnPostSaveApprovalSettingsAsync(
+            bool requireName, bool requirePhone, bool requirePrivacy, bool requirePhoto)
+        {
+            var settings = await _db.ApprovalSettings.FindAsync(1);
+            if (settings == null)
+            {
+                settings = new ApprovalSettings { Id = 1 };
+                _db.ApprovalSettings.Add(settings);
+            }
+
+            settings.RequireApprovalForName    = requireName;
+            settings.RequireApprovalForPhone   = requirePhone;
+            settings.RequireApprovalForPrivacy = requirePrivacy;
+            settings.RequireApprovalForPhoto   = requirePhoto;
+
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Approval settings saved.";
+            return RedirectToPage();
+        }
 
         //  Helpers 
         private static string CapFirst(string s)

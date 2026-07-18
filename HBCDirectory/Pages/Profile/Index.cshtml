@@ -3,7 +3,9 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="page-title">My Profile</h2>
-    <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">Back to Directory</a>
+    <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i>Back to Directory
+    </a>
 </div>
 
 @if (TempData["Success"] != null)
@@ -24,13 +26,15 @@
 @if (Model.HasPendingUpdate)
 {
     <div class="alert alert-warning d-flex align-items-center gap-2">
-        <span>⏳</span>
+        <i class="fa-solid fa-clock"></i>
         <span>You have changes pending admin approval. They will appear in the directory once reviewed.</span>
     </div>
 }
 
 @if (Model.CurrentMember != null)
 {
+    var cfg = Model.ApprovalConfig;
+
     <div class="admin-card">
         <div class="card-header">Edit My Details</div>
         <div class="card-body">
@@ -44,32 +48,82 @@
             <form method="post" enctype="multipart/form-data" class="admin-form-grid">
 
                 <div class="form-field">
-                    <label class="form-label">Name</label>
+                    <label class="form-label">
+                        Name
+                        @if (cfg.RequireApprovalForName)
+                        {
+                            <span class="approval-badge"><i class="fa-solid fa-clock"></i> Needs approval</span>
+                        }
+                        else
+                        {
+                            <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span>
+                        }
+                    </label>
                     <input name="name" class="form-control" value="@Model.CurrentMember.Name" required />
                 </div>
                 <div class="form-field">
-                    <label class="form-label">Surname</label>
+                    <label class="form-label">
+                        Surname
+                        @if (cfg.RequireApprovalForName)
+                        {
+                            <span class="approval-badge"><i class="fa-solid fa-clock"></i> Needs approval</span>
+                        }
+                        else
+                        {
+                            <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span>
+                        }
+                    </label>
                     <input name="surname" class="form-control" value="@Model.CurrentMember.Surname" required />
                 </div>
 
                 <div class="form-field">
-                    <label class="form-label">Phone</label>
+                    <label class="form-label">
+                        Phone
+                        @if (cfg.RequireApprovalForPhone)
+                        {
+                            <span class="approval-badge"><i class="fa-solid fa-clock"></i> Needs approval</span>
+                        }
+                        else
+                        {
+                            <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span>
+                        }
+                    </label>
                     <input name="phoneNumber" class="form-control" value="@Model.CurrentMember.PhoneNumber" />
                 </div>
 
                 <div class="form-field">
                     <label class="form-label">Church Office</label>
-                    @* Members cannot change their own church office — admin-only *@
                     <input class="form-control" value="@(Model.CurrentMember.ChurchOffice ?? "—")" readonly disabled />
+                    <div class="form-text">Admin-managed — cannot be changed here</div>
                 </div>
 
                 <div class="form-field form-field--full">
-                    <label class="form-label">Update Photo (leave empty to keep current)</label>
+                    <label class="form-label">
+                        Update Photo
+                        @if (cfg.RequireApprovalForPhoto)
+                        {
+                            <span class="approval-badge"><i class="fa-solid fa-clock"></i> Needs approval</span>
+                        }
+                        else
+                        {
+                            <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span>
+                        }
+                    </label>
                     <input type="file" name="photo" class="form-control" accept="image/jpeg,image/png" />
                 </div>
 
                 <div class="form-field form-field--full">
-                    <label class="form-label">Privacy Settings</label>
+                    <label class="form-label">
+                        Privacy Settings
+                        @if (cfg.RequireApprovalForPrivacy)
+                        {
+                            <span class="approval-badge"><i class="fa-solid fa-clock"></i> Needs approval</span>
+                        }
+                        else
+                        {
+                            <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span>
+                        }
+                    </label>
                     <div class="d-flex gap-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="showPhone"
@@ -90,8 +144,11 @@
                 </div>
 
                 <div class="form-field form-field--full">
-                    <button type="submit" class="btn btn-primary">Submit for Review</button>
-                    <p class="text-muted small mt-1">Changes go to the admin for approval before appearing in the directory.</p>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                    <p class="text-muted small mt-2">
+                        <i class="fa-solid fa-bolt" style="color:#c69760;"></i> <strong>Instant</strong> changes go live immediately.
+                        <i class="fa-solid fa-clock ms-2" style="color:#888;"></i> <strong>Needs approval</strong> changes are reviewed by the admin first.
+                    </p>
                 </div>
 
             </form>

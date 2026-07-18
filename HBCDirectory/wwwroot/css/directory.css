@@ -147,3 +147,211 @@
   .form-field--full { grid-column: 1; }
   .dir-modal-body { flex-direction: column; }
 }
+
+
+.pending-update-card {
+  background: white;
+  border: 0.5px solid var(--dir-light2);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pending-update-header {
+  background: var(--dir-light);
+  border-bottom: 0.5px solid var(--dir-light2);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pending-update-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.pending-col {
+  padding: 20px;
+}
+
+.pending-col:first-child {
+  border-right: 0.5px solid var(--dir-light2);
+}
+
+.pending-col-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dir-gold);
+  margin-bottom: 14px;
+}
+
+.pending-col-label--proposed {
+  color: var(--dir-mustard);
+}
+
+.pending-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.pending-photo {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid var(--dir-light2);
+  flex-shrink: 0;
+}
+
+.pending-photo--new {
+  border-color: var(--dir-mustard);
+}
+
+.pending-photo-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: var(--dir-light);
+  color: var(--dir-mustard);
+  font-size: 22px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--dir-light2);
+  flex-shrink: 0;
+}
+
+.pending-photo-nochange {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: #fafaf8;
+  border: 2px dashed var(--dir-light2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #aaa;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.pending-photo-note {
+  font-size: 12px;
+}
+
+.pending-fields-table {
+  width: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.pending-fields-table td {
+  padding: 5px 0;
+  vertical-align: top;
+}
+
+.field-label {
+  color: #888;
+  width: 110px;
+  font-size: 12px;
+}
+
+.field-changed {
+  background: #fff8e6;
+}
+
+.field-changed td {
+  font-weight: 600;
+  color: var(--dir-dark);
+}
+
+.field-unchanged td {
+  color: #aaa;
+}
+
+.changed-tag {
+  display: inline-flex;
+  align-items: center;
+  background: var(--dir-mustard);
+  color: var(--dir-dark);
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 20px;
+  margin-left: 6px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   APPROVAL SETTINGS CARDS — add to directory.css
+   ───────────────────────────────────────────────────────────── */
+
+.approval-setting-card {
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 0.5px solid var(--dir-light2);
+}
+
+.approval-setting-card--instant {
+  background: #f0f4ec;
+  border-color: #b3c9ae;
+}
+
+.approval-setting-card--pending {
+  background: #fff8e6;
+  border-color: #e8c97a;
+}
+
+.approval-setting-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dir-dark);
+}
+
+.approval-setting-status {
+  font-size: 11px;
+  color: var(--dir-grey);
+}
+
+.approval-setting-card--instant .approval-setting-status {
+  color: #4a6741;
+}
+
+.approval-setting-card--pending .approval-setting-status {
+  color: #a07830;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PROFILE PAGE — approval / instant badges
+   ───────────────────────────────────────────────────────────── */
+
+.approval-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #fff8e6;
+  color: #a07830;
+  border: 0.5px solid #e8c97a;
+  margin-left: 6px;
+}
+
+.instant-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #f0f4ec;
+  color: #4a6741;
+  border: 0.5px solid #b3c9ae;
+  margin-left: 6px;
+}

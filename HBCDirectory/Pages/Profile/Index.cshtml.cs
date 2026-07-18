@@ -37,13 +37,11 @@ namespace HBCDirectory.Pages.Profile
             if (memberId != null)
             {
                 CurrentMember = await _db.Members.FindAsync(memberId.Value);
-                // Check if there's a pending update waiting for approval
                 HasPendingUpdate = await _db.PendingUpdates
                     .AnyAsync(p => p.MemberId == memberId.Value && !p.IsApproved && !p.IsRejected);
             }
             else
             {
-                // Admin — look up by their username (email)
                 var username = User.Identity?.Name;
                 var account = await _db.MemberAccounts
                     .Include(a => a.Member)
@@ -51,9 +49,13 @@ namespace HBCDirectory.Pages.Profile
                 CurrentMember = account?.Member;
             }
 
+            ApprovalConfig = await _db.ApprovalSettings.FindAsync(1) ?? new ApprovalSettings();
+
             if (CurrentMember == null) return NotFound();
             return Page();
         }
+
+        public ApprovalSettings ApprovalConfig { get; set; } = new();
 
         public async Task<IActionResult> OnPostAsync(
             string name, string surname, string? phoneNumber,
@@ -72,57 +74,112 @@ namespace HBCDirectory.Pages.Profile
                 return RedirectToPage();
             }
 
-            // If there's already a pending update, reject the old one first
-            var existingPending = await _db.PendingUpdates
-                .FirstOrDefaultAsync(p => p.MemberId == memberId.Value && !p.IsApproved && !p.IsRejected);
-            if (existingPending != null)
+            // Load approval settings (one row, always Id = 1)
+            var settings = await _db.ApprovalSettings.FindAsync(1)
+                           ?? new ApprovalSettings();
+
+            // ── Apply immediate changes (no approval needed) ─────────────
+            if (!settings.RequireApprovalForName)
             {
-                existingPending.IsRejected = true;
-                existingPending.ReviewNote = "Superseded by a newer submission";
+                member.Name    = name.Trim();
+                member.Surname = surname.Trim();
             }
-
-            // Build the changes JSON
-            var changes = new
+            if (!settings.RequireApprovalForPhone)
+                member.PhoneNumber = phoneNumber?.Trim();
+            if (!settings.RequireApprovalForPrivacy)
             {
-                name        = name.Trim(),
-                surname     = surname.Trim(),
-                phoneNumber = phoneNumber?.Trim(),
-                showPhone,
-                showBirthdate,
-                showAnniversary
-            };
-
-            var pending = new PendingUpdate
-            {
-                MemberId    = memberId.Value,
-                ChangesJson = JsonSerializer.Serialize(changes),
-                SubmittedAt = DateTime.UtcNow
-            };
-
-            // Handle photo — store in R2 with a "pending-" prefix so it doesn't replace
-            // the live photo until admin approves
-            if (photo != null && photo.Length > 0)
-            {
-                var fileName    = "pending-" + Guid.NewGuid() + Path.GetExtension(photo.FileName).ToLowerInvariant();
-                var credentials = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
-                var cfg         = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
-                using var client = new AmazonS3Client(credentials, cfg);
-                using var stream = photo.OpenReadStream();
-                await client.PutObjectAsync(new PutObjectRequest
-                {
-                    BucketName            = _config["R2:BucketName"],
-                    Key                   = fileName,
-                    InputStream           = stream,
-                    ContentType           = photo.ContentType,
-                    DisablePayloadSigning = true
-                });
-                pending.PendingPhotoFileName = fileName;
+                member.ShowPhone       = showPhone;
+                member.ShowBirthdate   = showBirthdate;
+                member.ShowAnniversary = showAnniversary;
             }
-
-            _db.PendingUpdates.Add(pending);
             await _db.SaveChangesAsync();
 
-            TempData["Success"] = "Your changes have been submitted and are pending admin review. They will appear in the directory once approved.";
+            // ── Build pending changes (fields that need approval) ─────────
+            var pendingFields = new Dictionary<string, object?>();
+            if (settings.RequireApprovalForName)
+            {
+                pendingFields["name"]    = name.Trim();
+                pendingFields["surname"] = surname.Trim();
+            }
+            if (settings.RequireApprovalForPhone)
+                pendingFields["phoneNumber"] = phoneNumber?.Trim();
+            if (settings.RequireApprovalForPrivacy)
+            {
+                pendingFields["showPhone"]       = showPhone;
+                pendingFields["showBirthdate"]   = showBirthdate;
+                pendingFields["showAnniversary"] = showAnniversary;
+            }
+
+            bool hasPhoto = photo != null && photo.Length > 0;
+            bool hasPendingChanges = pendingFields.Count > 0 || (hasPhoto && settings.RequireApprovalForPhoto);
+
+            if (hasPendingChanges)
+            {
+                // Supersede any existing pending update
+                var existing = await _db.PendingUpdates
+                    .FirstOrDefaultAsync(p => p.MemberId == memberId.Value && !p.IsApproved && !p.IsRejected);
+                if (existing != null)
+                {
+                    existing.IsRejected = true;
+                    existing.ReviewNote = "Superseded by a newer submission";
+                }
+
+                var pending = new PendingUpdate
+                {
+                    MemberId    = memberId.Value,
+                    ChangesJson = JsonSerializer.Serialize(pendingFields),
+                    SubmittedAt = DateTime.UtcNow
+                };
+
+                // Photo — store with "pending-" prefix until approved
+                if (hasPhoto && settings.RequireApprovalForPhoto)
+                {
+                    var fileName    = "pending-" + Guid.NewGuid() + Path.GetExtension(photo!.FileName).ToLowerInvariant();
+                    var credentials = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
+                    var cfg         = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
+                    using var client = new AmazonS3Client(credentials, cfg);
+                    using var stream = photo.OpenReadStream();
+                    await client.PutObjectAsync(new PutObjectRequest
+                    {
+                        BucketName            = _config["R2:BucketName"],
+                        Key                   = fileName,
+                        InputStream           = stream,
+                        ContentType           = photo.ContentType,
+                        DisablePayloadSigning = true
+                    });
+                    pending.PendingPhotoFileName = fileName;
+                }
+
+                _db.PendingUpdates.Add(pending);
+                await _db.SaveChangesAsync();
+
+                TempData["Success"] = "Some changes were applied immediately. Others (marked below) have been submitted for admin review.";
+            }
+            else
+            {
+                // Photo not requiring approval — apply it directly
+                if (hasPhoto)
+                {
+                    var fileName    = Guid.NewGuid() + Path.GetExtension(photo!.FileName).ToLowerInvariant();
+                    var credentials = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
+                    var cfg         = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
+                    using var client = new AmazonS3Client(credentials, cfg);
+                    using var stream = photo.OpenReadStream();
+                    await client.PutObjectAsync(new PutObjectRequest
+                    {
+                        BucketName            = _config["R2:BucketName"],
+                        Key                   = fileName,
+                        InputStream           = stream,
+                        ContentType           = photo.ContentType,
+                        DisablePayloadSigning = true
+                    });
+                    member.PhotoFileName = fileName;
+                    await _db.SaveChangesAsync();
+                }
+
+                TempData["Success"] = "Profile updated successfully.";
+            }
+
             return RedirectToPage();
         }
 

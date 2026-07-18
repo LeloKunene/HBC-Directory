@@ -10,7 +10,7 @@
 @if (Model.UpcomingBirthdays.Any())
 {
     <div class="birthday-bar">
-        <span class="birthday-bar-icon">🎂</span>
+        <span class="birthday-bar-icon"><i class="fa-solid fa-cake-candles"></i></span>
         <span class="birthday-bar-text">
             Upcoming birthdays:
             @string.Join(", ", Model.UpcomingBirthdays.Select(m =>
@@ -385,22 +385,22 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     // Address
     const addrEl = document.getElementById('fm-address');
     if (data.address) {
-        addrEl.innerHTML = `<a href="https://maps.google.com/?q=${encodeURIComponent(data.address)}" target="_blank">📍 ${data.address}</a>`;
+        addrEl.innerHTML = `<a href="https://maps.google.com/?q=${encodeURIComponent(data.address)}" target="_blank"><i class="fa-solid fa-location-dot"></i> ${data.address}</a>`;
         addrEl.classList.remove('d-none');
     } else addrEl.classList.add('d-none');
 
     // Anniversary (taken from whichever adult has one on file)
     const annivEl = document.getElementById('fm-anniversary');
     if (data.anniversary) {
-        annivEl.innerHTML = `💍 Anniversary: ${data.anniversary}`;
+        annivEl.innerHTML = `<i class="fa-solid fa-ring"></i> Anniversary: ${data.anniversary}`;
         annivEl.classList.remove('d-none');
     } else annivEl.classList.add('d-none');
 
     // Family-level phone — shown as the household's main contact when set
     const famPhoneEl = document.getElementById('fm-familyphone');
     if (data.phone) {
-        famPhoneEl.innerHTML = `<a href="tel:${data.phone}">📞 ${data.phone}</a>
-                                 &nbsp;<a href="https://wa.me/${data.phone.replace(/\D/g, '')}">💬 WhatsApp</a>`;
+        famPhoneEl.innerHTML = `<a href="tel:${data.phone}"><i class="fa-solid fa-phone"></i> ${data.phone}</a>
+                                 &nbsp;<a href="https://wa.me/${data.phone.replace(/\D/g, '')}"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>`;
         famPhoneEl.classList.remove('d-none');
     } else famPhoneEl.classList.add('d-none');
 
@@ -409,8 +409,8 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     let hh = '';
     adults.forEach(a => {
         let contact = '';
-        if (a.phone) contact += `<a href="tel:${a.phone}">📞 ${a.phone}</a> <a href="https://wa.me/${a.phone.replace(/\D/g, '')}">💬</a> `;
-        if (a.email) contact += `<a href="mailto:${a.email}">✉️ ${a.email}</a>`;
+        if (a.phone) contact += `<a href="tel:${a.phone}"><i class="fa-solid fa-phone"></i> ${a.phone}</a> <a href="https://wa.me/${a.phone.replace(/\D/g,'')}"><i class="fa-brands fa-whatsapp"></i></a> `;
+        if (a.email) contact += `<a href="mailto:${a.email}"><i class="fa-solid fa-envelope"></i> ${a.email}</a>`;
         if (!contact) contact = data.phone
             ? `<span class="dir-modal-fallback">Uses family contact above</span>`
             : `<span class="dir-modal-fallback">No contact on file</span>`;
@@ -425,7 +425,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     // Children
     let ch = '';
     children.forEach(c => {
-        ch += `<span class="dir-modal-child-chip">${c.name}${c.birthdate ? ` 🎂 ${c.birthdate}` : ''}</span>`;
+        ch += `<span class="dir-modal-child-chip">${c.name}${c.birthdate ? ` <i class="fa-solid fa-cake-candles"></i> ${c.birthdate}` : ''}</span>`;
     });
     document.getElementById('fm-children').innerHTML = ch
         ? `<div class="dir-modal-section-label">Children</div><div class="dir-modal-children-row">${ch}</div>` : '';
@@ -467,25 +467,24 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     // Contact rows
     const phoneEl = document.getElementById('mm-phone');
     if (phone) {
-        phoneEl.innerHTML = `<a href="tel:${phone}">📞 ${phone}</a>
-                              &nbsp;<a href="https://wa.me/${phone.replace(/\D/g,'')}">💬 WhatsApp</a>`;
+        phoneEl.innerHTML = `<a href="tel:${phone}"><i class="fa-solid fa-phone"></i> ${phone}</a>&nbsp;<a href="https://wa.me/${phone.replace(/\D/g,'')}"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>`;
         phoneEl.classList.remove('d-none');
     } else { phoneEl.classList.add('d-none'); }
 
     const emailEl = document.getElementById('mm-email');
     if (email) {
-        emailEl.innerHTML = `<a href="mailto:${email}">✉️ ${email}</a>`;
+        emailEl.innerHTML = `<a href="mailto:${email}"><i class="fa-solid fa-envelope"></i> ${email}</a>`;
         emailEl.classList.remove('d-none');
     } else { emailEl.classList.add('d-none'); }
 
     const familyEl = document.getElementById('mm-family');
     if (family) {
-        familyEl.innerHTML = `🏠 ${family} family`;
+        familyEl.innerHTML = `<i class="fa-solid fa-house"></i> ${family} family`;
         familyEl.classList.remove('d-none');
     } else { familyEl.classList.add('d-none'); }
 
     const bdEl = document.getElementById('mm-bd');
-    if (bd) { bdEl.innerHTML = `🎂 ${bd}`; bdEl.classList.remove('d-none'); }
+    if (bd) { bdEl.innerHTML = `<i class="fa-solid fa-cake-candles"></i> ${bd}`; bdEl.classList.remove('d-none'); }
     else { bdEl.classList.add('d-none'); }
 });
 </script>

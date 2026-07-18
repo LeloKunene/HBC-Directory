@@ -521,7 +521,7 @@
                                 <form method="post" asp-page-handler="RemoveMemberFromGroup">
                                     <input type="hidden" name="id" value="@mg.Id" />
                                     <button type="submit" class="btn btn-xs btn-outline-danger"
-                                            style="font-size:10px;padding:1px 6px;">✕</button>
+                                            style="font-size:10px;padding:1px 6px;"><i class="fa-solid fa-xmark"></i></button>
                                 </form>
                             </div>
                         }
@@ -535,7 +535,114 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════
-     PENDING MEMBER UPDATES (Approval Queue)
+     APPROVAL SETTINGS
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Approval Settings</h4>
+    </div>
+    <div class="form-card">
+        <p class="text-muted small mb-3">Choose which profile fields require admin approval before going live. Fields set to instant are applied immediately when a member saves their profile.</p>
+        <form method="post" asp-page-handler="SaveApprovalSettings">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForName ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Name &amp; Surname</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requireName"
+                                       id="req-name" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForName ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForName)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForPhone ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Phone Number</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requirePhone"
+                                       id="req-phone" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForPhone ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForPhone)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForPrivacy ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Privacy Toggles</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requirePrivacy"
+                                       id="req-privacy" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForPrivacy ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForPrivacy)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForPhoto ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Profile Photo</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requirePhoto"
+                                       id="req-photo" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForPhoto ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForPhoto)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary btn-sm">Save settings</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PENDING MEMBER UPDATES — DETAILED
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5">
     <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
@@ -549,55 +656,155 @@
     </div>
     @if (!Model.PendingUpdates.Any())
     {
-        <p class="text-muted">No pending updates. Members' profile change submissions will appear here.</p>
+        <p class="text-muted">No pending updates. Member profile submissions will appear here.</p>
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Member</th>
-                        <th>Submitted</th>
-                        <th>Proposed changes</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var p in Model.PendingUpdates)
-                    {
-                        <tr>
-                            <td><strong>@p.Member.DisplayName</strong></td>
-                            <td class="text-muted small">@p.SubmittedAt.ToString("d MMM yyyy HH:mm")</td>
-                            <td class="small">
-                                @{
-                                    var doc = System.Text.Json.JsonDocument.Parse(p.ChangesJson).RootElement;
-                                    var changesList = new List<string>();
-                                    if (doc.TryGetProperty("name", out var nm)) changesList.Add($"Name: {nm.GetString()}");
-                                    if (doc.TryGetProperty("surname", out var sn)) changesList.Add($"Surname: {sn.GetString()}");
-                                    if (doc.TryGetProperty("phoneNumber", out var ph)) changesList.Add($"Phone: {ph.GetString()}");
-                                }
-                                @string.Join(", ", changesList)
-                                @if (!string.IsNullOrEmpty(p.PendingPhotoFileName))
+        <div class="d-flex flex-column gap-3">
+            @foreach (var p in Model.PendingUpdates)
+            {
+                    var doc = System.Text.Json.JsonDocument.Parse(p.ChangesJson).RootElement;
+                    var member = p.Member;
+                    string? propName      = doc.TryGetProperty("name",           out var jn)  ? jn.GetString()         : null;
+                    string? propSurname   = doc.TryGetProperty("surname",        out var js)  ? js.GetString()         : null;
+                    string? propPhone     = doc.TryGetProperty("phoneNumber",    out var jp)  ? jp.GetString()         : null;
+                    bool?   propShowPhone = doc.TryGetProperty("showPhone",      out var jsp) ? jsp.GetBoolean()       : (bool?)null;
+                    bool?   propShowBd    = doc.TryGetProperty("showBirthdate",  out var jsb) ? jsb.GetBoolean()       : (bool?)null;
+                    bool?   propShowAnn   = doc.TryGetProperty("showAnniversary",out var jsa) ? jsa.GetBoolean()       : (bool?)null;
+                    bool    hasPhoto      = !string.IsNullOrEmpty(p.PendingPhotoFileName);
+
+                    bool nameChanged    = propName    != null && propName    != member.Name;
+                    bool surnameChanged = propSurname != null && propSurname != member.Surname;
+                    bool phoneChanged   = propPhone   != null && propPhone   != member.PhoneNumber;
+                    bool spChanged      = propShowPhone.HasValue && propShowPhone.Value != member.ShowPhone;
+                    bool sbChanged      = propShowBd.HasValue   && propShowBd.Value    != member.ShowBirthdate;
+                    bool saChanged      = propShowAnn.HasValue  && propShowAnn.Value   != member.ShowAnniversary;
+                    
+                <div class="pending-update-card">
+                    <!-- Header -->
+                    <div class="pending-update-header">
+                        <div>
+                            <strong>@member.DisplayName</strong>
+                            <span class="text-muted ms-2" style="font-size:12px;">
+                                Submitted @p.SubmittedAt.ToString("d MMM yyyy") at @p.SubmittedAt.ToString("HH:mm")
+                            </span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <form method="post" asp-page-handler="ApprovePending">
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="fa-solid fa-check me-1"></i>Approve
+                                </button>
+                            </form>
+                            <form method="post" asp-page-handler="RejectPending"
+                                  onsubmit="return confirm('Reject this update from @member.DisplayName?')">
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fa-solid fa-xmark me-1"></i>Reject
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Body: Current vs Proposed -->
+                    <div class="pending-update-body">
+
+                        <!-- Current -->
+                        <div class="pending-col">
+                            <p class="pending-col-label">Current</p>
+                            <div class="pending-photo-row">
+                                @if (!string.IsNullOrEmpty(member.PhotoFileName))
                                 {
-                                    <span class="badge bg-info text-dark ms-1">New photo</span>
+                                    <img src="@Model.PhotoUrl(member.PhotoFileName)"
+                                         class="pending-photo" alt="Current photo" />
                                 }
-                            </td>
-                            <td>
-                                <form method="post" asp-page-handler="ApprovePending" class="d-inline">
-                                    <input type="hidden" name="id" value="@p.Id" />
-                                    <button type="submit" class="btn btn-xs btn-outline-success">Approve</button>
-                                </form>
-                                <form method="post" asp-page-handler="RejectPending" class="d-inline ms-1"
-                                      onsubmit="return confirm('Reject this update?')">
-                                    <input type="hidden" name="id" value="@p.Id" />
-                                    <button type="submit" class="btn btn-xs btn-outline-danger">Reject</button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                                else
+                                {
+                                    <div class="pending-photo-placeholder">@member.Name[0]@member.Surname[0]</div>
+                                }
+                                @if (hasPhoto)
+                                {
+                                    <span class="pending-photo-note text-warning">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> New photo submitted
+                                    </span>
+                                }
+                            </div>
+                            <table class="pending-fields-table">
+                                <tr><td class="field-label">Name</td><td>@member.Name</td></tr>
+                                <tr><td class="field-label">Surname</td><td>@member.Surname</td></tr>
+                                <tr><td class="field-label">Phone</td><td>@(member.PhoneNumber ?? "—")</td></tr>
+                                <tr><td class="field-label">Show phone</td><td>@(member.ShowPhone ? "Yes" : "No")</td></tr>
+                                <tr><td class="field-label">Show birthday</td><td>@(member.ShowBirthdate ? "Yes" : "No")</td></tr>
+                                <tr><td class="field-label">Show anniversary</td><td>@(member.ShowAnniversary ? "Yes" : "No")</td></tr>
+                            </table>
+                        </div>
+
+                        <!-- Proposed -->
+                        <div class="pending-col">
+                            <p class="pending-col-label pending-col-label--proposed">Proposed changes</p>
+                            <div class="pending-photo-row">
+                                @if (hasPhoto)
+                                {
+                                    <img src="@Model.PhotoUrl(p.PendingPhotoFileName)"
+                                         class="pending-photo pending-photo--new" alt="Pending photo" />
+                                    <span class="pending-photo-note" style="color:var(--dir-mustard);font-size:12px;font-weight:500;">
+                                        <i class="fa-solid fa-image"></i> New photo
+                                    </span>
+                                }
+                                else
+                                {
+                                    <div class="pending-photo-nochange">No change</div>
+                                }
+                            </div>
+                            <table class="pending-fields-table">
+                                <tr class="@(nameChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Name</td>
+                                    <td>
+                                        @(propName ?? member.Name)
+                                        @if (nameChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(surnameChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Surname</td>
+                                    <td>
+                                        @(propSurname ?? member.Surname)
+                                        @if (surnameChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(phoneChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Phone</td>
+                                    <td>
+                                        @(propPhone ?? member.PhoneNumber ?? "—")
+                                        @if (phoneChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(spChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Show phone</td>
+                                    <td>
+                                        @(propShowPhone.HasValue ? (propShowPhone.Value ? "Yes" : "No") : (member.ShowPhone ? "Yes" : "No"))
+                                        @if (spChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(sbChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Show birthday</td>
+                                    <td>
+                                        @(propShowBd.HasValue ? (propShowBd.Value ? "Yes" : "No") : (member.ShowBirthdate ? "Yes" : "No"))
+                                        @if (sbChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(saChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Show anniversary</td>
+                                    <td>
+                                        @(propShowAnn.HasValue ? (propShowAnn.Value ? "Yes" : "No") : (member.ShowAnniversary ? "Yes" : "No"))
+                                        @if (saChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            }
         </div>
     }
 </div>
@@ -981,7 +1188,7 @@ document.getElementById('editFamilyModal').addEventListener('show.bs.modal', e =
         childrenHtml = '<p style="font-size:12px;color:#888;font-style:italic;">No children added yet.</p>';
     } else {
         children.forEach(c => {
-            const bd = c.birthdate ? ` &nbsp;<span style="font-size:11px;color:#888;">🎂 ${c.birthdate}</span>` : '';
+            const bd = c.birthdate ? ` &nbsp;<span style="font-size:11px;color:#888;"><i class=\"fa-solid fa-cake-candles\"></i> ${c.birthdate}</span>` : '';
             childrenHtml += `
                 <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:0.5px solid #ede8df;border-radius:6px;margin-bottom:6px;">
                     <div style="flex:1;">
