@@ -21,16 +21,19 @@ namespace HBCDirectory.Pages.Directory
 
         public async Task<IActionResult> OnGetAsync()
         {
-            // Load all families with their members
+            // Families with their members (children included under the family)
             var families = await _db.Families
                 .Include(f => f.Members)
                 .OrderBy(f => f.FamilyName)
                 .ToListAsync();
 
-            // Members with no family
+            // Individual members — adults only, no family assigned.
+            // Children always appear under a family; if a child record has
+            // FamilyId == null that is a data error, not an individual member.
             var unassigned = await _db.Members
-                .Where(m => m.FamilyId == null)
+                .Where(m => m.FamilyId == null && m.MemberType == "Adult")
                 .OrderBy(m => m.Surname)
+                .ThenBy(m => m.Name)
                 .ToListAsync();
 
             var pdfBytes = await _pdfService.GenerateAsync(families, unassigned);

@@ -21,15 +21,25 @@
     </div>
 }
 
-<!--  Stats  -->
-<div class="stats-row mb-3">
-    @foreach (var stat in Model.Stats)
-    {
-        <div class="stat-pill">
-            <span class="stat-pill-value">@stat.Value</span>
-            <span class="stat-pill-label">@stat.Label</span>
-        </div>
-    }
+<!--  Stats + quick actions  -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="stats-row mb-0">
+        @foreach (var stat in Model.Stats)
+        {
+            <div class="stat-pill">
+                <span class="stat-pill-value">@stat.Value</span>
+                <span class="stat-pill-label">@stat.Label</span>
+            </div>
+        }
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-address-book me-1"></i>View Directory
+        </a>
+        <a href="/Directory/Download" class="btn btn-primary btn-sm" target="_blank">
+            <i class="fa-solid fa-file-pdf me-1"></i>Download PDF
+        </a>
+    </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════
