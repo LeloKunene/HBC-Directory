@@ -38,7 +38,7 @@ namespace HBCDirectory.Pages
 
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
-            // ── Check if it's a member ─────────────────────────────────────────
+            //  Check if it's a member 
             var member = await _db.Members
                 .Include(m => m.Family)
                 .FirstOrDefaultAsync(m => m.Email == input);
@@ -57,7 +57,7 @@ namespace HBCDirectory.Pages
                 return Page();
             }
 
-            // ── Check if it's the admin ────────────────────────────────────────
+            //  Check if it's the admin 
             var adminEmail = _config["AdminCredentials:Email"];
             if (!string.IsNullOrEmpty(adminEmail) &&
                 input == adminEmail.ToLower())

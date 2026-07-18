@@ -1,198 +1,763 @@
-﻿@page "Index"
-@model IndexModel
-
+@page "Index"
+@using HBCDirectory.Models
+@using System.Text.Json
+@model HBCDirectory.Pages.IndexModel
 @{
-    var groupedMembers = Model.Members
-        .Where(m => m.FamilyId != null && m.Family != null)
-        .GroupBy(m => m.FamilyId)
-        .OrderBy(g => g.First().Family!.FamilyName)
-        .ToList();
-
-    var unassignedMembers = Model.Members
-        .Where(m => m.FamilyId == null)
-        .ToList();
+    ViewData["Title"] = "Directory";
 }
 
-<h2 class="page-title">Church Directory</h2>
-<form method="get" class="d-flex gap-2 mb-4 align-items-center flex-wrap" role="search">
-
-    <div class="search-bar-wrap">
-        <input asp-for="q" id="member-search" class="form-control search-bar" placeholder="Search by name or surname" />
-        <button type="submit" class="search-icon-btn" aria-label="Search">
-            <i class="fa-solid fa-magnifying-glass"></i>
-        </button>
-    </div>
-    <div class="select-wrap">
-        <select asp-for="familyId" class="form-select">
-            <option class="form-select" value="">All families</option>
-            @foreach (var f in Model.Families)
-            {
-                <option value="@f.Id">@f.FamilyName</option>
-            }
-        </select>
-    </div>
-    <div class="select-wrap">
-        <select asp-for="role" class="form-select">
-            <option value="">All roles</option>
-            @foreach (var r in AdminModel.AllowedRoles)
-            {
-                <option value="@r">@r</option>
-            }
-        </select>
-    </div>
-    @{
-        var upcomingCount = Model.UpcomingBirthdays.Count + Model.UpcomingAnniversaries.Count;
-    }
-    <button type="button" class="upcoming-icon-btn" data-bs-toggle="offcanvas" data-bs-target="#upcomingOffcanvas"
-            aria-controls="upcomingOffcanvas" aria-label="Upcoming birthdays and anniversaries">
-        <i class="fa-solid fa-bell"></i>
-        @if (upcomingCount > 0)
-        {
-            <span class="upcoming-count-badge">@upcomingCount</span>
-        }
-    </button>
-</form>
-
-
-<div class="offcanvas offcanvas-end upcoming-offcanvas" tabindex="-1" id="upcomingOffcanvas"
-     aria-labelledby="upcomingOffcanvasLabel">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="upcomingOffcanvasLabel">Upcoming Dates</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body">
-        <h6 class="upcoming-modal-heading">Birthdays <span class="text-muted small">(next 30 days)</span></h6>
-        @if (Model.UpcomingBirthdays.Any())
-        {
-            <ul class="upcoming-list">
-                @foreach (var m in Model.UpcomingBirthdays)
-                {
-                    <li class="upcoming-list-item">
-                        <span>@m.Name @m.Surname</span>
-                        <span class="upcoming-date">@m.Birthdate!.Value.ToString("MMMM d")</span>
-                    </li>
-                }
-            </ul>
-        }
-        else
-        {
-            <p class="text-muted mb-0">None in the next 30 days</p>
-        }
-
-        <h6 class="upcoming-modal-heading mt-4">Anniversaries <span class="text-muted small">(next 30 days)</span></h6>
-        @if (Model.UpcomingAnniversaries.Any())
-        {
-            <ul class="upcoming-list">
-                @foreach (var m in Model.UpcomingAnniversaries)
-                {
-                    <li class="upcoming-list-item">
-                        <span>@m.Name @m.Surname</span>
-                        <span class="upcoming-date">@m.Anniversary!.Value.ToString("MMMM d")</span>
-                    </li>
-                }
-            </ul>
-        }
-        else
-        {
-            <p class="text-muted mb-0">None in the next 30 days</p>
-        }
-    </div>
-</div>
-@if (!Model.Members.Any() && (!string.IsNullOrEmpty(Model.q) || Model.familyId.HasValue ||
-!string.IsNullOrEmpty(Model.role)))
+<!--  Notifications bar  -->
+@{
+    var bdays   = Model.UpcomingBirthdays;
+    var annivs  = Model.UpcomingAnniversaries;
+    bool hasAny = bdays.Any() || annivs.Any();
+}
+@if (hasAny)
 {
-    <div class="empty-state">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <p>No members found matching your search.</p>
-        <a asp-page="/Index" class="btn btn-outline-primary">Clear search</a>
+    <div class="notification-bar">
+        @if (bdays.Any())
+        {
+            <div class="notification-item">
+                <i class="fa-solid fa-cake-candles notification-icon"></i>
+                <span class="notification-label"><strong>Upcoming birthdays</strong> (next 30 days)</span>
+                <div class="notification-chips">
+                    @foreach (var m in bdays)
+                    {
+                        <span class="notification-chip">@m.DisplayName <em>· @m.Birthdate!.Value.ToString("MMM d")</em></span>
+                    }
+                </div>
+            </div>
+        }
+        @if (annivs.Any())
+        {
+            <div class="notification-item">
+                <i class="fa-solid fa-ring notification-icon"></i>
+                <span class="notification-label"><strong>Upcoming anniversaries</strong> (next 30 days)</span>
+                <div class="notification-chips">
+                    @foreach (var m in annivs)
+                    {
+                        <span class="notification-chip">@m.DisplayName <em>· @m.Anniversary!.Value.ToString("MMM d")</em></span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!--  Search bar (fully client-side — filters instantly as you type, no page reload) -->
+<div class="dir-search-wrap">
+    <form class="dir-search-form" id="searchForm" onsubmit="return false;">
+        <div class="dir-search-row">
+            <div class="dir-search-input-wrap">
+                <i class="fa-solid fa-magnifying-glass dir-search-icon"></i>
+                <input type="text" name="q" value="@Model.Q" autocomplete="off"
+                       class="dir-search-input" placeholder="Search by name..."
+                       oninput="liveFilter()" />
+            </div>
+            <button type="button" class="dir-filter-toggle" onclick="toggleFilters()"
+                    aria-label="Toggle filters">
+                <i class="fa-solid fa-sliders"></i>
+                <span class="filter-dot d-none" id="filterDot"></span>
+            </button>
+        </div>
+        <div class="dir-filter-row" id="filterRow">
+            <select name="status" class="dir-filter-select" onchange="liveFilter()">
+                <option value="">All statuses</option>
+                <option value="Member"    selected="@(Model.StatusFilter == "Member")">Members</option>
+                <option value="Attendant" selected="@(Model.StatusFilter == "Attendant")">Attendants</option>
+            </select>
+            <select name="office" class="dir-filter-select" onchange="liveFilter()">
+                <option value="">All offices</option>
+                <option value="Elder"  selected="@(Model.OfficeFilter == "Elder")">Elders</option>
+                <option value="Deacon" selected="@(Model.OfficeFilter == "Deacon")">Deacons</option>
+            </select>
+            <button type="button" class="btn btn-primary btn-sm" onclick="toggleFilters()">Done</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="clearFiltersBtn" onclick="clearFilters()">Clear</button>
+        </div>
+    </form>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     LEADERSHIP SECTION (collapsible, participates in search/filter)
+════════════════════════════════════════════════════════ -->
+@if (Model.Leadership.Any())
+{
+    <div class="dir-section" id="leadershipSection">
+        <div class="dir-section-rule dir-section-rule--toggleable" onclick="toggleSection('leadership')">
+            <span class="dir-section-label">Leadership</span>
+            <div class="dir-section-line"></div>
+            <span class="dir-section-count" id="leadershipCount">@Model.Leadership.Count</span>
+            <button type="button" class="dir-section-toggle" id="leadershipToggleBtn" aria-label="Toggle Leadership section">
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+        </div>
+        <div class="dir-grid" id="leadershipGrid">
+            @foreach (var m in Model.Leadership)
+            {
+                var staffRoles = Model.StaffRolesFor(m.Id);
+                <div class="dir-card dir-card--leadership" data-bs-toggle="modal"
+                     data-bs-target="#memberModal"
+                     data-name="@m.DisplayName"
+                     data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
+                     data-email="@m.Email"
+                     data-status="@m.MemberStatus"
+                     data-office="@m.ChurchOffice"
+                     data-staffroles="@string.Join(", ", staffRoles)"
+                     data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                     data-address="@(m.ShowAddress ? m.Address : "")"
+                     data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
+                     data-family="@m.Family?.FamilyName"
+                     data-initials="@m.Name[0]@m.Surname[0]"
+                     data-cardtype="individual"
+                     data-search="@Model.SearchTextFor(m)">
+                    <div class="dir-card-photo dir-card-photo--dark">
+                        @if (!string.IsNullOrEmpty(m.PhotoFileName))
+                        {
+                            <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="@m.DisplayName" />
+                        }
+                        else
+                        {
+                            <span class="dir-card-initials">@m.Name[0]@m.Surname[0]</span>
+                        }
+                        <span class="dir-card-office-badge">@m.ChurchOffice</span>
+                    </div>
+                    <div class="dir-card-body">
+                        <p class="dir-card-name">@m.Surname, @m.Name</p>
+                        @if (!string.IsNullOrEmpty(m.Family?.FamilyName))
+                        {
+                            <p class="dir-card-sub">@m.Family.FamilyName family</p>
+                        }
+                        <div class="dir-card-badges">
+                            <span class="dir-badge dir-badge--member">Member</span>
+                            <span class="dir-badge dir-badge--office">@m.ChurchOffice</span>
+                            @foreach (var role in staffRoles)
+                            {
+                                <span class="dir-badge dir-badge--staff">@role</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <p class="text-center text-muted mt-3 d-none" id="leadershipNoResults">
+            <i class="fa-solid fa-magnifying-glass-minus me-1"></i>No leaders match your search.
+        </p>
+    </div>
+}
+
+<!-- ══════════════════════════════════════════════════════
+     STAFF SECTION (collapsible, participates in search/filter)
+════════════════════════════════════════════════════════ -->
+@if (Model.StaffAssignments.Any())
+{
+    <div class="dir-section" id="staffSection">
+        <div class="dir-section-rule dir-section-rule--toggleable" onclick="toggleSection('staff')">
+            <span class="dir-section-label">Staff</span>
+            <div class="dir-section-line"></div>
+            <span class="dir-section-count" id="staffCount">@Model.StaffAssignments.Count</span>
+            <button type="button" class="dir-section-toggle" id="staffToggleBtn" aria-label="Toggle Staff section">
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+        </div>
+        <div class="dir-grid" id="staffGrid">
+            @foreach (var sa in Model.StaffAssignments)
+            {
+                var m = sa.Member;
+                var staffRoles = Model.StaffRolesFor(m.Id);
+                <div class="dir-card dir-card--staff" data-bs-toggle="modal"
+                     data-bs-target="#memberModal"
+                     data-name="@m.DisplayName"
+                     data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
+                     data-email="@m.Email"
+                     data-status="@m.MemberStatus"
+                     data-office="@m.ChurchOffice"
+                     data-staffroles="@string.Join(", ", staffRoles)"
+                     data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                     data-address="@(m.ShowAddress ? m.Address : "")"
+                     data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
+                     data-family="@m.Family?.FamilyName"
+                     data-initials="@m.Name[0]@m.Surname[0]"
+                     data-cardtype="individual"
+                     data-search="@Model.SearchTextFor(m)">
+                    <div class="dir-card-photo dir-card-photo--staff">
+                        @if (!string.IsNullOrEmpty(m.PhotoFileName))
+                        {
+                            <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="@m.DisplayName" />
+                        }
+                        else
+                        {
+                            <span class="dir-card-initials">@m.Name[0]@m.Surname[0]</span>
+                        }
+                    </div>
+                    <div class="dir-card-body">
+                        <p class="dir-card-name">@m.Surname, @m.Name</p>
+                        <div class="dir-card-badges">
+                            @foreach (var role in staffRoles)
+                            {
+                                <span class="dir-badge dir-badge--staff">@role</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <p class="text-center text-muted mt-3 d-none" id="staffNoResults">
+            <i class="fa-solid fa-magnifying-glass-minus me-1"></i>No staff match your search.
+        </p>
+    </div>
+}
+
+<!-- ══════════════════════════════════════════════════════
+     MAIN ALPHABETICAL GRID (everyone — families, individuals,
+     leadership, and staff — sorted alphabetically so search and
+     filter apply uniformly to the whole directory)
+════════════════════════════════════════════════════════ -->
+@{
+    // Build one alphabetical list: families + individuals merged, sorted by surname/familyName
+    // NOTE: nothing is excluded here based on search/status/office — the full set always
+    // renders, and filtering happens instantly client-side (see liveFilter() in Scripts below).
+    var allCards = new List<(string SortKey, string CardType, object Data)>();
+
+    foreach (var f in Model.Families)
+        allCards.Add((f.FamilyName.ToUpper(), "family", f));
+
+    foreach (var m in Model.IndividualMembers)
+        allCards.Add((m.Surname.ToUpper(), "individual", m));
+
+    var sortedCards = allCards.OrderBy(c => c.SortKey).ToList();
+}
+
+@if (sortedCards.Any())
+{
+    <div class="dir-section">
+        <div class="dir-section-rule">
+            <span class="dir-section-label">Members</span>
+            <div class="dir-section-line"></div>
+            <span class="dir-section-count" id="allMembersCount">@sortedCards.Count cards</span>
+        </div>
+        <div class="dir-grid" id="allMembersGrid">
+            @foreach (var card in sortedCards)
+            {
+                if (card.CardType == "family")
+                {
+                    var f = (Family)card.Data;
+                    var adults   = f.Adults.ToList();
+                    var children = f.Children.ToList();
+                    var adultNames    = string.Join(", ", adults.Select(a => a.Name));
+                    var childrenNames = string.Join(", ", children.Select(c => c.Name));
+
+                    var familyPayload = new
+                    {
+                        name = f.FamilyName,
+                        address = f.Address,
+                        phone = f.FamilyPhone,
+                        photo = string.IsNullOrEmpty(f.PhotoFileName) ? "" : Model.PhotoUrl(f.PhotoFileName),
+                        anniversary = adults
+                            .Where(a => a.ShowAnniversary && a.Anniversary.HasValue)
+                            .Select(a => a.Anniversary!.Value.ToString("d MMM yyyy"))
+                            .FirstOrDefault(),
+                        adults = adults.Select(a => new
+                        {
+                            name = a.Name,
+                            office = a.ChurchOffice,
+                            staffRoles = Model.StaffRolesFor(a.Id),
+                            phone = a.ShowPhone ? a.PhoneNumber : null,
+                            email = a.Email,
+                            birthdate = a.ShowBirthdate && a.Birthdate.HasValue
+                                ? a.Birthdate.Value.ToString("d MMM") : null,
+                            photo = string.IsNullOrEmpty(a.PhotoFileName) ? "" : Model.PhotoUrl(a.PhotoFileName),
+                            initials = $"{a.Name.FirstOrDefault()}{a.Surname.FirstOrDefault()}".ToUpper()
+                        }),
+                        children = children.Select(c => new
+                        {
+                            name = c.Name,
+                            birthdate = c.ShowBirthdate && c.Birthdate.HasValue
+                                ? c.Birthdate.Value.ToString("d MMM") : null,
+                            photo = string.IsNullOrEmpty(c.PhotoFileName) ? "" : Model.PhotoUrl(c.PhotoFileName),
+                            initials = c.Name.FirstOrDefault().ToString().ToUpper()
+                        })
+                    };
+                    var familyJson = JsonSerializer.Serialize(familyPayload);
+
+                    <div class="dir-card dir-card--family" data-bs-toggle="modal"
+                         data-bs-target="#familyModal"
+                         data-familyid="@f.Id"
+                         data-family="@familyJson"
+                         data-cardtype="family"
+                         data-search="@Model.SearchTextFor(f)"
+                         data-statuses="@Model.StatusesFor(f)"
+                         data-offices="@Model.OfficesFor(f)"
+                         data-photo="@(string.IsNullOrEmpty(f.PhotoFileName) ? "" : Model.PhotoUrl(f.PhotoFileName))">
+                        <div class="dir-card-photo dir-card-photo--family">
+                            @if (!string.IsNullOrEmpty(f.PhotoFileName))
+                            {
+                                <img src="@Model.PhotoUrl(f.PhotoFileName)" alt="@f.FamilyName" />
+                            }
+                            else
+                            {
+                                <span class="dir-card-family-initial">@f.FamilyName[0]</span>
+                            }
+                            <span class="dir-card-type-pill dir-card-type-pill--family">Family</span>
+                        </div>
+                        <div class="dir-card-body">
+                            <p class="dir-card-name">@f.FamilyName</p>
+                            <div class="dir-card-avatars">
+                                @foreach (var a in adults.Take(5))
+                                {
+                                    <div class="dir-avatar dir-avatar--dark">@a.Name[0]@a.Surname[0]</div>
+                                }
+                                @foreach (var c in children.Take(3))
+                                {
+                                    <div class="dir-avatar dir-avatar--light">@c.Name[0]</div>
+                                }
+                            </div>
+                            <p class="dir-card-members">
+                                @adultNames
+                                @if (children.Any())
+                                {
+                                    <text> · <em>@childrenNames</em></text>
+                                }
+                            </p>
+                            @{
+                                var familyBadges = adults
+                                    .Where(a => !string.IsNullOrEmpty(a.ChurchOffice) || Model.StaffRolesFor(a.Id).Any())
+                                    .ToList();
+                            }
+                            @if (familyBadges.Any())
+                            {
+                                <div class="dir-card-badges">
+                                    @foreach (var a in familyBadges)
+                                    {
+                                        @if (!string.IsNullOrEmpty(a.ChurchOffice))
+                                        {
+                                            <span class="dir-badge dir-badge--office">@a.ChurchOffice</span>
+                                        }
+                                        @foreach (var role in Model.StaffRolesFor(a.Id))
+                                        {
+                                            <span class="dir-badge dir-badge--staff">@role</span>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    var m = (Member)card.Data;
+                    var staffRoles = Model.StaffRolesFor(m.Id);
+                    <div class="dir-card dir-card--individual" data-bs-toggle="modal"
+                         data-bs-target="#memberModal"
+                         data-name="@m.DisplayName"
+                         data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
+                         data-email="@m.Email"
+                         data-status="@m.MemberStatus"
+                         data-office="@m.ChurchOffice"
+                         data-staffroles="@string.Join(", ", staffRoles)"
+                         data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                         data-address="@(m.ShowAddress ? m.Address : "")"
+                         data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
+                         data-initials="@m.Name[0]@m.Surname[0]"
+                         data-cardtype="individual"
+                         data-search="@Model.SearchTextFor(m)">
+                        <div class="dir-card-photo dir-card-photo--individual">
+                            @if (!string.IsNullOrEmpty(m.PhotoFileName))
+                            {
+                                <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="@m.DisplayName" />
+                            }
+                            else
+                            {
+                                <span class="dir-card-initials">@m.Name[0]@m.Surname[0]</span>
+                            }
+                            <span class="dir-card-type-pill dir-card-type-pill--individual">Individual</span>
+                            @if (!string.IsNullOrEmpty(m.ChurchOffice))
+                            {
+                                <span class="dir-card-office-badge">@m.ChurchOffice</span>
+                            }
+                        </div>
+                        <div class="dir-card-body">
+                            <p class="dir-card-name">@m.Surname, @m.Name</p>
+                            @if (m.ShowPhone && !string.IsNullOrEmpty(m.PhoneNumber))
+                            {
+                                <p class="dir-card-sub">@m.PhoneNumber</p>
+                            }
+                            <div class="dir-card-badges">
+                                @if (!string.IsNullOrEmpty(m.MemberStatus))
+                                {
+                                    <span class="dir-badge dir-badge--@m.MemberStatus.ToLower()">@m.MemberStatus</span>
+                                }
+                                @if (!string.IsNullOrEmpty(m.ChurchOffice))
+                                {
+                                    <span class="dir-badge dir-badge--office">@m.ChurchOffice</span>
+                                }
+                                @foreach (var role in staffRoles)
+                                {
+                                    <span class="dir-badge dir-badge--staff">@role</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+        <p class="text-center text-muted mt-4 d-none" id="noResultsMsg">
+            <i class="fa-solid fa-magnifying-glass-minus me-1"></i>No members match your search.
+        </p>
     </div>
 }
 else
 {
-    <div id="member-grid">
-        @foreach (var group in groupedMembers)
-        {
-            var family = group.First().Family!;
-            <div class="family-group">
-                <div class="family-group-header">
-                    @if (family.PhotoFileName != null)
-                    {
-                        <div class="family-group-photo family-group-photo--clickable" data-bs-toggle="modal"
-                             data-bs-target="#family-modal-@family.Id">
-                            <img src="@Model.PhotoUrl(family.PhotoFileName)" alt="@family.FamilyName family photo" />
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="family-group-photo">
-                            <i class="fa-solid fa-people-roof"></i>
-                        </div>
-                    }
-                    <h3 class="family-group-name">@family.FamilyName</h3>
-                </div>
-
-                <ul class="member-list member-list--index">
-                    @foreach (var m in group.OrderBy(m => m.Surname).ThenBy(m => m.Name))
-                    {
-                        @await Html.PartialAsync("_MemberCard", m)
-                    }
-                </ul>
-            </div>
-
-            @if (family.PhotoFileName != null)
-            {
-                <div class="modal fade family-photo-modal" id="family-modal-@family.Id" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">@family.FamilyName</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <img src="@Model.PhotoUrl(family.PhotoFileName)" alt="@family.FamilyName family photo"
-                                     class="family-photo-full" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
-        }
-
-        @if (unassignedMembers.Any())
-        {
-            <div class="family-group family-group--unassigned">
-                <div class="family-group-header">
-                    <div class="family-group-photo family-group-photo--unassigned">
-                        <i class="fa-solid fa-user-group"></i>
-                    </div>
-                    <h3 class="family-group-name">Unassigned</h3>
-                </div>
-
-                <ul class="member-list member-list--index">
-                    @foreach (var m in unassignedMembers.OrderBy(m => m.Surname).ThenBy(m => m.Name))
-                    {
-                        @await Html.PartialAsync("_MemberCard", m)
-                    }
-                </ul>
-            </div>
-        }
-    </div>
+    <p class="text-center text-muted mt-5">No results found.</p>
 }
+
+<!-- ══════════════════════════════════════════════════════
+     FAMILY MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="familyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header dir-modal-header">
+                <h5 class="modal-title" id="fm-title">Family</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body dir-modal-body">
+                <div class="dir-modal-photo-wrap">
+                    <img id="fm-photo" src="" alt="" class="dir-modal-photo d-none" />
+                    <div id="fm-initials" class="dir-modal-initials"></div>
+                </div>
+                <div class="dir-modal-info">
+                    <div class="dir-card-badges mb-3">
+                        <span class="dir-badge dir-badge--family">Family</span>
+                    </div>
+                    <div id="fm-address"      class="dir-modal-row d-none"></div>
+                    <div id="fm-anniversary"  class="dir-modal-row d-none"></div>
+                    <div id="fm-familyphone"  class="dir-modal-row d-none"></div>
+
+                    <div id="fm-household" class="dir-modal-household"></div>
+                    <div id="fm-children"  class="dir-modal-children"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MEMBER MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="memberModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header dir-modal-header">
+                <h5 class="modal-title" id="mm-name"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body dir-modal-body">
+                <div class="dir-modal-photo-wrap">
+                    <img id="mm-photo" src="" alt="" class="dir-modal-photo d-none" />
+                    <div id="mm-initials" class="dir-modal-initials"></div>
+                </div>
+                <div class="dir-modal-info">
+                    <div id="mm-badges" class="dir-card-badges mb-3"></div>
+                    <div id="mm-phone"  class="dir-modal-row d-none"></div>
+                    <div id="mm-email"  class="dir-modal-row d-none"></div>
+                    <div id="mm-family" class="dir-modal-row d-none"></div>
+                    <div id="mm-bd"     class="dir-modal-row d-none"></div>
+                    <div id="mm-address" class="dir-modal-row d-none"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
 <script>
-    document.getElementById('member-search').addEventListener('input', function () {
-        const query = this.value.toLowerCase().trim();
-        const grid = document.getElementById('member-grid');
-        if (!grid) return;
+//  Family modal 
+document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    const data = JSON.parse(btn.getAttribute('data-family') || '{}');
+    const adults   = data.adults   || [];
+    const children = data.children || [];
 
-        grid.querySelectorAll('.member-card').forEach(card => {
-            const name = card.dataset.name ?? '';
-            card.style.display = name.includes(query) ? '' : 'none';
-        });
+    // Header: "Sam and Jane Stark" / "Sam Stark" / "Sam, Jane and Alex Stark"
+    const firstNames = adults.map(a => a.name).filter(Boolean);
+    let joined = '';
+    if (firstNames.length === 1) joined = firstNames[0];
+    else if (firstNames.length === 2) joined = firstNames[0] + ' and ' + firstNames[1];
+    else if (firstNames.length > 2) joined = firstNames.slice(0, -1).join(', ') + ' and ' + firstNames[firstNames.length - 1];
+    document.getElementById('fm-title').textContent = joined ? `${joined} ${data.name}` : `${data.name} Family`;
 
-        grid.querySelectorAll('.family-group').forEach(group => {
-            const hasVisible = Array.from(group.querySelectorAll('.member-card'))
-                .some(card => card.style.display !== 'none');
-            group.style.display = hasVisible ? '' : 'none';
-        });
+    // Photo / initials
+    const photoEl    = document.getElementById('fm-photo');
+    const initialsEl = document.getElementById('fm-initials');
+    if (data.photo) {
+        photoEl.src = data.photo; photoEl.alt = data.name;
+        photoEl.classList.remove('d-none'); initialsEl.classList.add('d-none');
+    } else {
+        initialsEl.textContent = (data.name || '?')[0];
+        initialsEl.classList.remove('d-none'); photoEl.classList.add('d-none');
+    }
+
+    // Address
+    const addrEl = document.getElementById('fm-address');
+    if (data.address) {
+        addrEl.innerHTML = `<a href="https://maps.google.com/?q=${encodeURIComponent(data.address)}" target="_blank"><i class="fa-solid fa-location-dot dir-icon"></i> ${data.address}</a>`;
+        addrEl.classList.remove('d-none');
+    } else addrEl.classList.add('d-none');
+
+    // Anniversary (taken from whichever adult has one on file)
+    const annivEl = document.getElementById('fm-anniversary');
+    if (data.anniversary) {
+        annivEl.innerHTML = `<i class="fa-solid fa-ring dir-icon"></i> Anniversary: ${data.anniversary}`;
+        annivEl.classList.remove('d-none');
+    } else annivEl.classList.add('d-none');
+
+    // Family-level phone — shown as the household's main contact when set
+    const famPhoneEl = document.getElementById('fm-familyphone');
+    if (data.phone) {
+        famPhoneEl.innerHTML = `<a href="tel:${data.phone}"><i class="fa-solid fa-phone dir-icon"></i> ${data.phone}</a>
+                                 &nbsp;<a href="https://wa.me/${data.phone.replace(/\D/g, '')}"><i class="fa-brands fa-whatsapp dir-icon"></i> WhatsApp</a>`;
+        famPhoneEl.classList.remove('d-none');
+    } else famPhoneEl.classList.add('d-none');
+
+    // Household — each adult's own phone/email; falls back to the family
+    // contact above when an individual hasn't got their own on file
+    let hh = '';
+    adults.forEach(a => {
+        let contact = '';
+        if (a.phone) contact += `<a href="tel:${a.phone}"><i class="fa-solid fa-phone dir-icon"></i> ${a.phone}</a> <a href="https://wa.me/${a.phone.replace(/\D/g, '')}"><i class="fa-brands fa-whatsapp dir-icon"></i></a> `;
+        if (a.email) contact += `<a href="mailto:${a.email}"><i class="fa-solid fa-envelope dir-icon"></i> ${a.email}</a>`;
+        if (!contact) contact = data.phone
+            ? `<span class="dir-modal-fallback">Uses family contact above</span>`
+            : `<span class="dir-modal-fallback">No contact on file</span>`;
+        const avatar = a.photo
+            ? `<img class="dir-modal-person-photo" src="${a.photo}" alt="${a.name}" />`
+            : `<div class="dir-modal-person-initials">${a.initials || (a.name || '?')[0]}</div>`;
+        hh += `<div class="dir-modal-person">
+                   ${avatar}
+                   <div class="dir-modal-person-body">
+                       <p class="dir-modal-person-name">${a.name}${a.office ? ` <span class="dir-badge dir-badge--office">${a.office}</span>` : ''}${(a.staffRoles || []).map(r => ` <span class="dir-badge dir-badge--staff">${r}</span>`).join('')}</p>
+                       <div class="dir-modal-person-contact">
+                           ${contact}
+                           ${a.birthdate ? `<span><i class="fa-solid fa-cake-candles dir-icon"></i> ${a.birthdate}</span>` : ''}
+                       </div>
+                   </div>
+               </div>`;
     });
+    document.getElementById('fm-household').innerHTML = hh
+        ? `<div class="dir-modal-section-label">Household</div>${hh}` : '';
+
+    // Children
+    let ch = '';
+    children.forEach(c => {
+        const avatar = c.photo
+            ? `<img class="dir-modal-person-photo dir-modal-person-photo--sm" src="${c.photo}" alt="${c.name}" />`
+            : `<div class="dir-modal-person-initials dir-modal-person-initials--sm">${c.initials || (c.name || '?')[0]}</div>`;
+        ch += `<span class="dir-modal-child-chip">${avatar}${c.name}${c.birthdate ? ` <i class="fa-solid fa-cake-candles dir-icon"></i> ${c.birthdate}` : ''}</span>`;
+    });
+    document.getElementById('fm-children').innerHTML = ch
+        ? `<div class="dir-modal-section-label">Children</div><div class="dir-modal-children-row">${ch}</div>` : '';
+});
+
+//  Member modal 
+document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    const get = k => btn.getAttribute('data-' + k) || '';
+
+    const name    = get('name');
+    const phone   = get('phone');
+    const email   = get('email');
+    const status  = get('status');
+    const office  = get('office');
+    const staffRolesRaw = get('staffroles');
+    const bd      = get('birthdate');
+    const photo   = get('photo');
+    const initials = get('initials');
+    const family  = get('family');
+
+    document.getElementById('mm-name').textContent = name;
+
+    const photoEl    = document.getElementById('mm-photo');
+    const initialsEl = document.getElementById('mm-initials');
+    if (photo) {
+        photoEl.src = photo; photoEl.alt = name;
+        photoEl.classList.remove('d-none'); initialsEl.classList.add('d-none');
+    } else {
+        initialsEl.textContent = initials;
+        initialsEl.classList.remove('d-none'); photoEl.classList.add('d-none');
+    }
+
+    // Badges
+    let badges = '';
+    if (status) badges += `<span class="dir-badge dir-badge--${status.toLowerCase()}">${status}</span>`;
+    if (office) badges += `<span class="dir-badge dir-badge--office">${office}</span>`;
+    if (staffRolesRaw) {
+        staffRolesRaw.split(',').map(r => r.trim()).filter(Boolean).forEach(role => {
+            badges += `<span class="dir-badge dir-badge--staff">${role}</span>`;
+        });
+    }
+    document.getElementById('mm-badges').innerHTML = badges;
+
+    // Contact rows
+    const phoneEl = document.getElementById('mm-phone');
+    if (phone) {
+        phoneEl.innerHTML = `<a href="tel:${phone}"><i class="fa-solid fa-phone dir-icon"></i> ${phone}</a>
+                              &nbsp;<a href="https://wa.me/${phone.replace(/\D/g,'')}"><i class="fa-brands fa-whatsapp dir-icon"></i> WhatsApp</a>`;
+        phoneEl.classList.remove('d-none');
+    } else { phoneEl.classList.add('d-none'); }
+
+    const emailEl = document.getElementById('mm-email');
+    if (email) {
+        emailEl.innerHTML = `<a href="mailto:${email}"><i class="fa-solid fa-envelope dir-icon"></i> ${email}</a>`;
+        emailEl.classList.remove('d-none');
+    } else { emailEl.classList.add('d-none'); }
+
+    const familyEl = document.getElementById('mm-family');
+    if (family) {
+        familyEl.innerHTML = `<i class="fa-solid fa-house dir-icon"></i> ${family} family`;
+        familyEl.classList.remove('d-none');
+    } else { familyEl.classList.add('d-none'); }
+
+    const bdEl = document.getElementById('mm-bd');
+    if (bd) { bdEl.innerHTML = `<i class="fa-solid fa-cake-candles dir-icon"></i> ${bd}`; bdEl.classList.remove('d-none'); }
+    else { bdEl.classList.add('d-none'); }
+
+    // Individual member address
+    const addrIndEl = document.getElementById('mm-address');
+    if (addrIndEl) {
+        const addr = get('address');
+        if (addr) {
+            addrIndEl.innerHTML = `<a href="https://maps.google.com/?q=${encodeURIComponent(addr)}" target="_blank"><i class="fa-solid fa-location-dot dir-icon"></i> ${addr}</a>`;
+            addrIndEl.classList.remove('d-none');
+        } else { addrIndEl.classList.add('d-none'); }
+    }
+});
+
+//  Instant, fully client-side search & filter 
+// Everything needed to filter is already in the DOM (data-search / data-status /
+// data-office attributes on each card), so typing never triggers a page reload
+// or a server round trip — we just show/hide cards. Keystrokes are coalesced
+// with requestAnimationFrame so even fast typing stays perfectly smooth.
+
+let filterFrame = null;
+function liveFilter() {
+    if (filterFrame) cancelAnimationFrame(filterFrame);
+    filterFrame = requestAnimationFrame(runFilter);
+}
+
+function runFilter() {
+    const q      = (document.querySelector('[name="q"]').value || '').trim().toLowerCase();
+    const status = document.querySelector('[name="status"]').value;
+    const office = document.querySelector('[name="office"]').value;
+
+    // Simple non-family grids (Leadership, Staff) — every card is judged on
+    // its own data-status/data-office, and the whole section hides if the
+    // search/filters leave nothing visible inside it.
+    function filterSimpleSection(gridId, sectionId, countId, noResultsId) {
+        const grid = document.getElementById(gridId);
+        if (!grid) return;
+        let visible = 0;
+        grid.querySelectorAll('.dir-card').forEach(card => {
+            const search = card.getAttribute('data-search') || '';
+            let match = !q || search.includes(q);
+            if (match && status && card.getAttribute('data-status') !== status) match = false;
+            if (match && office && card.getAttribute('data-office') !== office) match = false;
+            card.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        const countEl = document.getElementById(countId);
+        if (countEl) countEl.textContent = visible;
+        const noResultsEl = document.getElementById(noResultsId);
+        if (noResultsEl) noResultsEl.classList.toggle('d-none', visible !== 0);
+        const sectionEl = document.getElementById(sectionId);
+        // Only search/filter hides the whole section — manual collapse (which
+        // toggles the grid itself) is independent of this.
+        const searchOrFilterActive = !!(q || status || office);
+        if (sectionEl) sectionEl.style.display = (searchOrFilterActive && visible === 0) ? 'none' : '';
+    }
+    filterSimpleSection('leadershipGrid', 'leadershipSection', 'leadershipCount', 'leadershipNoResults');
+    filterSimpleSection('staffGrid', 'staffSection', 'staffCount', 'staffNoResults');
+
+    const grid = document.getElementById('allMembersGrid');
+    let visibleCount = 0;
+
+    if (grid) {
+        grid.querySelectorAll('.dir-card').forEach(card => {
+            const isFamily = card.getAttribute('data-cardtype') === 'family';
+            const search   = card.getAttribute('data-search') || '';
+
+            let match = !q || search.includes(q);
+
+            if (match && (status || office)) {
+                if (isFamily) {
+                    // A family matches a status/office filter if ANY member of
+                    // that household has it — otherwise the family disappears.
+                    const statuses = (card.getAttribute('data-statuses') || '').split(',').filter(Boolean);
+                    const offices  = (card.getAttribute('data-offices')  || '').split(',').filter(Boolean);
+                    if (status && !statuses.includes(status)) match = false;
+                    if (office && !offices.includes(office)) match = false;
+                } else {
+                    if (status && card.getAttribute('data-status') !== status) match = false;
+                    if (office && card.getAttribute('data-office') !== office) match = false;
+                }
+            }
+
+            card.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+    }
+
+    const noResults = document.getElementById('noResultsMsg');
+    if (noResults) noResults.classList.toggle('d-none', visibleCount !== 0);
+
+    const countEl = document.getElementById('allMembersCount');
+    if (countEl) countEl.textContent = visibleCount + (visibleCount === 1 ? ' card' : ' cards');
+
+    const dot = document.getElementById('filterDot');
+    if (dot) dot.classList.toggle('d-none', !(status || office));
+
+    const clearBtn = document.getElementById('clearFiltersBtn');
+    if (clearBtn) clearBtn.classList.toggle('d-none', !(q || status || office));
+
+    // Keep the URL shareable/bookmarkable without ever navigating the page.
+    const url = new URL(window.location);
+    q ? url.searchParams.set('q', q) : url.searchParams.delete('q');
+    status ? url.searchParams.set('status', status) : url.searchParams.delete('status');
+    office ? url.searchParams.set('office', office) : url.searchParams.delete('office');
+    window.history.replaceState({}, '', url);
+}
+
+function clearFilters() {
+    document.querySelector('[name="q"]').value = '';
+    document.querySelector('[name="status"]').value = '';
+    document.querySelector('[name="office"]').value = '';
+    runFilter();
+}
+
+// Toggle filter row on mobile
+function toggleFilters() {
+    const row = document.getElementById('filterRow');
+    row.classList.toggle('dir-filter-row--open');
+}
+
+// Collapsible Leadership / Staff sections — independent of search filtering.
+// Collapsing just hides the grid; if a search later leaves zero matches the
+// whole section still hides itself regardless of this collapsed state.
+function toggleSection(name) {
+    const grid = document.getElementById(name + 'Grid');
+    const btn  = document.getElementById(name + 'ToggleBtn');
+    if (!grid) return;
+    grid.classList.toggle('dir-grid--collapsed');
+    if (btn) btn.classList.toggle('dir-section-toggle--collapsed');
+}
+
+// Auto-open filters if any active, then apply the initial filter pass
+// (covers direct links like /Index?q=Smith&status=Member)
+(function() {
+    const row = document.getElementById('filterRow');
+    const status = document.querySelector('[name="status"]').value;
+    const office = document.querySelector('[name="office"]').value;
+    if (status || office) row.classList.add('dir-filter-row--open');
+    runFilter();
+})();
 </script>
+}

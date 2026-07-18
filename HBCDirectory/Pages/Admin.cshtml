@@ -1,16 +1,10 @@
 @page
+@using System.Text.Json
 @model HBCDirectory.Pages.AdminModel
-@using Microsoft.AspNetCore.Authorization
-
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-    <h2 class="page-title">Admin Dashboard</h2>
-    <div class="d-flex flex-wrap gap-2">
-        <a asp-page="/Directory/Download" class="btn btn-outline-secondary btn-sm">
-            Download PDF Directory
-        </a>
-        <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">View Directory</a>
-    </div>
-</div>
+@{
+    ViewData["Title"] = "Admin";
+    Layout = "_Layout";
+}
 
 @if (TempData["Success"] != null)
 {
@@ -27,354 +21,1253 @@
     </div>
 }
 
-<div class="row g-3 mb-4">
-    <div class="col-md-6">
-        <div class="admin-stat-card">
-            <div class="admin-stat-value">@Model.TotalMembers</div>
-            <div class="admin-stat-label">TOTAL MEMBERS</div>
+<!--  Stats  -->
+<div class="stats-row mb-3">
+    @foreach (var stat in Model.Stats)
+    {
+        <div class="stat-pill">
+            <span class="stat-pill-value">@stat.Value</span>
+            <span class="stat-pill-label">@stat.Label</span>
         </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="admin-stat-card">
-            <div class="admin-stat-value">@Model.TotalFamilies</div>
-            <div class="admin-stat-label">TOTAL FAMILIES</div>
-        </div>
-    </div>
+    }
 </div>
-<div class="row g-3 mb-4">
-    <div class="col-md-6">
-        <div class="admin-card">
-            <div class="card-header">Upcoming Birthdays <span class="text-muted small">(next 30 days)</span></div>
-            <div class="card-body">
-                @if (Model.UpcomingBirthdays.Any())
-                {
-                    <ul class="upcoming-list">
-                        @foreach (var m in Model.UpcomingBirthdays)
-                        {
-                            <li class="upcoming-list-item">
-                                <span>@m.Name @m.Surname</span>
-                                <span class="upcoming-date">@m.Birthdate!.Value.ToString("MMMM d")</span>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <p class="text-muted mb-0">None in the next 30 days</p>
-                }
-            </div>
-        </div>
+
+<!-- ══════════════════════════════════════════════════════
+     MEMBERS SECTION
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Members</h4>
+        <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addMemberForm">
+            + Add Member
+        </button>
     </div>
 
-    <div class="col-md-6">
-        <div class="admin-card">
-            <div class="card-header">Upcoming Anniversaries <span class="text-muted small">(next 30 days)</span></div>
-            <div class="card-body">
-                @if (Model.UpcomingAnniversaries.Any())
-                {
-                    <ul class="upcoming-list">
-                        @foreach (var m in Model.UpcomingAnniversaries)
-                        {
-                            <li class="upcoming-list-item">
-                                <span>@m.Name @m.Surname</span>
-                                <span class="upcoming-date">@m.Anniversary!.Value.ToString("MMMM d")</span>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <p class="text-muted mb-0">None in the next 30 days</p>
-                }
-            </div>
-        </div>
-    </div>
-</div>
-<div class="admin-card">
-    <div class="card-header">Families</div>
-    <div class="card-body">
+    <!-- Add Member Form -->
+    <div class="collapse" id="addMemberForm">
+        <div class="form-card mb-4">
+            <h6 class="form-card-title">Add New Member</h6>
+            <form method="post" asp-page-handler="AddMember" enctype="multipart/form-data">
 
-        <form method="post" asp-page-handler="AddFamily" class="admin-add-form">
-            <input name="FamilyName" placeholder="Family name" class="form-control" style="max-width: 240px" required />
-            <button type="submit" class="btn btn-primary btn-sm">Add Family</button>
-        </form>
-
-        @if (Model.EditingFamily != null)
-        {
-            <div class="mt-3 p-3 border rounded">
-                <strong>Renaming: @Model.EditingFamily.FamilyName</strong>
-                <form method="post" asp-page-handler="EditFamily" class="d-flex gap-2 mt-2">
-                    <input type="hidden" name="familyId" value="@Model.EditingFamily.Id" />
-                    <input name="familyName" value="@Model.EditingFamily.FamilyName" class="form-control form-control-sm"
-                           style="max-width: 240px" />
-                    <button type="submit" class="btn btn-primary btn-sm">Rename</button>
-                    <a asp-page="/Admin" class="btn btn-outline-secondary btn-sm">Cancel</a>
-                </form>
-                <form method="post" enctype="multipart/form-data" asp-page-handler="EditFamily"
-                      class="d-flex align-items-end gap-3 mt-3">
-                    <input type="hidden" name="familyId" value="@Model.EditingFamily.Id" />
-                    <input type="hidden" name="familyName" value="@Model.EditingFamily.FamilyName" />
-
-                    @if (Model.EditingFamily.PhotoFileName != null)
-                    {
-                        <img src="@Model.PhotoUrl(Model.EditingFamily.PhotoFileName)" alt="family photo" class="table-avatar" />
-                    }
-                    else
-                    {
-                        <i class="fa-solid fa-people-roof table-avatar-icon"></i>
-                    }
-
+                <div class="form-grid">
                     <div class="form-field">
-                        <label class="form-label">New Photo (leave empty to keep current)</label>
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="file" name="photo" accept="image/jpeg,image/png"
-                                   class="form-control form-control-sm" style="max-width: 220px" />
-                            <button type="submit" class="btn btn-outline-primary btn-sm">Upload Photo</button>
-                        </div>
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <input name="name" class="form-control" required />
                     </div>
-                </form>
-            </div>
-        }
+                    <div class="form-field">
+                        <label class="form-label">Surname <span class="text-danger">*</span></label>
+                        <input name="surname" class="form-control" required />
+                    </div>
+                    <div class="form-field form-field--full">
+                        <label class="form-label">Member Type <span class="text-danger">*</span></label>
+                        <select name="memberType" class="form-select" id="add-memberType" onchange="updateAddForm()">
+                            <option value="Adult">Adult</option>
+                            <option value="Child">Child</option>
+                        </select>
+                    </div>
+                    <div class="form-field" id="add-statusField">
+                        <label class="form-label">Member Status</label>
+                        <select name="memberStatus" class="form-select" id="add-memberStatus" onchange="updateAddForm()">
+                            <option value="Member">Member</option>
+                            <option value="Attendant">Attendant</option>
+                        </select>
+                    </div>
+                    <div class="form-field" id="add-officeField">
+                        <label class="form-label">Church Office</label>
+                        <select name="churchOffice" class="form-select">
+                            <option value="">None</option>
+                            <option value="Elder">Elder</option>
+                            <option value="Deacon">Deacon</option>
+                        </select>
+                    </div>
+                    <div class="form-field form-field--full" id="add-emailField">
+                        <label class="form-label">Email Address <span class="text-danger">*</span></label>
+                        <input name="email" type="email" class="form-control" id="add-email"
+                               placeholder="Required for adults — used as login username" />
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Birthdate</label>
+                        <input name="birthdate" type="date" class="form-control" />
+                    </div>
+                    <div class="form-field" id="add-anniversaryField">
+                        <label class="form-label">Anniversary</label>
+                        <input name="anniversary" type="date" class="form-control" />
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Phone</label>
+                        <input name="phoneNumber" class="form-control" placeholder="+27 ..." />
+                    </div>
+                    <div class="form-field" id="add-dateJoinedField">
+                        <label class="form-label">Date Became Member</label>
+                        <input name="dateJoined" type="date" class="form-control" />
+                    </div>
+                    <div class="form-field form-field--full" id="add-addressField">
+                        <label class="form-label">Address <span class="text-muted small">(individual members only)</span></label>
+                        <input name="address" class="form-control" placeholder="Street, suburb" />
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Family</label>
+                        <select name="familyId" class="form-select">
+                            <option value="">— Individual member —</option>
+                            @foreach (var f in Model.Families)
+                            {
+                                <option value="@f.Id">@f.FamilyName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-field form-field--full">
+                        <label class="form-label">Photo</label>
+                        <input name="photo" type="file" class="form-control" accept="image/*" />
+                    </div>
+                    <div class="form-field form-field--full">
+                        <p class="small text-muted">
+                            <i class="fa-solid fa-circle-info me-1"></i>
+                            Care Group assignment is managed via the Groups &amp; Ministries section below.
+                        </p>
+                    </div>
+                </div>
 
-        <table class="table table-hover align-middle mb-0 mt-3">
+                <p class="small text-muted mt-2"><span class="text-danger">*</span> Required</p>
+                <button type="submit" class="btn btn-primary">Add Member</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Members Table -->
+    <div class="table-responsive">
+        <table class="table table-hover">
             <thead>
                 <tr>
-                    <th>Family Name</th>
+                    <th>Photo</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Status / Office</th>
+                    <th>Family</th>
+                    <th>Phone</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in Model.Members)
+                {
+                    <tr>
+                        <td>
+                            @if (!string.IsNullOrEmpty(m.PhotoFileName))
+                            {
+                                <img src="@Model.PhotoUrl(m.PhotoFileName)" class="member-thumb" alt="@m.DisplayName" />
+                            }
+                            else
+                            {
+                                <div class="member-thumb-placeholder">@m.Name[0]@m.Surname[0]</div>
+                            }
+                        </td>
+                        <td><strong>@m.Surname, @m.Name</strong></td>
+                        <td>
+                            <span class="badge-type @(m.IsChild ? "badge-child" : "badge-adult")">
+                                @m.MemberType
+                            </span>
+                        </td>
+
+                        <td>
+                            @if (!string.IsNullOrEmpty(m.MemberStatus))
+                            {
+                                <span class="badge-status">@m.MemberStatus</span>
+                            }
+                            @if (!string.IsNullOrEmpty(m.ChurchOffice))
+                            {
+                                <span class="badge-office badge-office--@m.ChurchOffice.ToLower()">@m.ChurchOffice</span>
+                            }
+                        </td>
+                        <td>@(m.Family?.FamilyName ?? "—")</td>
+                        <td>@(m.PhoneNumber ?? "—")</td>
+                        <td class="text-muted small">@(m.DateJoined?.ToString("MMM yyyy") ?? "—")</td>
+                        <td>
+                            <button class="btn btn-xs btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editMemberModal"
+                                    data-id="@m.Id"
+                                    data-name="@m.Name"
+                                    data-surname="@m.Surname"
+                                    data-email="@m.Email"
+                                    data-membertype="@m.MemberType"
+                                    data-memberstatus="@m.MemberStatus"
+                                    data-churchoffice="@m.ChurchOffice"
+                                    data-birthdate="@(m.Birthdate?.ToString("yyyy-MM-dd"))"
+                                    data-anniversary="@(m.Anniversary?.ToString("yyyy-MM-dd"))"
+                                    data-phone="@m.PhoneNumber"
+                                    data-familyid="@m.FamilyId"
+                                    data-showphone="@m.ShowPhone.ToString().ToLower()"
+                                    data-showaddress="@m.ShowAddress.ToString().ToLower()"
+                                    data-showbirthdate="@m.ShowBirthdate.ToString().ToLower()"
+                                    data-showanniversary="@m.ShowAnniversary.ToString().ToLower()"
+                                    data-datejoined="@(m.DateJoined?.ToString("yyyy-MM-dd"))"
+                                    data-address="@m.Address">
+                                Edit
+                            </button>
+                            <form method="post" asp-page-handler="DeleteMember" class="d-inline"
+                                  onsubmit="return confirm('Delete @m.DisplayName?')">
+                                <input type="hidden" name="id" value="@m.Id" />
+                                <button type="submit" class="btn btn-xs btn-outline-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     FAMILIES SECTION
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Families</h4>
+        <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addFamilyForm">
+            + Add Family
+        </button>
+    </div>
+
+    <div class="collapse" id="addFamilyForm">
+        <div class="form-card mb-4">
+            <h6 class="form-card-title">Add New Family</h6>
+            <form method="post" asp-page-handler="AddFamily" enctype="multipart/form-data">
+                <div class="form-grid">
+                    <div class="form-field form-field--full">
+                        <label class="form-label">Family Name <span class="text-danger">*</span></label>
+                        <input name="familyName" class="form-control" required />
+                    </div>
+                    <div class="form-field form-field--full">
+                        <label class="form-label">Address</label>
+                        <input name="address" class="form-control" placeholder="Street address, suburb" />
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Family Phone</label>
+                        <input name="familyPhone" class="form-control" placeholder="+27 ..." />
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Group Photo</label>
+                        <input name="photo" type="file" class="form-control" accept="image/*" />
+                    </div>
+                    <div class="form-field form-field--full">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea name="additionalNotes" class="form-control" rows="2"
+                                  placeholder="e.g. Joined 2021, ministry notes..."></textarea>
+                    </div>
+                </div>
+                <p class="small text-muted mt-2"><span class="text-danger">*</span> Required</p>
+                <button type="submit" class="btn btn-primary">Create Family</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Family</th>
+                    <th>Address</th>
+                    <th>Phone</th>
                     <th>Members</th>
-                    <th></th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var f in Model.Families)
                 {
                     <tr>
-                        <td class="member-name">@f.FamilyName</td>
-                        <td>@Model.Members.Count(m => m.FamilyId == f.Id)</td>
-                        <td class="text-end">
-                            <div class="d-flex flex-wrap gap-2 justify-content-end">
-                                <a asp-page="/Admin" asp-route-editFamilyId="@f.Id"
-                                   class="btn btn-outline-primary btn-sm">Edit</a>
-
-                                <form method="post" asp-page-handler="DeleteFamily" class="d-inline">
-                                    <input type="hidden" name="familyId" value="@f.Id" />
-                                    <button type="submit" class="btn btn-danger btn-sm"
-                                            onclick="return confirm('Delete @f.FamilyName? All members in this family will also be deleted.')">
-                                        Delete
-                                    </button>
-                                </form>
-                            </div>
+                        <td>
+                            @if (!string.IsNullOrEmpty(f.PhotoFileName))
+                            {
+                                <img src="@Model.PhotoUrl(f.PhotoFileName)" class="member-thumb" alt="@f.FamilyName" />
+                            }
+                            else
+                            {
+                                <div class="member-thumb-placeholder" style="background:var(--dark);color:var(--mustard);">
+                                    @f.FamilyName[0]
+                                </div>
+                            }
+                        </td>
+                        <td><strong>@f.FamilyName</strong></td>
+                        <td class="text-muted small">@(f.Address ?? "—")</td>
+                        <td class="text-muted small">@(f.FamilyPhone ?? "—")</td>
+                        <td>
+                            <span class="text-muted small">
+                                @(string.Join(", ", f.Adults.Select(m => m.Name)))
+                                @if (f.Children.Any())
+                                {
+                                    <em> · @string.Join(", ", f.Children.Select(c => c.Name))</em>
+                                }
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-xs btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editFamilyModal"
+                                    data-id="@f.Id"
+                                    data-familyname="@f.FamilyName"
+                                    data-address="@f.Address"
+                                    data-familyphone="@f.FamilyPhone"
+                                    data-notes="@f.AdditionalNotes"
+                                    data-members='@System.Text.Json.JsonSerializer.Serialize(f.Members.Select(m => new {
+                                        id = m.Id,
+                                        name = m.Name,
+                                        surname = m.Surname,
+                                        type = m.MemberType,
+                                        status = m.MemberStatus,
+                                        office = m.ChurchOffice,
+                                        birthdate = m.Birthdate.HasValue
+                                            ? m.Birthdate.Value.ToString("d MMM yyyy")
+                                            : (string?)null
+                                    }))'>
+                                Edit
+                            </button>
+                            <form method="post" asp-page-handler="DeleteFamily" class="d-inline"
+                                  onsubmit="return confirm('Delete @f.FamilyName family? Adults will become individual members.')">
+                                <input type="hidden" name="id" value="@f.Id" />
+                                <button type="submit" class="btn btn-xs btn-outline-danger">Delete</button>
+                            </form>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     STAFF SECTION
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+<div class="admin-section-header mb-3">
+    <h4 class="mb-0">Staff</h4>
+</div>
+
+    <div class="row g-4">
+        <!-- Staff Roles -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Staff Roles</h6>
+                <form method="post" asp-page-handler="AddStaffRole" class="mb-3">
+                    <div class="input-group">
+                        <input name="roleName" class="form-control" placeholder="New role name..." required />
+                        <button type="submit" class="btn btn-primary">Add</button>
+                    </div>
+                </form>
+                <ul class="list-group list-group-flush">
+                    @foreach (var role in Model.StaffRoles)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>@role.RoleName</span>
+                            <form method="post" asp-page-handler="DeleteStaffRole"
+                                  onsubmit="return confirm('Delete role @role.RoleName?')">
+                                <input type="hidden" name="id" value="@role.Id" />
+                                <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                            </form>
+                        </li>
+                    }
+                    @if (!Model.StaffRoles.Any())
+                    {
+                        <li class="list-group-item px-0 text-muted small">No staff roles yet.</li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <!-- Assign Staff -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Assign Staff Role</h6>
+                <form method="post" asp-page-handler="AssignStaff">
+                    <div class="mb-2">
+                        <label class="form-label">Member</label>
+                        <select name="memberId" class="form-select">
+                            @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
+                            {
+                                <option value="@m.Id">@m.Surname, @m.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Staff Role</label>
+                        <select name="staffRoleId" class="form-select">
+                            @foreach (var r in Model.StaffRoles)
+                            {
+                                <option value="@r.Id">@r.RoleName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Display Order</label>
+                        <input name="displayOrder" type="number" class="form-control" value="1" min="1" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Bio (shown in PDF)</label>
+                        <textarea name="bio" class="form-control" rows="2" placeholder="Optional short bio..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Save Assignment</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Current Staff -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Current Staff</h6>
+                @if (!Model.StaffAssignments.Any())
+                {
+                    <p class="text-muted small">No staff assigned yet.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var sa in Model.StaffAssignments)
+                        {
+                            <li class="list-group-item px-0">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong class="d-block">@sa.Member.DisplayName</strong>
+                                        <span class="text-muted small">@sa.StaffRole.RoleName</span>
+                                    </div>
+                                    <form method="post" asp-page-handler="RemoveStaff">
+                                        <input type="hidden" name="id" value="@sa.Id" />
+                                        <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                                    </form>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     GROUPS / MINISTRY MEMBERSHIPS
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+<div class="admin-section-header mb-3">
+    <h4 class="mb-0">Groups & Ministries</h4>
+</div>
+    <div class="row g-4">
+
+        <!-- Create group -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Create Group</h6>
+                <form method="post" asp-page-handler="AddGroup">
+                    <div class="mb-2">
+                        <label class="form-label">Group Name</label>
+                        <input name="groupName" class="form-control" required
+                               placeholder="e.g. Iron Men, Heritage Ladies..." />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Description (optional)</label>
+                        <input name="description" class="form-control" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Create Group</button>
+                </form>
+                <ul class="list-group list-group-flush mt-3">
+                    @foreach (var g in Model.Groups)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>@g.Name</span>
+                            <form method="post" asp-page-handler="DeleteGroup"
+                                  onsubmit="return confirm('Delete group @g.Name?')">
+                                <input type="hidden" name="id" value="@g.Id" />
+                                <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                            </form>
+                        </li>
+                    }
+                    @if (!Model.Groups.Any())
+                    {
+                        <li class="list-group-item px-0 text-muted small">No groups yet.</li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <!-- Add member to group -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Add Member to Group</h6>
+                <form method="post" asp-page-handler="AddMemberToGroup">
+                    <div class="mb-2">
+                        <label class="form-label">Member</label>
+                        <select name="memberId" class="form-select">
+                            @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
+                            {
+                                <option value="@m.Id">@m.Surname, @m.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Group</label>
+                        <select name="groupId" class="form-select">
+                            @foreach (var g in Model.Groups)
+                            {
+                                <option value="@g.Id">@g.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Add to Group</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Current group memberships -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Group Memberships</h6>
+                @if (!Model.MemberGroups.Any())
+                {
+                    <p class="text-muted small">No assignments yet.</p>
+                }
+                else
+                {
+                    @foreach (var g in Model.Groups)
+                    {
+                        var groupMembers = Model.MemberGroups.Where(mg => mg.GroupId == g.Id).ToList();
+                        if (!groupMembers.Any()) continue;
+                        <p class="small fw-bold text-uppercase" style="color:var(--dir-gold);letter-spacing:.06em;margin-bottom:4px;">@g.Name</p>
+                        @foreach (var mg in groupMembers)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">@mg.Member.Surname, @mg.Member.Name</span>
+                                <form method="post" asp-page-handler="RemoveMemberFromGroup">
+                                    <input type="hidden" name="id" value="@mg.Id" />
+                                    <button type="submit" class="btn btn-xs btn-outline-danger"
+                                            style="font-size:10px;padding:1px 6px;">✕</button>
+                                </form>
+                            </div>
+                        }
+                        <hr style="border-color:#ede8df;margin:8px 0;" />
+                    }
+                }
+            </div>
+        </div>
 
     </div>
 </div>
 
-@if (Model.EditingMember != null)
-{
-    <div class="admin-card  admin-card--editing">
-        <div class="card-header">
-            Editing: @Model.EditingMember.Name @Model.EditingMember.Surname
-        </div>
-        <div class="card-body">
-            <form method="post" enctype="multipart/form-data" asp-page-handler="EditMember" class="admin-form-grid">
-                <input type="hidden" name="memberId" value="@Model.EditingMember.Id" />
-
-                <div class="form-field">
-                    <label class="form-label">Name</label>
-                    <input name="Name" class="form-control" value="@Model.EditingMember.Name" required />
-                </div>
-                <div class="form-field">
-                    <label class="form-label">Surname</label>
-                    <input name="Surname" class="form-control" value="@Model.EditingMember.Surname" required />
-                </div>
-
-                <div class="form-field">
-                    <label class="form-label">Birthdate</label>
-                    <input name="Birthdate" type="date" class="form-control"
-                           value="@Model.EditingMember.Birthdate?.ToString("yyyy-MM-dd")" />
-                </div>
-                <div class="form-field">
-                    <label class="form-label">Anniversary</label>
-                    <input name="Anniversary" type="date" class="form-control"
-                           value="@Model.EditingMember.Anniversary?.ToString("yyyy-MM-dd")" />
-                </div>
-                <div class="form-field ">
-                    <label class="form-label">Email Address <span class="text-danger">*</span></label>
-                    <input name="Email" type="email" placeholder="member@email.com" class="form-control" 
-                           value="@Model.EditingMember.Email" required />
-                    <div class="form-text">Login username. A welcome email will be sent.</div>
-                </div>
-                <div class="form-field">
-                    <label class="form-label">
-                        Role <span class="text-danger">*</span>
-                    </label>
-                    <select name="role" class="form-select">
-                        <option value="">-- none --</option>
-                        @foreach (var role in AdminModel.AllowedRoles)
-                        {
-                            <option value="@role" selected="@(Model.EditingMember.Role == role)">@role</option>
-                        }
-                    </select>
-                </div>
-
-
-                <div class="form-field">
-                    <label class="form-label">Phone</label>
-                    <input name="PhoneNumber" class="form-control" value="@Model.EditingMember.PhoneNumber" />
-                </div>
-                <div class="form-field">
-                    <label class="form-label">Family</label>
-                    <select name="FamilyId" class="form-select" value="@Model.EditingMember.Family">
-                        <option value="">-- none --</option>
-                        @foreach (var f in Model.Families)
-                        {
-                            <option value="@f.Id" selected="@(Model.EditingMember.FamilyId == f.Id)">@f.FamilyName</option>
-                        }
-                    </select>
-                </div>
-                
-                <div class="form-field form-field--full">
-                    <label class="form-label">New Photo (leave empty to keep current)</label>
-                    <input type="file" name="Photo" class="form-control" accept="image/jpeg,image/png" />
-                </div>
-
-                <div class="form-field form-field--full d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                    <a asp-page="/Admin" class="btn btn-outline-secondary">Cancel</a>
-                </div>
-            </form>
-        </div>
+<!-- ══════════════════════════════════════════════════════
+     APPROVAL SETTINGS
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Approval Settings</h4>
     </div>
-}
-
-<div class="admin-card">
-    <div class="card-header">Add Member</div>
-    <div class="card-body">
-        <form method="post" enctype="multipart/form-data" asp-page-handler="AddMember" class="admin-form-grid">
-
-            <div class="form-field">
-                <label class="form-label">Name <span class="text-danger">*</span></label>
-                <input name="Name" placeholder="Name" class="form-control" required />
+    <div class="form-card">
+        <p class="text-muted small mb-3">Choose which profile fields require admin approval before going live. Fields set to instant are applied immediately when a member saves their profile.</p>
+        <form method="post" asp-page-handler="SaveApprovalSettings">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForName ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Name &amp; Surname</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requireName"
+                                       id="req-name" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForName ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForName)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForPhone ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Phone Number</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requirePhone"
+                                       id="req-phone" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForPhone ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForPhone)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForPrivacy ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Privacy Toggles</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requirePrivacy"
+                                       id="req-privacy" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForPrivacy ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForPrivacy)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForPhoto ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Profile Photo</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requirePhoto"
+                                       id="req-photo" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForPhoto ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForPhoto)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
             </div>
-            <div class="form-field">
-                <label class="form-label">Surname <span class="text-danger">*</span></label>
-                <input name="Surname" placeholder="Surname" class="form-control" required />
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary btn-sm">Save settings</button>
             </div>
-
-            <div class="form-field ">
-                <label class="form-label">Email Address <span class="text-danger">*</span></label>
-                <input name="Email" type="email" placeholder="member@email.com" class="form-control" required />
-                <div class="form-text">Login username. A welcome email will be sent.</div>
-            </div>
-
-            <div class="form-field">
-                <label class="form-label">
-                    Role <span class="text-danger">*</span>
-                </label>
-                <select name="role" class="form-select">
-                    <option value="">-- none --</option>
-                    @foreach (var role in AdminModel.AllowedRoles)
-                    {
-                        <option value="@role">@role</option>
-                    }
-                </select>  
-            </div>
-
-            <div class="form-field">
-                <label class="form-label">Birthdate <span class="text-danger">*</span></label>
-                <input name="Birthdate" type="date" class="form-control" required />
-            </div>
-            <div class="form-field">
-                <label class="form-label">Anniversary</label>
-                <input name="Anniversary" type="date" class="form-control" />
-            </div>
-
-            <div class="form-field">
-                <label class="form-label">Phone <span class="text-danger">*</span></label>
-                <input name="PhoneNumber" placeholder="Phone" class="form-control" required />
-            </div>
-            <div class="form-field">
-                <label class="form-label">Family</label>
-                <select name="FamilyId" class="form-select">
-                    <option value="">-- none --</option>
-                    @foreach (var f in Model.Families)
-                    {
-                        <option value="@f.Id">@f.FamilyName</option>
-                    }
-                </select>
-            </div>
-
-            <div class="form-field form-field--full">
-                <label class="form-label">Photo (JPG or PNG, max 2MB)</label>
-                <input type="file" name="Photo" class="form-control" accept="image/jpeg,image/png" />
-            </div>
-
-            <div class="form-field form-field--full">
-                <button type="submit" class="btn btn-primary">Add Member</button>
-                <p class="small text-muted mt-2"><span class="text-danger">*</span> Required fields</p>
-            </div>
-
         </form>
     </div>
 </div>
 
-<div class="admin-card">
-    <div class="card-header">Members</div>
-    <div class="card-body">
-        <div class="table-scroll">
-            <table class="table table-hover align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th>Photo</th>
-                        <th>Name</th>
-                        <th>Family</th>
-                        <th>Birthdate</th>
-                        <th>Anniversary</th>
-                        <th>Role</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var m in Model.Members)
-                    {
-                        <tr>
-                            <td>
-                                @if (m.PhotoFileName != null)
+<!-- ══════════════════════════════════════════════════════
+     PENDING MEMBER UPDATES — DETAILED
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"> Pending Member Updates </h4>
+        @if (Model.PendingUpdates.Any())
+        {
+            <span class="badge bg-warning text-dark ms-2">@Model.PendingUpdates.Count</span>
+        }
+    </div>
+    @if (!Model.PendingUpdates.Any())
+    {
+        <p class="text-muted">No pending updates. Member profile submissions will appear here.</p>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3">
+            @foreach (var p in Model.PendingUpdates)
+            {
+                    var doc = System.Text.Json.JsonDocument.Parse(p.ChangesJson).RootElement;
+                    var member = p.Member;
+                    string? propName      = doc.TryGetProperty("name",           out var jn)  ? jn.GetString()         : null;
+                    string? propSurname   = doc.TryGetProperty("surname",        out var js)  ? js.GetString()         : null;
+                    string? propPhone     = doc.TryGetProperty("phoneNumber",    out var jp)  ? jp.GetString()         : null;
+                    string? propAddress   = doc.TryGetProperty("address",       out var jad) ? jad.GetString()        : null;
+                    bool?   propShowPhone = doc.TryGetProperty("showPhone",      out var jsp) ? jsp.GetBoolean()       : (bool?)null;
+                    bool?   propShowBd    = doc.TryGetProperty("showBirthdate",  out var jsb) ? jsb.GetBoolean()       : (bool?)null;
+                    bool?   propShowAnn   = doc.TryGetProperty("showAnniversary",out var jsa) ? jsa.GetBoolean()       : (bool?)null;
+                    bool    hasPhoto      = !string.IsNullOrEmpty(p.PendingPhotoFileName);
+
+                    bool nameChanged    = propName    != null && propName    != member.Name;
+                    bool surnameChanged = propSurname != null && propSurname != member.Surname;
+                    bool phoneChanged   = propPhone   != null && propPhone   != member.PhoneNumber;
+                    bool addressChanged = propAddress != null && propAddress != member.Address;
+                    bool spChanged      = propShowPhone.HasValue && propShowPhone.Value != member.ShowPhone;
+                    bool sbChanged      = propShowBd.HasValue   && propShowBd.Value    != member.ShowBirthdate;
+                    bool saChanged      = propShowAnn.HasValue  && propShowAnn.Value   != member.ShowAnniversary;
+
+                <div class="pending-update-card">
+                    <!-- Header -->
+                    <div class="pending-update-header">
+                        <div>
+                            <strong>@member.DisplayName</strong>
+                            <span class="text-muted ms-2" style="font-size:12px;">
+                                Submitted @p.SubmittedAt.ToString("d MMM yyyy") at @p.SubmittedAt.ToString("HH:mm")
+                            </span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <form method="post" asp-page-handler="ApprovePending">
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="fa-solid fa-check me-1"></i>Approve
+                                </button>
+                            </form>
+                            <form method="post" asp-page-handler="RejectPending"
+                                  onsubmit="return confirm('Reject this update from @member.DisplayName?')">
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fa-solid fa-xmark me-1"></i>Reject
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Body: Current vs Proposed -->
+                    <div class="pending-update-body">
+
+                        <!-- Current -->
+                        <div class="pending-col">
+                            <p class="pending-col-label">Current</p>
+                            <div class="pending-photo-row">
+                                @if (!string.IsNullOrEmpty(member.PhotoFileName))
                                 {
-                                    <img src="@Model.PhotoUrl(m.PhotoFileName)" alt="photo" class="table-avatar" />
+                                    <img src="@Model.PhotoUrl(member.PhotoFileName)"
+                                         class="pending-photo" alt="Current photo" />
                                 }
                                 else
                                 {
-                                    <i class="fa-solid fa-circle-user table-avatar-icon"></i>
+                                    <div class="pending-photo-placeholder">@member.Name[0]@member.Surname[0]</div>
                                 }
-                            </td>
-                            <td class="member-name">@m.Name @m.Surname</td>
-                            <td>@(m.Family?.FamilyName ?? "—")</td>
-                            <td>@(m.Birthdate?.ToString("yyyy-MM-dd") ?? "—")</td>
-                            <td>@(m.Anniversary?.ToString("yyyy-MM-dd") ?? "—")</td>
-                            <td>@(m.Role ?? "—")</td>
-                            <td class="text-end">
-                                <div class="d-flex flex-wrap gap-2 justify-content-end">
-                                    <a asp-page="/Admin" asp-route-editMemberId="@m.Id"
-                                       class="btn btn-outline-primary btn-sm">Edit</a>
+                                @if (hasPhoto)
+                                {
+                                    <span class="pending-photo-note text-warning">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> New photo submitted
+                                    </span>
+                                }
+                            </div>
+                            <table class="pending-fields-table">
+                                <tr><td class="field-label">Name</td><td>@member.Name</td></tr>
+                                <tr><td class="field-label">Surname</td><td>@member.Surname</td></tr>
+                                <tr><td class="field-label">Phone</td><td>@(member.PhoneNumber ?? "—")</td></tr>
+                                <tr><td class="field-label">Address</td><td>@(member.Address ?? "—")</td></tr>
+                                <tr><td class="field-label">Show phone</td><td>@(member.ShowPhone ? "Yes" : "No")</td></tr>
+                                <tr><td class="field-label">Show birthday</td><td>@(member.ShowBirthdate ? "Yes" : "No")</td></tr>
+                                <tr><td class="field-label">Show anniversary</td><td>@(member.ShowAnniversary ? "Yes" : "No")</td></tr>
+                            </table>
+                        </div>
 
-                                    <form method="post" asp-page-handler="DeleteMember" class="d-inline">
-                                        <input type="hidden" name="memberId" value="@m.Id" />
-                                        <button type="submit" class="btn btn-danger btn-sm"
-                                                onclick="return confirm('Delete @m.Name @m.Surname?')">
-                                            Delete
-                                        </button>
-                                    </form>
-                                </div>
+                        <!-- Proposed -->
+                        <div class="pending-col">
+                            <p class="pending-col-label pending-col-label--proposed">Proposed changes</p>
+                            <div class="pending-photo-row">
+                                @if (hasPhoto)
+                                {
+                                    <img src="@Model.PhotoUrl(p.PendingPhotoFileName)"
+                                         class="pending-photo pending-photo--new" alt="Pending photo" />
+                                    <span class="pending-photo-note" style="color:var(--dir-mustard);font-size:12px;font-weight:500;">
+                                        <i class="fa-solid fa-image"></i> New photo
+                                    </span>
+                                }
+                                else
+                                {
+                                    <div class="pending-photo-nochange">No change</div>
+                                }
+                            </div>
+                            <table class="pending-fields-table">
+                                <tr class="@(nameChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Name</td>
+                                    <td>
+                                        @(propName ?? member.Name)
+                                        @if (nameChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(surnameChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Surname</td>
+                                    <td>
+                                        @(propSurname ?? member.Surname)
+                                        @if (surnameChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(phoneChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Phone</td>
+                                    <td>
+                                        @(propPhone ?? member.PhoneNumber ?? "—")
+                                        @if (phoneChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(addressChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Address</td>
+                                    <td>
+                                        @(propAddress ?? member.Address ?? "—")
+                                        @if (addressChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(spChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Show phone</td>
+                                    <td>
+                                        @(propShowPhone.HasValue ? (propShowPhone.Value ? "Yes" : "No") : (member.ShowPhone ? "Yes" : "No"))
+                                        @if (spChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(sbChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Show birthday</td>
+                                    <td>
+                                        @(propShowBd.HasValue ? (propShowBd.Value ? "Yes" : "No") : (member.ShowBirthdate ? "Yes" : "No"))
+                                        @if (sbChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(saChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Show anniversary</td>
+                                    <td>
+                                        @(propShowAnn.HasValue ? (propShowAnn.Value ? "Yes" : "No") : (member.ShowAnniversary ? "Yes" : "No"))
+                                        @if (saChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     CHANGE HISTORY (Audit Log)
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+<div class="admin-section-header mb-3">
+    <h4 class="mb-0">Recent Changes</h4>
+</div>
+    @if (!Model.RecentChanges.Any())
+    {
+        <p class="text-muted">No changes recorded yet. Actions will appear here once LogChangeAsync is wired up.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>When</th>
+                        <th>Who</th>
+                        <th>What</th>
+                        <th>Action</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.RecentChanges)
+                    {
+                        <tr>
+                            <td class="text-muted small">@c.ChangedAt.ToString("d MMM HH:mm")</td>
+                            <td class="small">@c.ChangedBy</td>
+                            <td>@c.EntityName <span class="text-muted small">(@c.EntityType)</span></td>
+                            <td>
+                                <span class="badge @(c.Action == "Deleted" ? "bg-danger" : c.Action == "Created" ? "bg-success" : "bg-secondary")">
+                                    @c.Action
+                                </span>
                             </td>
+                            <td class="text-muted small">@c.Notes</td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
-        
+    }
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     EDIT MEMBER MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="editMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="EditMember" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="edit-id" />
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label class="form-label">Name</label>
+                            <input name="name" id="edit-name" class="form-control" required />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Surname</label>
+                            <input name="surname" id="edit-surname" class="form-control" required />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Member Type</label>
+                            <select name="memberType" id="edit-memberType" class="form-select"
+                                    onchange="updateEditForm()">
+                                <option value="Adult">Adult</option>
+                                <option value="Child">Child</option>
+                            </select>
+                        </div>
+                        <div class="form-field" id="edit-statusField">
+                            <label class="form-label">Member Status</label>
+                            <select name="memberStatus" id="edit-memberStatus" class="form-select"
+                                    onchange="updateEditForm()">
+                                <option value="Member">Member</option>
+                                <option value="Attendant">Attendant</option>
+                            </select>
+                        </div>
+                        <div class="form-field" id="edit-officeField">
+                            <label class="form-label">Church Office</label>
+                            <select name="churchOffice" id="edit-churchOffice" class="form-select">
+                                <option value="">None</option>
+                                <option value="Elder">Elder</option>
+                                <option value="Deacon">Deacon</option>
+                            </select>
+                        </div>
+                        <div class="form-field form-field--full" id="edit-emailField">
+                            <label class="form-label">Email</label>
+                            <input name="email" id="edit-email" type="email" class="form-control" />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Birthdate</label>
+                            <input name="birthdate" id="edit-birthdate" type="date" class="form-control" />
+                        </div>
+                        <div class="form-field" id="edit-anniversaryField">
+                            <label class="form-label">Anniversary</label>
+                            <input name="anniversary" id="edit-anniversary" type="date" class="form-control" />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Phone</label>
+                            <input name="phoneNumber" id="edit-phone" class="form-control" />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Date Became Member</label>
+                            <input name="dateJoined" id="edit-dateJoined" type="date" class="form-control" />
+                        </div>
+                        <div class="form-field form-field--full" id="edit-addressField">
+                            <label class="form-label">Address <span class="text-muted small">(individual only)</span></label>
+                            <input name="address" id="edit-address" class="form-control" placeholder="Street, suburb" />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Family</label>
+                            <select name="familyId" id="edit-familyId" class="form-select">
+                                <option value="">— Individual member —</option>
+                                @foreach (var f in Model.Families)
+                                {
+                                    <option value="@f.Id">@f.FamilyName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-field form-field--full">
+                            <label class="form-label">Photo</label>
+                            <input name="photo" type="file" class="form-control" accept="image/*" />
+                        </div>
+                        <div class="form-field form-field--full">
+                            <label class="form-label">Privacy</label>
+                            <div class="d-flex gap-3 flex-wrap">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="showPhone"
+                                           id="edit-showPhone" value="true" />
+                                    <label class="form-check-label" for="edit-showPhone">Show phone</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="showAddress"
+                                           id="edit-showAddress" value="true" />
+                                    <label class="form-check-label" for="edit-showAddress">Show address</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="showBirthdate"
+                                           id="edit-showBirthdate" value="true" />
+                                    <label class="form-check-label" for="edit-showBirthdate">Show birthdate</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="showAnniversary"
+                                           id="edit-showAnniversary" value="true" />
+                                    <label class="form-check-label" for="edit-showAnniversary">Show anniversary</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════
+     EDIT FAMILY MODAL
+════════════════════════════════════════════════════════ -->
+<!-- Hidden antiforgery token for dynamically generated forms -->
+<form id="af-token-form" method="post" style="display:none">
+    @Html.AntiForgeryToken()
+</form>
+
+<div class="modal fade" id="editFamilyModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header" style="background:var(--dir-dark);border-bottom:2px solid var(--dir-mustard);">
+                <h5 class="modal-title" id="edit-family-title"
+                    style="color:var(--dir-mustard);font-family:'Montserrat',sans-serif;">
+                    Edit Family
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="row g-0" style="min-height:480px;">
+
+                    <!-- ── LEFT: Family details ──────────────────────── -->
+                    <div class="col-md-6" style="padding:24px;border-right:1px solid var(--dir-light2);">
+                        <p style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dir-gold);margin-bottom:16px;">Family Details</p>
+                        <form method="post" asp-page-handler="EditFamily" enctype="multipart/form-data">
+                            <input type="hidden" name="id" id="edit-fid" />
+                            <div class="form-grid">
+                                <div class="form-field form-field--full">
+                                    <label class="form-label">Family Name <span class="text-danger">*</span></label>
+                                    <input name="familyName" id="edit-fname" class="form-control" required />
+                                </div>
+                                <div class="form-field form-field--full">
+                                    <label class="form-label">Address</label>
+                                    <input name="address" id="edit-faddress" class="form-control"
+                                           placeholder="Street, suburb" />
+                                </div>
+                                <div class="form-field">
+                                    <label class="form-label">Family Phone</label>
+                                    <input name="familyPhone" id="edit-fphone" class="form-control"
+                                           placeholder="+27 ..." />
+                                </div>
+                                <div class="form-field">
+                                    <label class="form-label">Group Photo</label>
+                                    <input name="photo" type="file" class="form-control" accept="image/*" />
+                                </div>
+                                <div class="form-field form-field--full">
+                                    <label class="form-label">Additional Notes</label>
+                                    <textarea name="additionalNotes" id="edit-fnotes"
+                                              class="form-control" rows="2"
+                                              placeholder="e.g. Joined 2021..."></textarea>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 mt-3">
+                                <button type="submit" class="btn btn-primary">Save details</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ── RIGHT: Family members ─────────────────────── -->
+                    <div class="col-md-6" style="padding:24px;background:#fafaf8;">
+                        <p style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dir-gold);margin-bottom:4px;">Family Members</p>
+                        <p style="font-size:12px;color:#888;margin-bottom:16px;">Changes save immediately when you use the buttons below.</p>
+
+                        <!-- Adults -->
+                        <div id="fm-adults-wrap">
+                            <p style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dir-mustard);margin-bottom:8px;">Adults</p>
+                            <div id="fm-adults-list"></div>
+                        </div>
+
+                        <hr style="border-color:var(--dir-light2);margin:16px 0;" />
+
+                        <!-- Children -->
+                        <div id="fm-children-wrap">
+                            <p style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dir-mustard);margin-bottom:8px;">Children</p>
+                            <div id="fm-children-list"></div>
+                        </div>
+
+                        <!-- Add Child form -->
+                        <div style="margin-top:16px;padding:14px;background:white;border:0.5px dashed var(--dir-beige);border-radius:8px;">
+                            <p style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dir-gold);margin-bottom:10px;">+ Add Child</p>
+                            <form method="post" asp-page-handler="AddChild" enctype="multipart/form-data">
+                                <input type="hidden" name="familyId" id="add-child-familyid" />
+                                <div class="form-grid" style="gap:8px;">
+                                    <div class="form-field">
+                                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                                        <input name="name" class="form-control form-control-sm" required />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">Surname <span class="text-danger">*</span></label>
+                                        <input name="surname" class="form-control form-control-sm" required />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">Birthdate</label>
+                                        <input name="birthdate" type="date" class="form-control form-control-sm" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">Photo</label>
+                                        <input name="photo" type="file" class="form-control form-control-sm" accept="image/*" />
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary mt-2">Add Child</button>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+//  Add form: show/hide fields by MemberType 
+function updateAddForm() {
+    const type   = document.getElementById('add-memberType').value;
+    const status = document.getElementById('add-memberStatus').value;
+    const isAdult = type === 'Adult';
+    const isMember = status === 'Member';
+
+    document.getElementById('add-statusField').style.display      = isAdult ? '' : 'none';
+    document.getElementById('add-officeField').style.display       = isAdult && isMember ? '' : 'none';
+    document.getElementById('add-emailField').style.display        = isAdult ? '' : 'none';
+    document.getElementById('add-anniversaryField').style.display  = isAdult ? '' : 'none';
+    document.getElementById('add-email').required = isAdult;
+}
+
+//  Edit form: show/hide fields by MemberType 
+function updateEditForm() {
+    const type   = document.getElementById('edit-memberType').value;
+    const status = document.getElementById('edit-memberStatus').value;
+    const isAdult = type === 'Adult';
+    const isMember = status === 'Member';
+
+    document.getElementById('edit-statusField').style.display      = isAdult ? '' : 'none';
+    document.getElementById('edit-officeField').style.display       = isAdult && isMember ? '' : 'none';
+    document.getElementById('edit-emailField').style.display        = isAdult ? '' : 'none';
+    document.getElementById('edit-anniversaryField').style.display  = isAdult ? '' : 'none';
+}
+
+//  Populate Edit Member modal 
+document.getElementById('editMemberModal').addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    const get = attr => btn.getAttribute('data-' + attr) || '';
+
+    document.getElementById('edit-id').value         = get('id');
+    document.getElementById('edit-name').value        = get('name');
+    document.getElementById('edit-surname').value     = get('surname');
+    document.getElementById('edit-email').value       = get('email');
+    document.getElementById('edit-birthdate').value   = get('birthdate');
+    document.getElementById('edit-anniversary').value = get('anniversary');
+    document.getElementById('edit-phone').value       = get('phone');
+
+    const mt = get('membertype');
+    document.getElementById('edit-memberType').value     = mt || 'Adult';
+    document.getElementById('edit-memberStatus').value   = get('memberstatus') || 'Member';
+    document.getElementById('edit-churchOffice').value   = get('churchoffice') || '';
+
+    const fid = get('familyid');
+    const fsel = document.getElementById('edit-familyId');
+    fsel.value = fid || '';
+
+    document.getElementById('edit-dateJoined').value        = get('datejoined');
+    document.getElementById('edit-address').value           = get('address');
+    document.getElementById('edit-showPhone').checked       = get('showphone') === 'true';
+    document.getElementById('edit-showAddress').checked     = get('showaddress') === 'true';
+    document.getElementById('edit-showBirthdate').checked   = get('showbirthdate') === 'true';
+    document.getElementById('edit-showAnniversary').checked = get('showanniversary') === 'true';
+
+    updateEditForm();
+});
+
+//  Populate Edit Family modal 
+document.getElementById('editFamilyModal').addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+
+    document.getElementById('edit-fid').value      = btn.getAttribute('data-id') || '';
+    document.getElementById('edit-fname').value    = btn.getAttribute('data-familyname') || '';
+    document.getElementById('edit-faddress').value = btn.getAttribute('data-address') || '';
+    document.getElementById('edit-fphone').value   = btn.getAttribute('data-familyphone') || '';
+    document.getElementById('edit-fnotes').value   = btn.getAttribute('data-notes') || '';
+    document.getElementById('edit-family-title').textContent =
+        'Edit — ' + (btn.getAttribute('data-familyname') || 'Family');
+
+    // Family ID for the Add Child form
+    const fid = btn.getAttribute('data-id') || '';
+    document.getElementById('add-child-familyid').value = fid;
+
+    // Anti-forgery token for remove-child forms
+    const afInput = document.querySelector('#af-token-form input[name="__RequestVerificationToken"]');
+    const afToken = afInput ? afInput.value : '';
+
+    // Right panel
+    let members = [];
+    try { members = JSON.parse(btn.getAttribute('data-members') || '[]'); } catch(e) {}
+
+    const adults   = members.filter(m => m.type === 'Adult');
+    const children = members.filter(m => m.type === 'Child');
+
+    // Adults list
+    let adultsHtml = '';
+    if (adults.length === 0) {
+        adultsHtml = '<p style="font-size:12px;color:#888;font-style:italic;">No adults assigned.</p>';
+    } else {
+        adults.forEach(a => {
+            const badge = a.office
+                ? `<span style="font-size:9px;font-weight:700;background:#202222;color:#c69760;padding:2px 7px;border-radius:20px;letter-spacing:.05em;">${a.office}</span>`
+                : (a.status ? `<span style="font-size:9px;font-weight:700;background:#ede8df;color:#202222;padding:2px 7px;border-radius:20px;">${a.status}</span>` : '');
+            adultsHtml += `
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:0.5px solid #ede8df;border-radius:6px;margin-bottom:6px;">
+                    <div style="flex:1;">
+                        <span style="font-size:13px;font-weight:500;color:#202222;">${a.name} ${a.surname}</span>
+                        &nbsp;${badge}
+                    </div>
+                    <button type="button" class="btn btn-xs btn-outline-secondary"
+                            style="font-size:10px;padding:2px 8px;"
+                            title="Edit this member"
+                            onclick="openEditMemberFromFamily(${a.id})">
+                        Edit
+                    </button>
+                </div>`;
+        });
+    }
+    document.getElementById('fm-adults-list').innerHTML = adultsHtml;
+
+    // Children list
+    let childrenHtml = '';
+    if (children.length === 0) {
+        childrenHtml = '<p style="font-size:12px;color:#888;font-style:italic;">No children added yet.</p>';
+    } else {
+        children.forEach(c => {
+            const bd = c.birthdate ? ` &nbsp;<span style="font-size:11px;color:#888;">🎂 ${c.birthdate}</span>` : '';
+            childrenHtml += `
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:0.5px solid #ede8df;border-radius:6px;margin-bottom:6px;">
+                    <div style="flex:1;">
+                        <span style="font-size:13px;font-weight:500;color:#202222;">${c.name} ${c.surname}</span>${bd}
+                    </div>
+                    <form method="post" style="margin:0;"
+                          action="?handler=RemoveChild"
+                          onsubmit="return confirm('Remove ${c.name}? This cannot be undone.')">
+                        <input type="hidden" name="id" value="${c.id}" />
+                        <input type="hidden" name="__RequestVerificationToken" value="${afToken}" />
+                        <button type="submit" class="btn btn-xs btn-outline-danger"
+                                style="font-size:10px;padding:2px 8px;">Remove</button>
+                    </form>
+                </div>`;
+        });
+    }
+    document.getElementById('fm-children-list').innerHTML = childrenHtml;
+});
+
+// Finds the member row in the Members table and triggers the Edit button click.
+function openEditMemberFromFamily(memberId) {
+    // Close family modal first
+    const famModal = bootstrap.Modal.getInstance(document.getElementById('editFamilyModal'));
+    if (famModal) famModal.hide();
+
+    // After the family modal closes, open the edit member modal
+    document.getElementById('editFamilyModal').addEventListener('hidden.bs.modal', function onHidden() {
+        this.removeEventListener('hidden.bs.modal', onHidden);
+        const editBtn = document.querySelector(`[data-id="${memberId}"][data-bs-target="#editMemberModal"]`);
+        if (editBtn) editBtn.click();
+    });
+}
+
+// Init
+updateAddForm();
+</script>
+}
