@@ -128,6 +128,7 @@
                      data-status="@m.MemberStatus"
                      data-office="@m.ChurchOffice"
                      data-staffroles="@string.Join(", ", staffRoles)"
+                     data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                      data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
                      data-address="@(m.ShowAddress ? m.Address : "")"
                      data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
@@ -197,6 +198,7 @@
                      data-status="@m.MemberStatus"
                      data-office="@m.ChurchOffice"
                      data-staffroles="@string.Join(", ", staffRoles)"
+                     data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                      data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
                      data-address="@(m.ShowAddress ? m.Address : "")"
                      data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
@@ -233,14 +235,14 @@
 }
 
 <!-- ══════════════════════════════════════════════════════
-     MAIN ALPHABETICAL GRID (everyone — families, individuals,
-     leadership, and staff — sorted alphabetically so search and
+     MAIN ALPHABETICAL GRID (everyone: families, individuals,
+     leadership, and staff sorted alphabetically so search and
      filter apply uniformly to the whole directory)
 ════════════════════════════════════════════════════════ -->
 @{
-    // Build one alphabetical list: families + individuals merged, sorted by surname/familyName
-    // NOTE: nothing is excluded here based on search/status/office — the full set always
-    // renders, and filtering happens instantly client-side (see liveFilter() in Scripts below).
+    /*  Build one alphabetical list: families + individuals merged, sorted by surname/familyName
+        NOTE: nothing is excluded here based on search/status/office — the full set always
+        renders, and filtering happens instantly client-side (see liveFilter() in Scripts below).*/
     var allCards = new List<(string SortKey, string CardType, object Data)>();
 
     foreach (var f in Model.Families)
@@ -286,6 +288,7 @@
                             name = a.Name,
                             office = a.ChurchOffice,
                             staffRoles = Model.StaffRolesFor(a.Id),
+                            groups = Model.GroupsFor(a.Id),
                             phone = a.ShowPhone ? a.PhoneNumber : null,
                             email = a.Email,
                             birthdate = a.ShowBirthdate && a.Birthdate.HasValue
@@ -491,6 +494,7 @@ else
                     <div id="mm-family" class="dir-modal-row d-none"></div>
                     <div id="mm-bd"     class="dir-modal-row d-none"></div>
                     <div id="mm-address" class="dir-modal-row d-none"></div>
+                    <div id="mm-groups" class="dir-modal-row d-none"></div>
                 </div>
             </div>
         </div>
@@ -568,6 +572,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
                            ${contact}
                            ${a.birthdate ? `<span><i class="fa-solid fa-cake-candles dir-icon"></i> ${a.birthdate}</span>` : ''}
                        </div>
+                       ${(a.groups && a.groups.length) ? `<p class="dir-modal-person-groups"><i class="fa-solid fa-people-group dir-icon"></i> Groups/Ministries: ${a.groups.join(', ')}</p>` : ''}
                    </div>
                </div>`;
     });
@@ -601,6 +606,7 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     const photo   = get('photo');
     const initials = get('initials');
     const family  = get('family');
+    const groupsRaw = get('groups');
 
     document.getElementById('mm-name').textContent = name;
 
@@ -658,6 +664,14 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
             addrIndEl.classList.remove('d-none');
         } else { addrIndEl.classList.add('d-none'); }
     }
+
+    // Groups/Ministries
+    const groupsEl = document.getElementById('mm-groups');
+    const groups = groupsRaw.split(',').map(g => g.trim()).filter(Boolean);
+    if (groups.length) {
+        groupsEl.innerHTML = `<i class="fa-solid fa-people-group dir-icon"></i> Groups/Ministries: ${groups.join(', ')}`;
+        groupsEl.classList.remove('d-none');
+    } else { groupsEl.classList.add('d-none'); }
 });
 
 //  Instant, fully client-side search & filter 
