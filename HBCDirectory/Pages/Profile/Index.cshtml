@@ -47,7 +47,8 @@
                         </p>
                     </div>
 
-                    <form method="post" enctype="multipart/form-data" class="admin-form-grid">
+                    <form method="post" enctype="multipart/form-data" class="admin-form-grid"
+                          onsubmit="return combinePhone('profile-phone-code','profile-phone-local','profile-phone-hidden')">
 
                         <div class="form-field">
                             <label class="form-label">
@@ -73,7 +74,11 @@
                                 @if (cfg.RequireApprovalForPhone) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
                                 else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
                             </label>
-                            <input name="phoneNumber" class="form-control" value="@Model.CurrentMember.PhoneNumber" />
+                            <div class="phone-input-group">
+                                <select class="form-select phone-country-code" id="profile-phone-code" data-default="+27"></select>
+                                <input type="tel" class="form-control" id="profile-phone-local" placeholder="82 123 4567" />
+                            </div>
+                            <input type="hidden" name="phoneNumber" id="profile-phone-hidden" />
                         </div>
 
                         <div class="form-field">
@@ -198,5 +203,13 @@
         };
         reader.readAsDataURL(input.files[0]);
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const codeSel = document.getElementById('profile-phone-code');
+        if (!codeSel) return; // no CurrentMember → the form (and this field) isn't on the page
+        const parts = splitPhoneForEdit(@Json.Serialize(Model.CurrentMember?.PhoneNumber), '+27');
+        codeSel.value = parts.code;
+        document.getElementById('profile-phone-local').value = parts.local;
+    });
 </script>
 }

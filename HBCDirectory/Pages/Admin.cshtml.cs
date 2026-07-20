@@ -621,11 +621,6 @@ namespace HBCDirectory.Pages
             else if (!string.IsNullOrWhiteSpace(password))
                 settings.Password = password.Trim();
 
-            // If a password was just removed and a PDF is already cached in R2,
-            // that cached file was encrypted at generation time — the setting
-            // alone can't strip it, so regenerate it now to match. This does
-            // the same R2 write + QuestPDF render as "Update PDF", so it draws
-            // from the same rate limit.
             if (removePassword && settings.R2Key != null)
             {
                 using var lease = await _pdfGenerateLimiter.AcquireAsync(1);

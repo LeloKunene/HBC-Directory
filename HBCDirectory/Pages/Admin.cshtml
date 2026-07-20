@@ -44,7 +44,8 @@
     <div class="collapse" id="addMemberForm">
         <div class="form-card mb-4">
             <h6 class="form-card-title">Add New Member</h6>
-            <form method="post" asp-page-handler="AddMember" enctype="multipart/form-data">
+            <form method="post" asp-page-handler="AddMember" enctype="multipart/form-data"
+                  onsubmit="return combinePhone('add-phone-code','add-phone-local','add-phone-hidden')">
 
                 <div class="form-grid">
                     <div class="form-field">
@@ -92,11 +93,15 @@
                     </div>
                     <div class="form-field">
                         <label class="form-label">Phone</label>
-                        <input name="phoneNumber" class="form-control" placeholder="+27 ..." />
+                        <div class="phone-input-group">
+                            <select class="form-select phone-country-code" id="add-phone-code" data-default="+27"></select>
+                            <input type="tel" class="form-control" id="add-phone-local" placeholder="82 123 4567" />
+                        </div>
+                        <input type="hidden" name="phoneNumber" id="add-phone-hidden" />
                     </div>
                     <div class="form-field" id="add-dateJoinedField">
                         <label class="form-label">Date Became Member</label>
-                        <input name="dateJoined" type="date" class="form-control" />
+                        <input name="dateJoined" type="month" class="form-control" />
                     </div>
                     <div class="form-field form-field--full" id="add-addressField">
                         <label class="form-label">Address <span class="text-muted small">(individual members only)</span></label>
@@ -198,7 +203,7 @@
                                     data-showaddress="@m.ShowAddress.ToString().ToLower()"
                                     data-showbirthdate="@m.ShowBirthdate.ToString().ToLower()"
                                     data-showanniversary="@m.ShowAnniversary.ToString().ToLower()"
-                                    data-datejoined="@(m.DateJoined?.ToString("yyyy-MM-dd"))"
+                                    data-datejoined="@(m.DateJoined?.ToString("yyyy-MM"))"
                                     data-address="@m.Address">
                                 Edit
                             </button>
@@ -229,7 +234,8 @@
     <div class="collapse" id="addFamilyForm">
         <div class="form-card mb-4">
             <h6 class="form-card-title">Add New Family</h6>
-            <form method="post" asp-page-handler="AddFamily" enctype="multipart/form-data">
+            <form method="post" asp-page-handler="AddFamily" enctype="multipart/form-data"
+                  onsubmit="return combinePhone('add-fphone-code','add-fphone-local','add-fphone-hidden')">
                 <div class="form-grid">
                     <div class="form-field form-field--full">
                         <label class="form-label">Family Name <span class="text-danger">*</span></label>
@@ -241,7 +247,11 @@
                     </div>
                     <div class="form-field">
                         <label class="form-label">Family Phone</label>
-                        <input name="familyPhone" class="form-control" placeholder="+27 ..." />
+                        <div class="phone-input-group">
+                            <select class="form-select phone-country-code" id="add-fphone-code" data-default="+27"></select>
+                            <input type="tel" class="form-control" id="add-fphone-local" placeholder="82 123 4567" />
+                        </div>
+                        <input type="hidden" name="familyPhone" id="add-fphone-hidden" />
                     </div>
                     <div class="form-field">
                         <label class="form-label">Group Photo</label>
@@ -1185,7 +1195,8 @@ function togglePdfPasswordVisibility() {
                 <h5 class="modal-title">Edit Member</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post" asp-page-handler="EditMember" enctype="multipart/form-data">
+            <form method="post" asp-page-handler="EditMember" enctype="multipart/form-data"
+                  onsubmit="return combinePhone('edit-phone-code','edit-phone-local','edit-phone-hidden')">
                 <div class="modal-body">
                     <input type="hidden" name="id" id="edit-id" />
                     <div class="form-grid">
@@ -1235,11 +1246,15 @@ function togglePdfPasswordVisibility() {
                         </div>
                         <div class="form-field">
                             <label class="form-label">Phone</label>
-                            <input name="phoneNumber" id="edit-phone" class="form-control" />
+                            <div class="phone-input-group">
+                                <select class="form-select phone-country-code" id="edit-phone-code" data-default="+27"></select>
+                                <input type="tel" class="form-control" id="edit-phone-local" placeholder="82 123 4567" />
+                            </div>
+                            <input type="hidden" name="phoneNumber" id="edit-phone-hidden" />
                         </div>
                         <div class="form-field">
                             <label class="form-label">Date Became Member</label>
-                            <input name="dateJoined" id="edit-dateJoined" type="date" class="form-control" />
+                            <input name="dateJoined" id="edit-dateJoined" type="month" class="form-control" />
                         </div>
                         <div class="form-field form-field--full" id="edit-addressField">
                             <label class="form-label">Address <span class="text-muted small">(individual only)</span></label>
@@ -1319,7 +1334,8 @@ function togglePdfPasswordVisibility() {
                     <!-- ── LEFT: Family details ──────────────────────── -->
                     <div class="col-md-6" style="padding:24px;border-right:1px solid var(--dir-light2);">
                         <p style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dir-gold);margin-bottom:16px;">Family Details</p>
-                        <form method="post" asp-page-handler="EditFamily" enctype="multipart/form-data">
+                        <form method="post" asp-page-handler="EditFamily" enctype="multipart/form-data"
+                              onsubmit="return combinePhone('edit-fphone-code','edit-fphone-local','edit-fphone-hidden')">
                             <input type="hidden" name="id" id="edit-fid" />
                             <div class="form-grid">
                                 <div class="form-field form-field--full">
@@ -1333,8 +1349,11 @@ function togglePdfPasswordVisibility() {
                                 </div>
                                 <div class="form-field">
                                     <label class="form-label">Family Phone</label>
-                                    <input name="familyPhone" id="edit-fphone" class="form-control"
-                                           placeholder="+27 ..." />
+                                    <div class="phone-input-group">
+                                        <select class="form-select phone-country-code" id="edit-fphone-code" data-default="+27"></select>
+                                        <input type="tel" class="form-control" id="edit-fphone-local" placeholder="82 123 4567" />
+                                    </div>
+                                    <input type="hidden" name="familyPhone" id="edit-fphone-hidden" />
                                 </div>
                                 <div class="form-field">
                                     <label class="form-label">Group Photo</label>
@@ -1456,7 +1475,10 @@ document.getElementById('editMemberModal').addEventListener('show.bs.modal', e =
     document.getElementById('edit-email').value       = get('email');
     document.getElementById('edit-birthdate').value   = get('birthdate');
     document.getElementById('edit-anniversary').value = get('anniversary');
-    document.getElementById('edit-phone').value       = get('phone');
+
+    const phoneParts = splitPhoneForEdit(get('phone'), '+27');
+    document.getElementById('edit-phone-code').value  = phoneParts.code;
+    document.getElementById('edit-phone-local').value = phoneParts.local;
 
     const mt = get('membertype');
     document.getElementById('edit-memberType').value     = mt || 'Adult';
@@ -1484,7 +1506,9 @@ document.getElementById('editFamilyModal').addEventListener('show.bs.modal', e =
     document.getElementById('edit-fid').value      = btn.getAttribute('data-id') || '';
     document.getElementById('edit-fname').value    = btn.getAttribute('data-familyname') || '';
     document.getElementById('edit-faddress').value = btn.getAttribute('data-address') || '';
-    document.getElementById('edit-fphone').value   = btn.getAttribute('data-familyphone') || '';
+    const fPhoneParts = splitPhoneForEdit(btn.getAttribute('data-familyphone') || '', '+27');
+    document.getElementById('edit-fphone-code').value  = fPhoneParts.code;
+    document.getElementById('edit-fphone-local').value = fPhoneParts.local;
     document.getElementById('edit-fnotes').value   = btn.getAttribute('data-notes') || '';
     document.getElementById('edit-family-title').textContent =
         'Edit — ' + (btn.getAttribute('data-familyname') || 'Family');

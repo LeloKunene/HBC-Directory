@@ -1409,3 +1409,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   transition: background 0.15s ease;
 }
 .profile-photo-camera-btn:hover { background: var(--color-primary-dark); }
+
+/*  Phone number: country code + local number   */
+.phone-input-group { display: flex; gap: 8px; }
+.phone-input-group .phone-country-code { flex: 0 0 auto; width: 80px; }
+.phone-input-group input[type="tel"] { flex: 1 1 auto; min-width: 0; }

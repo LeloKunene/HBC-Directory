@@ -135,3 +135,103 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 })();
+
+(function () {
+  window.PHONE_COUNTRY_CODES = [
+    { code: "+27",  name: "South Africa" },
+    { code: "+260", name: "Zambia" },
+    { code: "+263", name: "Zimbabwe" },
+    { code: "+267", name: "Botswana" },
+    { code: "+258", name: "Mozambique" },
+    { code: "+266", name: "Lesotho" },
+    { code: "+268", name: "Eswatini" },
+    { code: "+264", name: "Namibia" },
+    { code: "+265", name: "Malawi" },
+    { code: "+254", name: "Kenya" },
+    { code: "+255", name: "Tanzania" },
+    { code: "+256", name: "Uganda" },
+    { code: "+234", name: "Nigeria" },
+    { code: "+233", name: "Ghana" },
+    { code: "+20",  name: "Egypt" },
+    { code: "+212", name: "Morocco" },
+    { code: "+44",  name: "United Kingdom" },
+    { code: "+1",   name: "US / Canada" },
+    { code: "+61",  name: "Australia" },
+    { code: "+64",  name: "New Zealand" },
+    { code: "+91",  name: "India" },
+    { code: "+86",  name: "China" },
+    { code: "+81",  name: "Japan" },
+    { code: "+82",  name: "South Korea" },
+    { code: "+49",  name: "Germany" },
+    { code: "+33",  name: "France" },
+    { code: "+39",  name: "Italy" },
+    { code: "+34",  name: "Spain" },
+    { code: "+31",  name: "Netherlands" },
+    { code: "+32",  name: "Belgium" },
+    { code: "+41",  name: "Switzerland" },
+    { code: "+46",  name: "Sweden" },
+    { code: "+47",  name: "Norway" },
+    { code: "+45",  name: "Denmark" },
+    { code: "+353", name: "Ireland" },
+    { code: "+351", name: "Portugal" },
+    { code: "+7",   name: "Russia" },
+    { code: "+55",  name: "Brazil" },
+    { code: "+52",  name: "Mexico" },
+    { code: "+971", name: "UAE" },
+    { code: "+966", name: "Saudi Arabia" },
+    { code: "+974", name: "Qatar" },
+    { code: "+65",  name: "Singapore" },
+    { code: "+60",  name: "Malaysia" },
+    { code: "+63",  name: "Philippines" },
+    { code: "+92",  name: "Pakistan" }
+  ];
+
+  window.populatePhoneCodeSelects = function () {
+    document.querySelectorAll("select.phone-country-code").forEach(function (sel) {
+      if (sel.dataset.populated) return;
+      const def = sel.dataset.default || "+27";
+      window.PHONE_COUNTRY_CODES.forEach(function (c) {
+        const opt = document.createElement("option");
+        opt.value = c.code;
+        opt.textContent = c.code + " " + c.name;
+        if (c.code === def) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.dataset.populated = "true";
+    });
+  };
+
+  // Joins the code + local-number inputs into the hidden field that
+  // actually gets submitted. Wire this to a form's onsubmit — always
+  // returns true so the submit proceeds either way.
+  window.combinePhone = function (codeId, localId, hiddenId) {
+    const code  = document.getElementById(codeId).value;
+    const local = document.getElementById(localId).value.trim();
+    document.getElementById(hiddenId).value = local ? (code + " " + local) : "";
+    return true;
+  };
+
+  // Best-effort split of a previously-saved phone string back into
+  // {code, local} for populating an Edit modal. Numbers saved before this
+  // feature existed (or entered without a "+") can't be reliably attributed
+  // to a country, so those fall back to the default code with the whole
+  // original string left in the local field — nothing is lost, it just
+  // isn't pre-split.
+  window.splitPhoneForEdit = function (full, defaultCode) {
+    full = (full || "").trim();
+    if (!full) return { code: defaultCode, local: "" };
+    if (full.startsWith("+")) {
+      const byLength = window.PHONE_COUNTRY_CODES.slice().sort(function (a, b) {
+        return b.code.length - a.code.length;
+      });
+      for (const c of byLength) {
+        if (full.startsWith(c.code)) {
+          return { code: c.code, local: full.slice(c.code.length).trim() };
+        }
+      }
+    }
+    return { code: defaultCode, local: full };
+  };
+
+  document.addEventListener("DOMContentLoaded", window.populatePhoneCodeSelects);
+})();
