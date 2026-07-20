@@ -25,6 +25,8 @@
 </head>
 
 <body>
+    <div class="app-toast-stack" id="app-toast-stack" aria-live="polite" aria-atomic="true"></div>
+
     @if (ViewData["HideNav"] as bool? != true)
     {
         <header>
@@ -96,6 +98,23 @@
         <script src="~/lib/jquery/dist/jquery.min.js"></script>
         <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
         <script src="~/js/site.js" asp-append-version="true"></script>
+        @{
+            /* Every page's "flash" success/error message flows through here.
+                set TempData["Success"]/TempData["Error"] in any handler before
+                a RedirectToPage() and it shows as a toast on the next page,
+                with no per-page markup needed. Read once, here, so it's
+                consumed exactly once per request regardless of which page set it.*/
+            var toastSuccess = TempData["Success"] as string;
+            var toastError   = TempData["Error"]   as string;
+        }
+        @if (!string.IsNullOrEmpty(toastSuccess))
+        {
+            <script>document.addEventListener('DOMContentLoaded', () => window.showToast(@Json.Serialize(toastSuccess), 'success'));</script>
+        }
+        @if (!string.IsNullOrEmpty(toastError))
+        {
+            <script>document.addEventListener('DOMContentLoaded', () => window.showToast(@Json.Serialize(toastError), 'error'));</script>
+        }
         <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
