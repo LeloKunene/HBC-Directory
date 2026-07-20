@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Security.Cryptography;
+using System.Threading.RateLimiting;
 
 namespace HBCDirectory.Pages
 {
@@ -22,11 +24,14 @@ namespace HBCDirectory.Pages
         private readonly TokenService      _tokens;
         private readonly EmailService      _email;
         private readonly DirectoryPdfService _pdfService;
+        private readonly RateLimiter        _pdfGenerateLimiter;
 
         public AdminModel(DirectoryContext db, IConfiguration config, PhotoService photos,
-                          TokenService tokens, EmailService email, DirectoryPdfService pdfService)
+                          TokenService tokens, EmailService email, DirectoryPdfService pdfService,
+                          [FromKeyedServices("pdfgenerate")] RateLimiter pdfGenerateLimiter)
         {
             _db = db; _config = config; _photos = photos; _tokens = tokens; _email = email; _pdfService = pdfService;
+            _pdfGenerateLimiter = pdfGenerateLimiter;
         }
 
         public List<Member>          Members          { get; set; } = new();
@@ -555,6 +560,13 @@ namespace HBCDirectory.Pages
 
         public async Task<IActionResult> OnPostGeneratePdfAsync()
         {
+            using var lease = await _pdfGenerateLimiter.AcquireAsync(1);
+            if (!lease.IsAcquired)
+            {
+                TempData["Error"] = "PDF generation is limited to 10 per hour. Please try again later.";
+                return RedirectToPage();
+            }
+
             var settings = await _db.PdfSettings.FindAsync(1);
             if (settings == null)
             {
@@ -581,11 +593,21 @@ namespace HBCDirectory.Pages
             else if (!string.IsNullOrWhiteSpace(password))
                 settings.Password = password.Trim();
 
-            // If a password was just removed and a PDF is already cached in R2,
-            // that cached file was encrypted at generation time — the setting
-            // alone can't strip it, so regenerate it now to match.
+            /*If a password was just removed and a PDF is already cached in R2,
+                that cached file was encrypted at generation time — the setting
+                alone can't strip it, so regenerate it now to match. This does
+                the same R2 write + QuestPDF render as "Update PDF", so it draws
+                from the same rate limit.*/
             if (removePassword && settings.R2Key != null)
             {
+                using var lease = await _pdfGenerateLimiter.AcquireAsync(1);
+                if (!lease.IsAcquired)
+                {
+                    TempData["Error"] = "PDF generation is limited to 10 per hour. The password field was saved, but the stored PDF could not be regenerated yet. Try 'Update PDF' shortly.";
+                    await _db.SaveChangesAsync();
+                    return RedirectToPage();
+                }
+
                 await RegenerateAndCachePdfAsync(settings);
                 TempData["Success"] = "Password removed. The stored PDF has been updated.";
             }

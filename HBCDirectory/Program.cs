@@ -2,7 +2,9 @@ using HBCDirectory.Data;
 using HBCDirectory.Services;
 using QuestPDF.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +20,54 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/Login";
     });
+
+/* Rate limiting — protects the login endpoint from brute-force attempts and
+    caps how often the (relatively expensive) PDF download/generation paths
+    can be hit per user/IP. Policy names are referenced via [EnableRateLimiting]
+    on the relevant PageModels.*/
+builder.Services.AddRateLimiter(options =>
+{
+    // Login: 6 attempts per IP per 15 minutes.
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit          = 6,
+                Window               = TimeSpan.FromMinutes(15),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit           = 0
+            }));
+
+    // PDF download: 10 per signed-in user per hour.
+    options.AddPolicy("pdf", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.User.Identity?.Name
+                ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window      = TimeSpan.FromHours(1),
+                QueueLimit  = 0
+            }));
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
+/*PDF generation (admin-triggered, R2 write + QuestPDF render): 10/hour.
+    Registered as a standalone keyed limiter rather than an [EnableRateLimiting]
+    policy: Admin.cshtml has many OnPost* handlers that all share the single
+    "/Admin" route, so a page-level policy would throttle every admin action
+    (adding a member, editing a family, etc.) together with PDF generation.
+    OnPostGeneratePdfAsync acquires a lease from this limiter directly instead.*/
+builder.Services.AddKeyedSingleton<RateLimiter>("pdfgenerate", (_, _) =>
+    new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
+    {
+        PermitLimit = 10,
+        Window      = TimeSpan.FromHours(1),
+        QueueLimit  = 0
+    }));
 
 var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=hbc.db";
 var pgHost = Environment.GetEnvironmentVariable("PGHOST");
@@ -57,6 +107,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
