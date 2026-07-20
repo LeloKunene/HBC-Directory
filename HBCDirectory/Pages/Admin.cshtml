@@ -101,7 +101,7 @@
                     </div>
                     <div class="form-field" id="add-dateJoinedField">
                         <label class="form-label">Date Became Member</label>
-                        <input name="dateJoined" type="month" class="form-control" />
+                        <input name="dateJoined" type="date" class="form-control" />
                     </div>
                     <div class="form-field form-field--full" id="add-addressField">
                         <label class="form-label">Address <span class="text-muted small">(individual members only)</span></label>
@@ -203,7 +203,7 @@
                                     data-showaddress="@m.ShowAddress.ToString().ToLower()"
                                     data-showbirthdate="@m.ShowBirthdate.ToString().ToLower()"
                                     data-showanniversary="@m.ShowAnniversary.ToString().ToLower()"
-                                    data-datejoined="@(m.DateJoined?.ToString("yyyy-MM"))"
+                                    data-datejoined="@(m.DateJoined?.ToString("yyyy-MM-dd"))"
                                     data-address="@m.Address">
                                 Edit
                             </button>
@@ -1254,7 +1254,7 @@ function togglePdfPasswordVisibility() {
                         </div>
                         <div class="form-field">
                             <label class="form-label">Date Became Member</label>
-                            <input name="dateJoined" id="edit-dateJoined" type="month" class="form-control" />
+                            <input name="dateJoined" id="edit-dateJoined" type="date" class="form-control" />
                         </div>
                         <div class="form-field form-field--full" id="edit-addressField">
                             <label class="form-label">Address <span class="text-muted small">(individual only)</span></label>
