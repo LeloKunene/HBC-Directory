@@ -99,10 +99,14 @@ namespace HBCDirectory.Pages
             string? phoneNumber, string? address, int? familyId, IFormFile? photo)
         {
             memberType = string.IsNullOrWhiteSpace(memberType) ? "Adult" : memberType;
-            bool isAdult = memberType == "Adult";
+            bool isAdult   = memberType == "Adult";
+            bool isMember  = (memberStatus ?? "Member") == "Member";
 
-            if (isAdult && string.IsNullOrWhiteSpace(email))
-            { TempData["Error"] = "Email is required for adults."; return RedirectToPage(); }
+            /*  Only Members get a login
+                Attendants shouldn't have directory access until they become a
+                Member, so there's no reason to force an email address on them.*/
+            if (isAdult && isMember && string.IsNullOrWhiteSpace(email))
+            { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
             { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
 
@@ -119,7 +123,7 @@ namespace HBCDirectory.Pages
                 {
                     Name         = CapFirst(name),
                     Surname      = CapFirst(surname),
-                    Email        = isAdult ? email!.Trim().ToLower() : null,
+                    Email        = isAdult && !string.IsNullOrWhiteSpace(email) ? email.Trim().ToLower() : null,
                     MemberType   = memberType,
                     MemberStatus = isAdult ? (memberStatus ?? "Member") : null,
                     ChurchOffice = isAdult && memberStatus == "Member"
@@ -144,27 +148,34 @@ namespace HBCDirectory.Pages
                 _db.Members.Add(member);
                 await _db.SaveChangesAsync();
 
-                if (isAdult && !string.IsNullOrEmpty(member.Email))
-                {
-                    var tmp  = GenerateTempPassword();
-                    _db.MemberAccounts.Add(new MemberAccount
-                    {
-                        MemberId     = member.Id,
-                        Username     = member.Email,
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(tmp)
-                    });
-                    await _db.SaveChangesAsync();
-
-                    var token = await _tokens.CreateTokenAsync(member.Email, TimeSpan.FromHours(24));
-                    var link  = $"{Request.Scheme}://{Request.Host}/ResetPassword?token={token}";
-                    await _email.SendWelcomeEmailAsync(member.Email, member.DisplayName, tmp, link);
-                }
+                if (isAdult && isMember && !string.IsNullOrEmpty(member.Email))
+                    await CreateMemberAccountAsync(member);
 
                 TempData["Success"] = $"'{member.DisplayName}' added.";
                 await LogChangeAsync("Member", member.Id, member.DisplayName, "Created");
             }
             catch (Exception ex) { Console.WriteLine(ex.Message); TempData["Error"] = "Could not add member."; }
             return RedirectToPage();
+        }
+
+        /*  Grants directory login access: creates a MemberAccount with a
+            temporary password and emails the member a reset link. Only ever
+            called for Members with an email set. Attendants shouldn't have
+            access until they're promoted to Member*/
+        private async Task CreateMemberAccountAsync(Member member)
+        {
+            var tmp = GenerateTempPassword();
+            _db.MemberAccounts.Add(new MemberAccount
+            {
+                MemberId     = member.Id,
+                Username     = member.Email!,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(tmp)
+            });
+            await _db.SaveChangesAsync();
+
+            var token = await _tokens.CreateTokenAsync(member.Email!, TimeSpan.FromHours(24));
+            var link  = $"{Request.Scheme}://{Request.Host}/ResetPassword?token={token}";
+            await _email.SendWelcomeEmailAsync(member.Email!, member.DisplayName, tmp, link);
         }
 
         //  Edit Member 
@@ -179,9 +190,15 @@ namespace HBCDirectory.Pages
             var m = await _db.Members.FindAsync(id);
             if (m == null) return NotFound();
 
-            bool isAdult = memberType == "Adult";
+            bool isAdult  = memberType == "Adult";
+            bool isMember = (memberStatus ?? "Member") == "Member";
+
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
             { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
+
+            var effectiveEmail = !string.IsNullOrWhiteSpace(email) ? email.Trim() : m.Email;
+            if (isAdult && isMember && string.IsNullOrWhiteSpace(effectiveEmail))
+            { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
 
             m.Name         = CapFirst(name);
             m.Surname      = CapFirst(surname);
@@ -224,6 +241,17 @@ namespace HBCDirectory.Pages
             }
 
             await _db.SaveChangesAsync();
+
+            /*  Promoted from Attendant to Member (or was already a Member but
+                never had an account, e.g. was added before an email existed)
+                and now has an email —> grant directory access.*/
+            if (isAdult && isMember && !string.IsNullOrEmpty(m.Email))
+            {
+                var hasAccount = await _db.MemberAccounts.AnyAsync(a => a.MemberId == id);
+                if (!hasAccount)
+                    await CreateMemberAccountAsync(m);
+            }
+
             await LogChangeAsync("Member", m.Id, m.DisplayName, "Updated");
             TempData["Success"] = $"'{m.DisplayName}' updated.";
             return RedirectToPage();

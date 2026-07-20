@@ -78,9 +78,9 @@
                         </select>
                     </div>
                     <div class="form-field form-field--full" id="add-emailField">
-                        <label class="form-label">Email Address <span class="text-danger">*</span></label>
+                        <label class="form-label">Email Address <span class="text-danger" id="add-email-required-mark">*</span></label>
                         <input name="email" type="email" class="form-control" id="add-email"
-                               placeholder="Required for adults — used as login username" />
+                               placeholder="Used as login username — required for Members, optional for Attendants" />
                     </div>
                     <div class="form-field">
                         <label class="form-label">Birthdate</label>
@@ -1220,7 +1220,7 @@ function togglePdfPasswordVisibility() {
                             </select>
                         </div>
                         <div class="form-field form-field--full" id="edit-emailField">
-                            <label class="form-label">Email</label>
+                            <label class="form-label">Email <span class="text-danger" id="edit-email-required-mark">*</span></label>
                             <input name="email" id="edit-email" type="email" class="form-control" />
                         </div>
                         <div class="form-field">
@@ -1418,7 +1418,12 @@ function updateAddForm() {
     document.getElementById('add-officeField').style.display       = isAdult && isMember ? '' : 'none';
     document.getElementById('add-emailField').style.display        = isAdult ? '' : 'none';
     document.getElementById('add-anniversaryField').style.display  = isAdult ? '' : 'none';
-    document.getElementById('add-email').required = isAdult;
+
+    // Attendants don't get directory access, so
+    // there's no reason to force an email address on them, only Members need one, since it becomes their login username.
+    const emailRequired = isAdult && isMember;
+    document.getElementById('add-email').required = emailRequired;
+    document.getElementById('add-email-required-mark').style.display = emailRequired ? '' : 'none';
 }
 
 //  Edit form: show/hide fields by MemberType 
@@ -1432,6 +1437,9 @@ function updateEditForm() {
     document.getElementById('edit-officeField').style.display       = isAdult && isMember ? '' : 'none';
     document.getElementById('edit-emailField').style.display        = isAdult ? '' : 'none';
     document.getElementById('edit-anniversaryField').style.display  = isAdult ? '' : 'none';
+    const emailRequired = isAdult && isMember;
+    document.getElementById('edit-email').required = emailRequired;
+    document.getElementById('edit-email-required-mark').style.display = emailRequired ? '' : 'none';
 }
 
 //  Populate Edit Member modal 
