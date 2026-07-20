@@ -12,10 +12,11 @@ namespace HBCDirectory.Pages
     {
         private readonly DirectoryContext _db;
         private readonly PhotoService _photos;
+        private readonly IDbContextFactory<DirectoryContext> _dbFactory;
 
-        public IndexModel(DirectoryContext db, PhotoService photos)
+        public IndexModel(DirectoryContext db, PhotoService photos, IDbContextFactory<DirectoryContext> dbFactory)
         {
-            _db = db; _photos = photos;
+            _db = db; _photos = photos; _dbFactory = dbFactory;
         }
 
         // ── Directory sections ─────────────────────────────────────────────
@@ -26,7 +27,7 @@ namespace HBCDirectory.Pages
 
         public Dictionary<int, List<string>> StaffRoleLookup { get; set; } = new();
 
-        // MemberId → group names e.g. ["Iron Men", "Growth Groups"]
+        // MemberId → group names e.g. ["Care Grop A", "Drivers"]
         public Dictionary<int, List<string>> GroupLookup { get; set; } = new();
         public List<string> AllAssignedStaffRoles { get; set; } = new();
         public List<Group> AllGroups { get; set; } = new();
@@ -52,12 +53,27 @@ namespace HBCDirectory.Pages
             GroupFilter    = group;
             CardTypeFilter = cardtype;
 
-            // Staff assignments & role lookup
-            StaffAssignments = await _db.StaffAssignments
-                .Include(sa => sa.Member).ThenInclude(m => m.Family)
-                .Include(sa => sa.StaffRole)
-                .OrderBy(sa => sa.DisplayOrder)
-                .ToListAsync();
+            /* These six reads don't depend on each other, so run them
+                concurrently instead of one after another. Each uses its own
+                short-lived DbContext from _dbFactory — a single DbContext
+                can't safely run more than one query at a time.*/
+            var staffAssignmentsTask  = LoadStaffAssignmentsAsync();
+            var groupsTask            = LoadGroupsAsync();
+            var memberGroupsTask      = LoadMemberGroupsAsync();
+            var leadershipTask        = LoadLeadershipAsync();
+            var familiesTask          = LoadFamiliesAsync();
+            var individualMembersTask = LoadIndividualMembersAsync();
+
+            await Task.WhenAll(
+                staffAssignmentsTask, groupsTask, memberGroupsTask,
+                leadershipTask, familiesTask, individualMembersTask);
+
+            StaffAssignments     = await staffAssignmentsTask;
+            AllGroups            = await groupsTask;
+            var allMemberGroups  = await memberGroupsTask;
+            Leadership           = await leadershipTask;
+            Families             = await familiesTask;
+            IndividualMembers    = await individualMembersTask;
 
             StaffRoleLookup = StaffAssignments
                 .GroupBy(sa => sa.MemberId)
@@ -69,35 +85,9 @@ namespace HBCDirectory.Pages
                 .OrderBy(r => r)
                 .ToList();
 
-            // Group lookup
-            AllGroups = await _db.Groups.OrderBy(g => g.DisplayOrder).ToListAsync();
-
-            var allMemberGroups = await _db.MemberGroups
-                .Include(mg => mg.Group)
-                .ToListAsync();
-
             GroupLookup = allMemberGroups
                 .GroupBy(mg => mg.MemberId)
                 .ToDictionary(g => g.Key, g => g.Select(mg => mg.Group.Name).ToList());
-
-            // Leadership
-            Leadership = await _db.Members
-                .Include(m => m.Family)
-                .Where(m => m.ChurchOffice == "Elder" || m.ChurchOffice == "Deacon")
-                .OrderBy(m => m.ChurchOffice).ThenBy(m => m.Surname).ThenBy(m => m.Name)
-                .ToListAsync();
-
-            // Families
-            Families = await _db.Families
-                .Include(f => f.Members)
-                .OrderBy(f => f.FamilyName)
-                .ToListAsync();
-
-            // Individual members
-            IndividualMembers = await _db.Members
-                .Where(m => m.FamilyId == null && m.MemberType == "Adult")
-                .OrderBy(m => m.Surname).ThenBy(m => m.Name)
-                .ToListAsync();
 
             // Notifications
             var today    = DateTime.Today;
@@ -119,6 +109,61 @@ namespace HBCDirectory.Pages
                     catch { return false; } })
                 .OrderBy(m => m.Anniversary!.Value.Month).ThenBy(m => m.Anniversary!.Value.Day)
                 .ToList();
+        }
+
+        /* Parallel loaders for OnGetAsync ──────────────────────────────────
+            Each opens its own DbContext via _dbFactory so these can run
+            concurrently with Task.WhenAll above. Read-only — nothing here
+            calls SaveChanges, so entities not being tracked by the page's
+            main _db instance doesn't matter.*/
+        private async Task<List<StaffAssignment>> LoadStaffAssignmentsAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.StaffAssignments
+                .Include(sa => sa.Member).ThenInclude(m => m.Family)
+                .Include(sa => sa.StaffRole)
+                .OrderBy(sa => sa.DisplayOrder)
+                .ToListAsync();
+        }
+
+        private async Task<List<Group>> LoadGroupsAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.Groups.OrderBy(g => g.DisplayOrder).ToListAsync();
+        }
+
+        private async Task<List<MemberGroup>> LoadMemberGroupsAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.MemberGroups.Include(mg => mg.Group).ToListAsync();
+        }
+
+        private async Task<List<Member>> LoadLeadershipAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.Members
+                .Include(m => m.Family)
+                .Where(m => m.ChurchOffice == "Elder" || m.ChurchOffice == "Deacon")
+                .OrderBy(m => m.ChurchOffice).ThenBy(m => m.Surname).ThenBy(m => m.Name)
+                .ToListAsync();
+        }
+
+        private async Task<List<Family>> LoadFamiliesAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.Families
+                .Include(f => f.Members)
+                .OrderBy(f => f.FamilyName)
+                .ToListAsync();
+        }
+
+        private async Task<List<Member>> LoadIndividualMembersAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.Members
+                .Where(m => m.FamilyId == null && m.MemberType == "Adult")
+                .OrderBy(m => m.Surname).ThenBy(m => m.Name)
+                .ToListAsync();
         }
 
         public List<string> StaffRolesFor(int memberId) =>

@@ -82,7 +82,10 @@ if (!string.IsNullOrEmpty(pgHost))
 }
 
 QuestPDF.Settings.License = LicenseType.Community;
-builder.Services.AddDbContext<DirectoryContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContextFactory<DirectoryContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddScoped<DirectoryContext>(sp =>
+    sp.GetRequiredService<IDbContextFactory<DirectoryContext>>().CreateDbContext());
+
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var app = builder.Build();
