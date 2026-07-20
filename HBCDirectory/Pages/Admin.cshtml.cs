@@ -638,7 +638,12 @@ namespace HBCDirectory.Pages
             if (settings.HasPassword)
                 bytes = PdfPasswordHelper.AddPassword(bytes, settings.Password!);
 
-            var key = $"pdf/hbc-directory-{DateTime.Today:yyyy-MM-dd}.pdf";
+            /* A predictable, date-based key would let anyone who guesses the
+                pattern download the directory PDF directly from R2 if the
+                bucket were ever accidentally made public — use a random key
+                instead so it's only reachable via the authenticated Download
+                page, which looks it up from settings.R2Key in the database.*/
+            var key = $"pdf/hbc-directory-{Guid.NewGuid():N}.pdf";
             await _pdfService.UploadToR2Async(bytes, key);
 
             settings.R2Key         = key;
@@ -727,10 +732,19 @@ namespace HBCDirectory.Pages
                 using var input  = new MemoryStream(pdfBytes);
                 using var output = new MemoryStream();
                 var reader = new PdfReader(input);
+
+                /* The owner password grants full control over the PDF (removing
+                    the user password, changing permissions, etc). Deriving it from
+                    the user password ("<password>_o") meant anyone who knew the
+                    open password could trivially guess it. Thus we now use an independent
+                    random value each time so nobody needs to remember it,
+                    it only needs to exist so the encryption has an owner.*/
+                var ownerPassword = RandomNumberGenerator.GetBytes(32);
+
                 var writerProps = new WriterProperties()
                     .SetStandardEncryption(
                         System.Text.Encoding.UTF8.GetBytes(password),
-                        System.Text.Encoding.UTF8.GetBytes(password + "_o"),
+                        ownerPassword,
                         EncryptionConstants.ALLOW_PRINTING | EncryptionConstants.ALLOW_COPY,
                         EncryptionConstants.ENCRYPTION_AES_128
                     );
