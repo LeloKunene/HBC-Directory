@@ -130,6 +130,7 @@
                      data-staffroles="@string.Join(", ", staffRoles)"
                      data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                      data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                     data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                      data-address="@(m.ShowAddress ? m.Address : "")"
                      data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
                      data-family="@m.Family?.FamilyName"
@@ -200,6 +201,7 @@
                      data-staffroles="@string.Join(", ", staffRoles)"
                      data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                      data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                     data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                      data-address="@(m.ShowAddress ? m.Address : "")"
                      data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
                      data-family="@m.Family?.FamilyName"
@@ -293,6 +295,8 @@
                             email = a.Email,
                             birthdate = a.ShowBirthdate && a.Birthdate.HasValue
                                 ? a.Birthdate.Value.ToString("d MMM") : null,
+                            dateJoined = a.MemberStatus == "Member" && a.DateJoined.HasValue
+                                ? a.DateJoined.Value.ToString("MMMM yyyy") : null,
                             photo = string.IsNullOrEmpty(a.PhotoFileName) ? "" : Model.PhotoUrl(a.PhotoFileName),
                             initials = $"{a.Name.FirstOrDefault()}{a.Surname.FirstOrDefault()}".ToUpper()
                         }),
@@ -386,6 +390,7 @@
                          data-staffroles="@string.Join(",", staffRoles)"
                          data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                          data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                         data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                          data-address="@(m.ShowAddress ? m.Address : "")"
                          data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
                          data-initials="@m.Name[0]@m.Surname[0]"
@@ -493,6 +498,7 @@ else
                     <div id="mm-email"  class="dir-modal-row d-none"></div>
                     <div id="mm-family" class="dir-modal-row d-none"></div>
                     <div id="mm-bd"     class="dir-modal-row d-none"></div>
+                    <div id="mm-joined" class="dir-modal-row d-none"></div>
                     <div id="mm-address" class="dir-modal-row d-none"></div>
                     <div id="mm-groups" class="dir-modal-row d-none"></div>
                 </div>
@@ -502,7 +508,7 @@ else
 </div>
 
 @section Scripts {
-<script> 
+<script>
 document.getElementById('fm-photo').addEventListener('click', function () {
     if (!this.classList.contains('d-none')) window.openLightbox(this.src, this.alt);
 });
@@ -578,6 +584,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
                        <div class="dir-modal-person-contact">
                            ${contact}
                            ${a.birthdate ? `<span><i class="fa-solid fa-cake-candles dir-icon"></i> ${a.birthdate}</span>` : ''}
+                           ${a.dateJoined ? `<span><i class="fa-solid fa-calendar-check dir-icon"></i> Member since ${a.dateJoined}</span>` : ''}
                        </div>
                        ${(a.groups && a.groups.length) ? `<p class="dir-modal-person-groups"><i class="fa-solid fa-people-group dir-icon"></i> Groups/Ministries: ${a.groups.join(', ')}</p>` : ''}
                    </div>
@@ -610,6 +617,7 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     const office  = get('office');
     const staffRolesRaw = get('staffroles');
     const bd      = get('birthdate');
+    const joined  = get('datejoined');
     const photo   = get('photo');
     const initials = get('initials');
     const family  = get('family');
@@ -662,6 +670,10 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     if (bd) { bdEl.innerHTML = `<i class="fa-solid fa-cake-candles dir-icon"></i> ${bd}`; bdEl.classList.remove('d-none'); }
     else { bdEl.classList.add('d-none'); }
 
+    const joinedEl = document.getElementById('mm-joined');
+    if (joined) { joinedEl.innerHTML = `<i class="fa-solid fa-calendar-check dir-icon"></i> Member since ${joined}`; joinedEl.classList.remove('d-none'); }
+    else { joinedEl.classList.add('d-none'); }
+
     // Individual member address
     const addrIndEl = document.getElementById('mm-address');
     if (addrIndEl) {
@@ -680,12 +692,6 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
         groupsEl.classList.remove('d-none');
     } else { groupsEl.classList.add('d-none'); }
 });
-
-//  Instant, fully client-side search & filter 
-// Everything needed to filter is already in the DOM (data-search / data-status /
-// data-office attributes on each card), so typing never triggers a page reload
-// or a server round trip — we just show/hide cards. Keystrokes are coalesced
-// with requestAnimationFrame so even fast typing stays perfectly smooth.
 
 let filterFrame = null;
 function liveFilter() {
