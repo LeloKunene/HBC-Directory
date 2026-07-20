@@ -1027,7 +1027,8 @@ function togglePdfPasswordVisibility() {
                                 @if (!string.IsNullOrEmpty(member.PhotoFileName))
                                 {
                                     <img src="@Model.PhotoUrl(member.PhotoFileName)"
-                                         class="pending-photo" alt="Current photo" />
+                                         class="pending-photo lightbox-trigger" alt="Current photo"
+                                         onclick="openLightbox(this.src, this.alt)" />
                                 }
                                 else
                                 {
@@ -1058,7 +1059,8 @@ function togglePdfPasswordVisibility() {
                                 @if (hasPhoto)
                                 {
                                     <img src="@Model.PhotoUrl(p.PendingPhotoFileName)"
-                                         class="pending-photo pending-photo--new" alt="Pending photo" />
+                                         class="pending-photo pending-photo--new lightbox-trigger" alt="Pending photo"
+                                         onclick="openLightbox(this.src, this.alt)" />
                                     <span class="pending-photo-note" style="color:var(--dir-mustard);font-size:12px;font-weight:500;">
                                         <i class="fa-solid fa-image"></i> New photo
                                     </span>
@@ -1437,6 +1439,7 @@ function updateEditForm() {
     document.getElementById('edit-officeField').style.display       = isAdult && isMember ? '' : 'none';
     document.getElementById('edit-emailField').style.display        = isAdult ? '' : 'none';
     document.getElementById('edit-anniversaryField').style.display  = isAdult ? '' : 'none';
+
     const emailRequired = isAdult && isMember;
     document.getElementById('edit-email').required = emailRequired;
     document.getElementById('edit-email-required-mark').style.display = emailRequired ? '' : 'none';

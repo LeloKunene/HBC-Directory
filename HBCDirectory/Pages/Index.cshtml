@@ -453,7 +453,7 @@ else
             </div>
             <div class="modal-body dir-modal-body">
                 <div class="dir-modal-photo-wrap">
-                    <img id="fm-photo" src="" alt="" class="dir-modal-photo d-none" />
+                    <img id="fm-photo" src="" alt="" class="dir-modal-photo lightbox-trigger d-none" />
                     <div id="fm-initials" class="dir-modal-initials"></div>
                 </div>
                 <div class="dir-modal-info">
@@ -484,7 +484,7 @@ else
             </div>
             <div class="modal-body dir-modal-body">
                 <div class="dir-modal-photo-wrap">
-                    <img id="mm-photo" src="" alt="" class="dir-modal-photo d-none" />
+                    <img id="mm-photo" src="" alt="" class="dir-modal-photo lightbox-trigger d-none" />
                     <div id="mm-initials" class="dir-modal-initials"></div>
                 </div>
                 <div class="dir-modal-info">
@@ -502,7 +502,14 @@ else
 </div>
 
 @section Scripts {
-<script>
+<script> 
+document.getElementById('fm-photo').addEventListener('click', function () {
+    if (!this.classList.contains('d-none')) window.openLightbox(this.src, this.alt);
+});
+document.getElementById('mm-photo').addEventListener('click', function () {
+    if (!this.classList.contains('d-none')) window.openLightbox(this.src, this.alt);
+});
+
 //  Family modal 
 document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;

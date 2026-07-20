@@ -73,3 +73,65 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(dismiss, AUTO_DISMISS_MS);
   };
 })();
+
+(function () {
+  let overlay = null;
+  let imgEl = null;
+  let lastFocused = null;
+
+  function build() {
+    overlay = document.createElement("div");
+    overlay.className = "app-lightbox";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", "Photo viewer");
+
+    imgEl = document.createElement("img");
+    imgEl.className = "app-lightbox-img";
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "app-lightbox-close";
+    close.setAttribute("aria-label", "Close");
+    close.innerHTML = "&times;";
+    close.addEventListener("click", closeLightbox);
+
+    overlay.append(imgEl, close);
+    document.body.appendChild(overlay);
+
+    // Click the dark background (not the photo itself) to dismiss.
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay) closeLightbox();
+    });
+  }
+
+  function closeLightbox() {
+    if (!overlay) return;
+    overlay.classList.remove("app-lightbox--visible");
+    setTimeout(function () {
+      overlay.classList.remove("app-lightbox--open");
+      if (lastFocused) { lastFocused.focus(); lastFocused = null; }
+    }, 200); // matches the CSS transition duration
+  }
+
+  window.openLightbox = function (src, alt) {
+    if (!src) return;
+    if (!overlay) build();
+
+    lastFocused = document.activeElement;
+    imgEl.src = src;
+    imgEl.alt = alt || "";
+
+    overlay.classList.add("app-lightbox--open");
+    void overlay.offsetWidth; // force reflow so the transition actually plays
+    overlay.classList.add("app-lightbox--visible");
+  };
+
+  window.closeLightbox = closeLightbox;
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && overlay && overlay.classList.contains("app-lightbox--visible")) {
+      closeLightbox();
+    }
+  });
+})();

@@ -29,9 +29,22 @@
                 <div class="card-body">
 
                     <div class="text-center mb-4">
-                        <img src="@Model.PhotoUrl(Model.CurrentMember.PhotoFileName)"
-                             alt="Profile photo"
-                             style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:3px solid var(--color-primary)" />
+                        <div class="profile-photo-wrap">
+                            <img id="profile-photo-preview"
+                                 src="@Model.PhotoUrl(Model.CurrentMember.PhotoFileName)"
+                                 alt="Profile photo"
+                                 class="lightbox-trigger"
+                                 style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:3px solid var(--color-primary)"
+                                 onclick="openLightbox(this.src, this.alt)" />
+                            <button type="button" class="profile-photo-camera-btn"
+                                    title="Change photo" aria-label="Change photo"
+                                    onclick="document.getElementById('profile-photo-input').click()">
+                                <i class="fa-solid fa-camera"></i>
+                            </button>
+                        </div>
+                        <p class="small text-muted mt-2 mb-0 d-none" id="profile-photo-hint">
+                            New photo selected — click "Save changes" below to apply it.
+                        </p>
                     </div>
 
                     <form method="post" enctype="multipart/form-data" class="admin-form-grid">
@@ -78,7 +91,8 @@
                                 @if (cfg.RequireApprovalForPhoto) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
                                 else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
                             </label>
-                            <input type="file" name="photo" class="form-control" accept="image/jpeg,image/png" />
+                            <input type="file" name="photo" id="profile-photo-input" class="form-control"
+                                   accept="image/jpeg,image/png" onchange="previewProfilePhoto(this)" />
                         </div>
 
                         <!-- Privacy: only phone and address -->
@@ -171,4 +185,18 @@
         </div>
 
     </div>
+}
+
+@section Scripts {
+<script>
+    function previewProfilePhoto(input) {
+        if (!input.files || !input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('profile-photo-preview').src = e.target.result;
+            document.getElementById('profile-photo-hint').classList.remove('d-none');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+</script>
 }
