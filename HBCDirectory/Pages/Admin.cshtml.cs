@@ -593,17 +593,17 @@ namespace HBCDirectory.Pages
             else if (!string.IsNullOrWhiteSpace(password))
                 settings.Password = password.Trim();
 
-            /*If a password was just removed and a PDF is already cached in R2,
-                that cached file was encrypted at generation time — the setting
-                alone can't strip it, so regenerate it now to match. This does
-                the same R2 write + QuestPDF render as "Update PDF", so it draws
-                from the same rate limit.*/
+            // If a password was just removed and a PDF is already cached in R2,
+            // that cached file was encrypted at generation time — the setting
+            // alone can't strip it, so regenerate it now to match. This does
+            // the same R2 write + QuestPDF render as "Update PDF", so it draws
+            // from the same rate limit.
             if (removePassword && settings.R2Key != null)
             {
                 using var lease = await _pdfGenerateLimiter.AcquireAsync(1);
                 if (!lease.IsAcquired)
                 {
-                    TempData["Error"] = "PDF generation is limited to 10 per hour. The password field was saved, but the stored PDF could not be regenerated yet. Try 'Update PDF' shortly.";
+                    TempData["Error"] = "PDF generation is limited to 10 per hour. The password field was saved, but the stored PDF could not be regenerated yet — try 'Update PDF' shortly.";
                     await _db.SaveChangesAsync();
                     return RedirectToPage();
                 }
@@ -644,10 +644,20 @@ namespace HBCDirectory.Pages
                 instead so it's only reachable via the authenticated Download
                 page, which looks it up from settings.R2Key in the database.*/
             var key = $"pdf/hbc-directory-{Guid.NewGuid():N}.pdf";
+
+            /* Each generation used to write a brand-new key without removing
+                the previous one, so old PDFs (containing member photos, phone
+                numbers, addresses) accumulated in R2 forever. Keep track of the
+                old key and remove it once the new upload has succeeded.*/
+            var previousKey = settings.R2Key;
+
             await _pdfService.UploadToR2Async(bytes, key);
 
             settings.R2Key         = key;
             settings.LastGenerated = DateTime.UtcNow;
+
+            if (!string.IsNullOrEmpty(previousKey) && previousKey != key)
+                await DeleteFromR2Async(previousKey);
         }
 
         //  Helpers 
