@@ -89,21 +89,32 @@ namespace HBCDirectory.Pages
                 .GroupBy(mg => mg.MemberId)
                 .ToDictionary(g => g.Key, g => g.Select(mg => mg.Group.Name).ToList());
 
-            // Notifications
+            /* Notifications
+                The month/day-crossing-year-boundary check below still has to run
+                in memory (EF Core can't translate "does this recurring date fall
+                in the next 30 days" into SQL), but there's no reason to pull
+                members who have no birthdate/anniversary, or who've hidden it,
+                out of the database in the first place so filter those at the
+                query level instead of loading the whole table.*/
             var today    = DateTime.Today;
             var in30days = today.AddDays(30);
-            var everyone = await _db.Members.ToListAsync();
 
-            UpcomingBirthdays = everyone
+            var birthdayCandidates = await _db.Members
                 .Where(m => m.Birthdate.HasValue && m.ShowBirthdate)
+                .ToListAsync();
+
+            var anniversaryCandidates = await _db.Members
+                .Where(m => m.Anniversary.HasValue && m.ShowAnniversary)
+                .ToListAsync();
+
+            UpcomingBirthdays = birthdayCandidates
                 .Where(m => { var d = m.Birthdate!.Value;
                     try { var t = new DateTime(today.Year, d.Month, d.Day); return t >= today && t <= in30days; }
                     catch { return false; } })
                 .OrderBy(m => m.Birthdate!.Value.Month).ThenBy(m => m.Birthdate!.Value.Day)
                 .ToList();
 
-            UpcomingAnniversaries = everyone
-                .Where(m => m.Anniversary.HasValue && m.ShowAnniversary)
+            UpcomingAnniversaries = anniversaryCandidates
                 .Where(m => { var a = m.Anniversary!.Value;
                     try { var t = new DateTime(today.Year, a.Month, a.Day); return t >= today && t <= in30days; }
                     catch { return false; } })
