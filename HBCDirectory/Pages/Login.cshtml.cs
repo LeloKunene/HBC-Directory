@@ -3,22 +3,25 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 
 namespace HBCDirectory.Pages
 {
-    [EnableRateLimiting("login")]
     public class LoginModel : PageModel
     {
         private readonly IConfiguration _config;
         private readonly DirectoryContext _db;
+        private readonly PartitionedRateLimiter<HttpContext> _loginLimiter;
 
-        public LoginModel(IConfiguration config, DirectoryContext db)
+        public LoginModel(IConfiguration config, DirectoryContext db,
+            [FromKeyedServices("login")] PartitionedRateLimiter<HttpContext> loginLimiter)
         {
             _config = config;
             _db = db;
+            _loginLimiter = loginLimiter;
         }
 
         public string? ErrorMessage { get; set; }
@@ -27,6 +30,13 @@ namespace HBCDirectory.Pages
 
         public async Task<IActionResult> OnPostAsync(string username, string password)
         {
+            using var lease = await _loginLimiter.AcquireAsync(HttpContext);
+            if (!lease.IsAcquired)
+            {
+                ErrorMessage = "Too many login attempts from this connection. Please wait a few minutes and try again.";
+                return Page();
+            }
+
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
                 ErrorMessage = "Please enter your email and password.";

@@ -27,18 +27,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     on the relevant PageModels.*/
 builder.Services.AddRateLimiter(options =>
 {
-    // Login: 6 attempts per IP per 15 minutes.
-    options.AddPolicy("login", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit          = 6,
-                Window               = TimeSpan.FromMinutes(15),
-                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                QueueLimit           = 0
-            }));
-
     // PDF download: 10 per signed-in user per hour.
     options.AddPolicy("pdf", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
@@ -54,6 +42,18 @@ builder.Services.AddRateLimiter(options =>
 
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
+
+builder.Services.AddKeyedSingleton<PartitionedRateLimiter<HttpContext>>("login", (_, _) =>
+    PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit          = 10,
+                Window               = TimeSpan.FromMinutes(15),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit           = 0
+            })));
 
 /*PDF generation (admin-triggered, R2 write + QuestPDF render): 10/hour.
     Registered as a standalone keyed limiter rather than an [EnableRateLimiting]
