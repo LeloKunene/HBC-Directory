@@ -516,6 +516,14 @@ document.getElementById('fm-photo').addEventListener('click', function () {
 document.getElementById('mm-photo').addEventListener('click', function () {
     if (!this.classList.contains('d-none')) window.openLightbox(this.src, this.alt);
 });
+document.getElementById('fm-household').addEventListener('click', function (e) {
+    const img = e.target.closest('.dir-modal-person-photo');
+    if (img) window.openLightbox(img.src, img.alt);
+});
+document.getElementById('fm-children').addEventListener('click', function (e) {
+    const img = e.target.closest('.dir-modal-person-photo');
+    if (img) window.openLightbox(img.src, img.alt);
+});
 
 //  Family modal 
 document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
@@ -576,7 +584,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
             ? `<span class="dir-modal-fallback">Uses family contact above</span>`
             : `<span class="dir-modal-fallback">No contact on file</span>`;
         const avatar = a.photo
-            ? `<img class="dir-modal-person-photo" src="${a.photo}" alt="${a.name}" />`
+            ? `<img class="dir-modal-person-photo lightbox-trigger" src="${a.photo}" alt="${a.name}" />`
             : `<div class="dir-modal-person-initials">${a.initials || (a.name || '?')[0]}</div>`;
         hh += `<div class="dir-modal-person">
                    ${avatar}
@@ -598,7 +606,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     let ch = '';
     children.forEach(c => {
         const avatar = c.photo
-            ? `<img class="dir-modal-person-photo dir-modal-person-photo--sm" src="${c.photo}" alt="${c.name}" />`
+            ? `<img class="dir-modal-person-photo dir-modal-person-photo--sm lightbox-trigger" src="${c.photo}" alt="${c.name}" />`
             : `<div class="dir-modal-person-initials dir-modal-person-initials--sm">${c.initials || (c.name || '?')[0]}</div>`;
         ch += `<span class="dir-modal-child-chip">${avatar}${c.name}${c.birthdate ? ` <i class="fa-solid fa-cake-candles dir-icon"></i> ${c.birthdate}` : ''}</span>`;
     });
