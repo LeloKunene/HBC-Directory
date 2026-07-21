@@ -38,7 +38,13 @@ namespace HBCDirectory.Pages
         public string? GroupFilter     { get; set; }
         public string? CardTypeFilter  { get; set; }
         public List<Member> UpcomingBirthdays    { get; set; } = new();
-        public List<Member> UpcomingAnniversaries{ get; set; } = new();
+        public List<AnniversaryDisplayItem> UpcomingAnniversaries { get; set; } = new();
+        public class AnniversaryDisplayItem
+        {
+            public string Names { get; set; } = "";
+            public DateTime Date { get; set; }
+            public int? Years { get; set; }
+        }
 
         public string PhotoUrl(string? f) => _photos.Url(f);
 
@@ -114,11 +120,34 @@ namespace HBCDirectory.Pages
                 .OrderBy(m => m.Birthdate!.Value.Month).ThenBy(m => m.Birthdate!.Value.Day)
                 .ToList();
 
-            UpcomingAnniversaries = anniversaryCandidates
+            var upcomingAnniversaryMembers = anniversaryCandidates
                 .Where(m => { var a = m.Anniversary!.Value;
                     try { var t = new DateTime(today.Year, a.Month, a.Day); return t >= today && t <= in30days; }
                     catch { return false; } })
-                .OrderBy(m => m.Anniversary!.Value.Month).ThenBy(m => m.Anniversary!.Value.Day)
+                .ToList();
+
+            UpcomingAnniversaries = upcomingAnniversaryMembers
+                .GroupBy(m => m.FamilyId.HasValue
+                    ? $"fam{m.FamilyId}-{m.Anniversary!.Value:yyyyMMdd}"
+                    : $"solo{m.Id}")
+                .Select(g =>
+                {
+                    var pair = g.OrderBy(m => m.Name).ToList();
+                    var date = pair[0].Anniversary!.Value;
+                    var years = today.Year - date.Year;
+
+                    string names = pair.Count == 2 && pair[0].Surname == pair[1].Surname
+                        ? $"{pair[0].Name} & {pair[1].Name} {pair[0].Surname}"
+                        : string.Join(" & ", pair.Select(m => m.DisplayName));
+
+                    return new AnniversaryDisplayItem
+                    {
+                        Names = names,
+                        Date  = date,
+                        Years = years >= 0 ? years : null // guards against a bad/placeholder year on file
+                    };
+                })
+                .OrderBy(x => x.Date.Month).ThenBy(x => x.Date.Day)
                 .ToList();
         }
 
