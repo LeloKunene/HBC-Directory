@@ -114,41 +114,59 @@ namespace HBCDirectory.Pages
                 .ToListAsync();
 
             UpcomingBirthdays = birthdayCandidates
-                .Where(m => { var d = m.Birthdate!.Value;
-                    try { var t = new DateTime(today.Year, d.Month, d.Day); return t >= today && t <= in30days; }
-                    catch { return false; } })
-                .OrderBy(m => m.Birthdate!.Value.Month).ThenBy(m => m.Birthdate!.Value.Day)
+                .Select(m => (Member: m, Next: NextOccurrence(m.Birthdate!.Value, today, in30days)))
+                .Where(x => x.Next.HasValue)
+                .OrderBy(x => x.Next!.Value) // chronological — soonest first, correctly across a year boundary
+                .Select(x => x.Member)
                 .ToList();
 
             var upcomingAnniversaryMembers = anniversaryCandidates
-                .Where(m => { var a = m.Anniversary!.Value;
-                    try { var t = new DateTime(today.Year, a.Month, a.Day); return t >= today && t <= in30days; }
-                    catch { return false; } })
+                .Select(m => (Member: m, Next: NextOccurrence(m.Anniversary!.Value, today, in30days)))
+                .Where(x => x.Next.HasValue)
                 .ToList();
 
             UpcomingAnniversaries = upcomingAnniversaryMembers
-                .GroupBy(m => m.FamilyId.HasValue
-                    ? $"fam{m.FamilyId}-{m.Anniversary!.Value:yyyyMMdd}"
-                    : $"solo{m.Id}")
+                .GroupBy(x => x.Member.FamilyId.HasValue
+                    ? $"fam{x.Member.FamilyId}-{x.Member.Anniversary!.Value:yyyyMMdd}"
+                    : $"solo{x.Member.Id}")
                 .Select(g =>
                 {
-                    var pair = g.OrderBy(m => m.Name).ToList();
-                    var date = pair[0].Anniversary!.Value;
-                    var years = today.Year - date.Year;
+                    var pair = g.OrderBy(x => x.Member.Name).ToList();
+                    var weddingDate = pair[0].Member.Anniversary!.Value;
+                    var next        = pair[0].Next!.Value; // this year's or next year's occurrence, whichever is upcoming
+                    var years       = next.Year - weddingDate.Year;
 
-                    string names = pair.Count == 2 && pair[0].Surname == pair[1].Surname
-                        ? $"{pair[0].Name} & {pair[1].Name} {pair[0].Surname}"
-                        : string.Join(" & ", pair.Select(m => m.DisplayName));
+                    string names = pair.Count == 2 && pair[0].Member.Surname == pair[1].Member.Surname
+                        ? $"{pair[0].Member.Name} & {pair[1].Member.Name} {pair[0].Member.Surname}"
+                        : string.Join(" & ", pair.Select(x => x.Member.DisplayName));
 
                     return new AnniversaryDisplayItem
                     {
                         Names = names,
-                        Date  = date,
+                        Date  = next,
                         Years = years >= 0 ? years : null // guards against a bad/placeholder year on file
                     };
                 })
-                .OrderBy(x => x.Date.Month).ThenBy(x => x.Date.Day)
+                .OrderBy(x => x.Date) // chronological — soonest first, correctly across a year boundary
                 .ToList();
+        }
+
+        private static DateTime? NextOccurrence(DateTime recurring, DateTime today, DateTime windowEnd)
+        {
+            try
+            {
+                var thisYear = new DateTime(today.Year, recurring.Month, recurring.Day);
+                if (thisYear >= today && thisYear <= windowEnd) return thisYear;
+
+                var nextYear = new DateTime(today.Year + 1, recurring.Month, recurring.Day);
+                if (nextYear >= today && nextYear <= windowEnd) return nextYear;
+
+                return null;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return null;
+            }
         }
 
         /* Parallel loaders for OnGetAsync ──────────────────────────────────
