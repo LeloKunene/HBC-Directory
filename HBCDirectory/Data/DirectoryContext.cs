@@ -19,19 +19,14 @@ namespace HBCDirectory.Data
         public DbSet<ChangeLog>         ChangeLogs         => Set<ChangeLog>();
         public DbSet<ApprovalSettings>  ApprovalSettings   => Set<ApprovalSettings>();
         public DbSet<PdfSettings> PdfSettings => Set<PdfSettings>();
+        public DbSet<Role>       Roles       => Set<Role>();
+        public DbSet<MemberRole> MemberRoles => Set<MemberRole>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Member>()
                 .HasOne(m => m.Family).WithMany(f => f.Members)
                 .HasForeignKey(m => m.FamilyId).OnDelete(DeleteBehavior.Cascade);
-
-            // A second relationship between the same two tables (Family "points
-            // at" one of its own Members as the head) — can't also be Cascade,
-            // or Postgres/EF rejects the model with multiple cascade paths
-            // between Family and Member. SetNull instead: if the designated
-            // head is ever removed as a member, the family just loses its head
-            // designation rather than the deletion being blocked.
             modelBuilder.Entity<Family>()
                 .HasOne(f => f.HeadOfFamily).WithMany()
                 .HasForeignKey(f => f.HeadOfFamilyId)
@@ -62,6 +57,19 @@ namespace HBCDirectory.Data
             modelBuilder.Entity<PendingUpdate>()
                 .HasOne(p => p.Member).WithMany()
                 .HasForeignKey(p => p.MemberId).OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<MemberRole>()
+                .HasOne(mr => mr.Member).WithMany()
+                .HasForeignKey(mr => mr.MemberId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<MemberRole>()
+                .HasOne(mr => mr.Role).WithMany(r => r.MemberRoles)
+                .HasForeignKey(mr => mr.RoleId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<MemberRole>()
+                .HasIndex(mr => new { mr.MemberId, mr.RoleId }).IsUnique();
+            modelBuilder.Entity<Role>().HasData(
+                new Role { Id = 1, Name = "Admin",      DisplayOrder = 1 },
+                new Role { Id = 2, Name = "Leadership", DisplayOrder = 2 }
+            );
         }
     }
 }

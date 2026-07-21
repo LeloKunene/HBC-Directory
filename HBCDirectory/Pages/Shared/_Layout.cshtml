@@ -52,10 +52,16 @@
                             </li>
                             
 
-                            @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin"))
+                            @if (User.Identity?.IsAuthenticated == true && (User.IsInRole("Admin") || User.IsInRole("Leadership")))
                             {
                                 <li>
                                     <a asp-page="/Admin" class="nav-link">Admin</a>
+                                </li>
+                            }
+                            @if (User.IsInRole("Leadership"))
+                            {
+                                <li>
+                                    <a asp-page="/MemberManagement/Index" class="nav-link">Member Management</a>
                                 </li>
                             }
                             @if (User.IsInRole("Member"))

@@ -15,7 +15,7 @@ using System.Threading.RateLimiting;
 
 namespace HBCDirectory.Pages
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Leadership")]
     public class AdminModel : PageModel
     {
         private readonly DirectoryContext _db;

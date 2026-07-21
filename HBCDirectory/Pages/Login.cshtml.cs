@@ -42,7 +42,7 @@ namespace HBCDirectory.Pages
 
             if (input == adminUser && password == adminPass)
             {
-                await SignInAsync(input, "Admin");
+                await SignInAsync(input, new[] { "Admin", "SystemAdmin" });
                 return RedirectToPage("/Admin");
             }
 
@@ -53,7 +53,15 @@ namespace HBCDirectory.Pages
 
             if (account != null && BCrypt.Net.BCrypt.Verify(password, account.PasswordHash))
             {
-                await SignInAsync(input, "Member", account.MemberId.ToString());
+                var grantedRoles = await _db.MemberRoles
+                    .Where(mr => mr.MemberId == account.MemberId)
+                    .Select(mr => mr.Role.Name)
+                    .ToListAsync();
+
+                var roles = new List<string> { "Member" };
+                roles.AddRange(grantedRoles);
+
+                await SignInAsync(input, roles, account.MemberId.ToString());
                 return RedirectToPage("/Index");
             }
 
@@ -62,13 +70,10 @@ namespace HBCDirectory.Pages
             return Page();
         }
 
-        private async Task SignInAsync(string username, string role, string? memberId = null)
+        private async Task SignInAsync(string username, IEnumerable<string> roles, string? memberId = null)
         {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, username),
-                new Claim(ClaimTypes.Role, role),
-            };
+            var claims = new List<Claim> { new Claim(ClaimTypes.Name, username) };
+            claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
             if (memberId != null)
                 claims.Add(new Claim("MemberId", memberId));
