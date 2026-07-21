@@ -40,6 +40,7 @@ namespace HBCDirectory.Pages
         public List<StaffAssignment> StaffAssignments { get; set; } = new();
         public List<Group>         Groups         { get; set; } = new();
         public List<MemberGroup>   MemberGroups   { get; set; } = new();
+        public List<CareGroup>     CareGroups     { get; set; } = new();
         public List<PendingUpdate> PendingUpdates { get; set; } = new();
         public List<ChangeLog>     RecentChanges  { get; set; } = new();
         public List<(string Label, int Value)> Stats { get; set; } = new();
@@ -70,6 +71,10 @@ namespace HBCDirectory.Pages
             Groups = await _db.Groups.OrderBy(g => g.DisplayOrder).ToListAsync();
             MemberGroups = await _db.MemberGroups
                 .Include(mg => mg.Member).Include(mg => mg.Group).ToListAsync();
+            CareGroups = await _db.CareGroups
+                .Include(cg => cg.Leaders).ThenInclude(l => l.Member)
+                .Include(cg => cg.Members).ThenInclude(m => m.Member)
+                .OrderBy(cg => cg.Name).ToListAsync();
             PendingUpdates = await _db.PendingUpdates.Include(p => p.Member)
                 .Where(p => !p.IsApproved && !p.IsRejected)
                 .OrderBy(p => p.SubmittedAt).ToListAsync();
@@ -526,6 +531,79 @@ namespace HBCDirectory.Pages
             _db.MemberGroups.Remove(mg);
             await _db.SaveChangesAsync();
             TempData["Success"] = "Member removed from group.";
+            return RedirectToPage();
+        }
+
+        //  Care Groups (pastoral care -> standalone from Groups & Ministries) 
+        public async Task<IActionResult> OnPostAddCareGroupAsync(string careGroupName)
+        {
+            if (string.IsNullOrWhiteSpace(careGroupName))
+            { TempData["Error"] = "Care group name is required."; return RedirectToPage(); }
+
+            _db.CareGroups.Add(new CareGroup { Name = careGroupName.Trim() });
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Care group '{careGroupName}' created.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostDeleteCareGroupAsync(int id)
+        {
+            var cg = await _db.CareGroups.FindAsync(id);
+            if (cg == null) return NotFound();
+            _db.CareGroups.Remove(cg);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Care group deleted.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostAddCareGroupLeaderAsync(int memberId, int careGroupId)
+        {
+            var exists = await _db.CareGroupLeaders
+                .AnyAsync(l => l.MemberId == memberId && l.CareGroupId == careGroupId);
+            if (!exists)
+            {
+                _db.CareGroupLeaders.Add(new CareGroupLeader { MemberId = memberId, CareGroupId = careGroupId });
+                await _db.SaveChangesAsync();
+            }
+            TempData["Success"] = "Leader added to care group.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostRemoveCareGroupLeaderAsync(int id)
+        {
+            var leader = await _db.CareGroupLeaders.FindAsync(id);
+            if (leader == null) return NotFound();
+            _db.CareGroupLeaders.Remove(leader);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Leader removed from care group.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostAddMemberToCareGroupAsync(int memberId, int careGroupId)
+        {
+            var existing = await _db.CareGroupMembers.FirstOrDefaultAsync(m => m.MemberId == memberId);
+            if (existing != null)
+            {
+                if (existing.CareGroupId == careGroupId)
+                { TempData["Error"] = "That member is already in this care group."; return RedirectToPage(); }
+                existing.CareGroupId = careGroupId;
+            }
+            else
+            {
+                _db.CareGroupMembers.Add(new CareGroupMember { MemberId = memberId, CareGroupId = careGroupId });
+            }
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Member added to care group.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostRemoveMemberFromCareGroupAsync(int id)
+        {
+            var cgm = await _db.CareGroupMembers.FindAsync(id);
+            if (cgm == null) return NotFound();
+            _db.CareGroupMembers.Remove(cgm);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Member removed from care group.";
             return RedirectToPage();
         }
 
