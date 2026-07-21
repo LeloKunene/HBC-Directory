@@ -13,6 +13,9 @@ namespace HBCDirectory.Models
 
         public ICollection<Member> Members { get; set; } = new List<Member>();
 
+        public int? HeadOfFamilyId { get; set; }
+        public Member? HeadOfFamily { get; set; }
+
         [NotMapped]
         public IEnumerable<Member> Adults =>
             Members.Where(m => m.MemberType == "Adult")
