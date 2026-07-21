@@ -18,7 +18,7 @@
     <div class="card-body">
         <p class="text-muted small">
             <strong>Pending Removal</strong> and <strong>Pending Discipline</strong> still show normally on the
-            public directory — only the status label itself is Leadership-only, never visible to other members.
+            public directory. Only the status label itself is Leadership-only, never visible to other members.
             <strong>Resigned</strong> and <strong>Excommunicated</strong> are removed from the directory and PDF
             export entirely (and lose their login). All four are Leadership-only, the regular Admin panel only
             ever shows Members and Attendants.
@@ -135,7 +135,7 @@
                         <span class="badge bg-dark">@r.Name</span>
                         @if (r.Name is "Admin" or "Leadership")
                         {
-                            <span class="text-muted small ms-1">— built-in, controls actual access</span>
+                            <span class="text-muted small ms-1"> built-in, controls actual access</span>
                         }
                     </li>
                 }
@@ -147,7 +147,7 @@
             </form>
             <p class="text-muted small mt-2 mb-0">
                 A new role here is just a label until it's wired up to control
-                something specific — "Admin" and "Leadership" are the only two
+                something specific. "Admin" and "Leadership" are the only two
                 that currently grant real access.
             </p>
             </div>

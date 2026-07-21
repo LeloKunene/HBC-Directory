@@ -49,15 +49,15 @@ namespace HBCDirectory.Pages
 
         public string PhotoUrl(string? f) => _photos.Url(f);
 
-        public static bool IsOrdinaryStatus(Member m) =>
-            m.MemberStatus is null or "Member" or "Attendant";
+        public string? AdminDisplayStatus(Member m) =>
+            m.MemberStatus is "Pending Removal" or "Pending Discipline" ? "Member" : m.MemberStatus;
 
         public IEnumerable<Member> VisibleAdultsFor(Family f) =>
-            f.Members.Where(m => m.MemberType == "Adult" && IsOrdinaryStatus(m))
+            f.Members.Where(m => m.MemberType == "Adult" && Member.IsVisibleToCongregation(m))
                      .OrderBy(m => m.Surname).ThenBy(m => m.Name);
 
         public IEnumerable<Member> VisibleMembersFor(Family f) =>
-            f.Members.Where(IsOrdinaryStatus);
+            f.Members.Where(Member.IsVisibleToCongregation);
 
         public string FamilyDisambiguated(Family f)
         {
@@ -71,7 +71,7 @@ namespace HBCDirectory.Pages
         public async Task OnGetAsync()
         {
             Members = await _db.Members.Include(m => m.Family)
-                .Where(m => m.MemberStatus == null || m.MemberStatus == "Member" || m.MemberStatus == "Attendant")
+                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
                 .OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
             Families = await _db.Families.Include(f => f.Members).Include(f => f.HeadOfFamily)
                 .OrderBy(f => f.FamilyName).ToListAsync();
@@ -191,11 +191,6 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        // Grants directory login access: creates a MemberAccount with a
-        // temporary password and emails the member a reset link. Only ever
-        // called for Members with an email set — Attendants shouldn't have
-        // access until they're promoted to Member (see OnPostAddMemberAsync
-        // and OnPostEditMemberAsync).
         private async Task CreateMemberAccountAsync(Member member)
         {
             var tmp = GenerateTempPassword();
@@ -230,19 +225,20 @@ namespace HBCDirectory.Pages
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
             { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
 
-            // Members need an email (it's their login username); Attendants
-            // don't, since they don't get directory access. Check against
-            // whichever email will actually be on file after this save —
-            // the field submitted, or (if left blank) whatever's already there.
             var effectiveEmail = !string.IsNullOrWhiteSpace(email) ? email.Trim() : m.Email;
             if (isAdult && isMember && string.IsNullOrWhiteSpace(effectiveEmail))
             { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
 
+            var hasLeadershipManagedStatus = m.MemberStatus is
+                "Pending Removal" or "Pending Discipline" or "Resigned" or "Excommunicated";
+
             m.Name         = CapFirst(name);
             m.Surname      = CapFirst(surname);
             m.MemberType   = memberType;
-            m.MemberStatus = isAdult ? (memberStatus ?? "Member") : null;
-            m.ChurchOffice = isAdult && memberStatus == "Member"
+            m.MemberStatus = isAdult
+                ? (hasLeadershipManagedStatus ? m.MemberStatus : (memberStatus ?? "Member"))
+                : null;
+            m.ChurchOffice = isAdult && !hasLeadershipManagedStatus && memberStatus == "Member"
                               ? (string.IsNullOrEmpty(churchOffice) ? null : churchOffice)
                               : null;
             m.Birthdate    = birthdate;
@@ -250,12 +246,7 @@ namespace HBCDirectory.Pages
             m.DateJoined   = dateJoined;
             m.PhoneNumber  = phoneNumber?.Trim();
             m.Address      = address?.Trim();
-            // If this member is currently designated as some family's head,
-            // but won't actually be that family's adult member anymore
-            // after this save (moved to a different family, unlinked
-            // entirely, or demoted to Child), clear that family's head
-            // designation — otherwise it'd keep pointing at someone who's
-            // no longer actually in it.
+
             var headOfFamily = await _db.Families.FirstOrDefaultAsync(fam => fam.HeadOfFamilyId == m.Id);
             if (headOfFamily != null && (headOfFamily.Id != familyId || !isAdult))
                 headOfFamily.HeadOfFamilyId = null;
@@ -290,9 +281,7 @@ namespace HBCDirectory.Pages
 
             await _db.SaveChangesAsync();
 
-            // Promoted from Attendant to Member (or was already a Member but
-            // never had an account, e.g. was added before an email existed)
-            // and now has an email — grant directory access.
+
             if (isAdult && isMember && !string.IsNullOrEmpty(m.Email))
             {
                 var hasAccount = await _db.MemberAccounts.AnyAsync(a => a.MemberId == id);

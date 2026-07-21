@@ -176,9 +176,10 @@
                         </td>
 
                         <td>
-                            @if (!string.IsNullOrEmpty(m.MemberStatus))
+                            @{ var displayStatus = Model.AdminDisplayStatus(m); }
+                            @if (!string.IsNullOrEmpty(displayStatus))
                             {
-                                <span class="badge-status">@m.MemberStatus</span>
+                                <span class="badge-status">@displayStatus</span>
                             }
                             @if (!string.IsNullOrEmpty(m.ChurchOffice))
                             {
@@ -197,7 +198,7 @@
                                     data-surname="@m.Surname"
                                     data-email="@m.Email"
                                     data-membertype="@m.MemberType"
-                                    data-memberstatus="@m.MemberStatus"
+                                    data-memberstatus="@Model.AdminDisplayStatus(m)"
                                     data-churchoffice="@m.ChurchOffice"
                                     data-birthdate="@(m.Birthdate?.ToString("yyyy-MM-dd"))"
                                     data-anniversary="@(m.Anniversary?.ToString("yyyy-MM-dd"))"
@@ -349,7 +350,7 @@
                                         name = m.Name,
                                         surname = m.Surname,
                                         type = m.MemberType,
-                                        status = m.MemberStatus,
+                                        status = Model.AdminDisplayStatus(m),
                                         office = m.ChurchOffice,
                                         birthdate = m.Birthdate.HasValue
                                             ? m.Birthdate.Value.ToString("d MMM yyyy")
