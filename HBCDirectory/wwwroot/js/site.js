@@ -235,3 +235,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.addEventListener("DOMContentLoaded", window.populatePhoneCodeSelects);
 })();
+
+window.filterTableRows = function (inputId, tableId) {
+  const q = document.getElementById(inputId).value.trim().toLowerCase();
+  document.querySelectorAll("#" + tableId + " tbody tr").forEach(function (row) {
+    const text = row.getAttribute("data-search") || row.textContent.toLowerCase();
+    row.style.display = text.includes(q) ? "" : "none";
+  });
+};

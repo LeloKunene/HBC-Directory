@@ -136,8 +136,12 @@
     </div>
 
     <!-- Members Table -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <input type="text" id="members-search" class="form-control form-control-sm" style="max-width:300px;"
+               placeholder="Search members by name, email, or family…" onkeyup="filterTableRows('members-search', 'members-table')" />
+    </div>
     <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover" id="members-table">
             <thead>
                 <tr>
                     <th>Photo</th>
@@ -153,7 +157,7 @@
             <tbody>
                 @foreach (var m in Model.Members)
                 {
-                    <tr>
+                    <tr data-search="@($"{m.Name} {m.Surname} {m.Email} {m.Family?.FamilyName}".ToLowerInvariant())">
                         <td>
                             @if (!string.IsNullOrEmpty(m.PhotoFileName))
                             {
@@ -172,9 +176,10 @@
                         </td>
 
                         <td>
-                            @if (!string.IsNullOrEmpty(m.MemberStatus))
+                            @{ var displayStatus = Model.AdminDisplayStatus(m); }
+                            @if (!string.IsNullOrEmpty(displayStatus))
                             {
-                                <span class="badge-status">@m.MemberStatus</span>
+                                <span class="badge-status">@displayStatus</span>
                             }
                             @if (!string.IsNullOrEmpty(m.ChurchOffice))
                             {
@@ -193,7 +198,7 @@
                                     data-surname="@m.Surname"
                                     data-email="@m.Email"
                                     data-membertype="@m.MemberType"
-                                    data-memberstatus="@m.MemberStatus"
+                                    data-memberstatus="@Model.AdminDisplayStatus(m)"
                                     data-churchoffice="@m.ChurchOffice"
                                     data-birthdate="@(m.Birthdate?.ToString("yyyy-MM-dd"))"
                                     data-anniversary="@(m.Anniversary?.ToString("yyyy-MM-dd"))"
@@ -269,8 +274,12 @@
         </div>
     </div>
 
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <input type="text" id="families-search" class="form-control form-control-sm" style="max-width:300px;"
+               placeholder="Search families by name or member…" onkeyup="filterTableRows('families-search', 'families-table')" />
+    </div>
     <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover" id="families-table">
             <thead>
                 <tr>
                     <th>Photo</th>
@@ -284,7 +293,7 @@
             <tbody>
                 @foreach (var f in Model.Families)
                 {
-                    <tr>
+                    <tr data-search="@($"{f.FamilyName} {string.Join(" ", f.Members.Select(m => m.Name + " " + m.Surname))}".ToLowerInvariant())">
                         <td>
                             @if (!string.IsNullOrEmpty(f.PhotoFileName))
                             {
@@ -319,7 +328,7 @@
                         <td class="text-muted small">@(f.FamilyPhone ?? "—")</td>
                         <td>
                             <span class="text-muted small">
-                                @(string.Join(", ", f.Adults.Select(m => m.Name)))
+                                @(string.Join(", ", Model.VisibleAdultsFor(f).Select(m => m.Name)))
                                 @if (f.Children.Any())
                                 {
                                     <em> · @string.Join(", ", f.Children.Select(c => c.Name))</em>
@@ -336,12 +345,12 @@
                                     data-familyphone="@f.FamilyPhone"
                                     data-notes="@f.AdditionalNotes"
                                     data-headoffamilyid="@f.HeadOfFamilyId"
-                                    data-members='@System.Text.Json.JsonSerializer.Serialize(f.Members.Select(m => new {
+                                    data-members='@System.Text.Json.JsonSerializer.Serialize(Model.VisibleMembersFor(f).Select(m => new {
                                         id = m.Id,
                                         name = m.Name,
                                         surname = m.Surname,
                                         type = m.MemberType,
-                                        status = m.MemberStatus,
+                                        status = Model.AdminDisplayStatus(m),
                                         office = m.ChurchOffice,
                                         birthdate = m.Birthdate.HasValue
                                             ? m.Birthdate.Value.ToString("d MMM yyyy")
@@ -571,6 +580,168 @@
                         }
                         <hr style="border-color:#ede8df;margin:8px 0;" />
                     }
+                }
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     CARE GROUPS: pastoral care, standalone from Groups & Ministries above.
+     Admin + Leadership both manage this (Admin does the data entry, per
+     elder instruction), this is never shown on the public directory.
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+<div class="admin-section-header mb-3">
+    <h4 class="mb-0">Care Groups</h4>
+    <p class="text-muted small mb-0">Pastoral care assignments — who's shepherding whom. Separate from Groups &amp; Ministries above; never shown on the public directory.</p>
+</div>
+    <div class="row g-4">
+
+        <!-- Create care group -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Create Care Group</h6>
+                <form method="post" asp-page-handler="AddCareGroup">
+                    <div class="mb-2">
+                        <label class="form-label">Care Group Name</label>
+                        <input name="careGroupName" class="form-control" required
+                               placeholder="e.g. Elder Smith's Group" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Create Care Group</button>
+                </form>
+                <ul class="list-group list-group-flush mt-3">
+                    @foreach (var cg in Model.CareGroups)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>@cg.Name</span>
+                            <form method="post" asp-page-handler="DeleteCareGroup"
+                                  onsubmit="return confirm('Delete care group @cg.Name? This does not delete any members, just the grouping.')">
+                                <input type="hidden" name="id" value="@cg.Id" />
+                                <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                            </form>
+                        </li>
+                    }
+                    @if (!Model.CareGroups.Any())
+                    {
+                        <li class="list-group-item px-0 text-muted small">No care groups yet.</li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <!-- Assign leader -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Assign Leader</h6>
+                <p class="text-muted small">Usually an Elder, but not required to be.</p>
+                <form method="post" asp-page-handler="AddCareGroupLeader">
+                    <div class="mb-2">
+                        <label class="form-label">Member</label>
+                        <select name="memberId" class="form-select">
+                            @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
+                            {
+                                <option value="@m.Id">@m.Surname, @m.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Care Group</label>
+                        <select name="careGroupId" class="form-select">
+                            @foreach (var cg in Model.CareGroups)
+                            {
+                                <option value="@cg.Id">@cg.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Assign as Leader</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Assign member -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Assign Member</h6>
+                <p class="text-muted small">A member can only be under one care group at a time — assigning them to a new one moves them.</p>
+                <form method="post" asp-page-handler="AddMemberToCareGroup">
+                    <div class="mb-2">
+                        <label class="form-label">Member</label>
+                        <select name="memberId" class="form-select">
+                            @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
+                            {
+                                <option value="@m.Id">@m.Surname, @m.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Care Group</label>
+                        <select name="careGroupId" class="form-select">
+                            @foreach (var cg in Model.CareGroups)
+                            {
+                                <option value="@cg.Id">@cg.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Assign Member</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Overview -->
+        <div class="col-12">
+            <div class="form-card">
+                <h6 class="form-card-title">Care Groups Overview</h6>
+                @if (!Model.CareGroups.Any())
+                {
+                    <p class="text-muted small">No care groups yet.</p>
+                }
+                else
+                {
+                    <div class="row g-3">
+                        @foreach (var cg in Model.CareGroups)
+                        {
+                            <div class="col-md-4">
+                                <p class="small fw-bold text-uppercase" style="color:var(--dir-gold);letter-spacing:.06em;margin-bottom:4px;">@cg.Name</p>
+
+                                <p class="small text-muted mb-1">Leader@(cg.Leaders.Count == 1 ? "" : "s"):</p>
+                                @if (!cg.Leaders.Any())
+                                {
+                                    <p class="small text-muted fst-italic">None assigned</p>
+                                }
+                                @foreach (var l in cg.Leaders)
+                                {
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="small">@l.Member.Surname, @l.Member.Name</span>
+                                        <form method="post" asp-page-handler="RemoveCareGroupLeader">
+                                            <input type="hidden" name="id" value="@l.Id" />
+                                            <button type="submit" class="btn btn-xs btn-outline-danger"
+                                                    style="font-size:10px;padding:1px 6px;">✕</button>
+                                        </form>
+                                    </div>
+                                }
+
+                                <p class="small text-muted mb-1 mt-2">Members:</p>
+                                @if (!cg.Members.Any())
+                                {
+                                    <p class="small text-muted fst-italic">None assigned</p>
+                                }
+                                @foreach (var cgm in cg.Members)
+                                {
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="small">@cgm.Member.Surname, @cgm.Member.Name</span>
+                                        <form method="post" asp-page-handler="RemoveMemberFromCareGroup">
+                                            <input type="hidden" name="id" value="@cgm.Id" />
+                                            <button type="submit" class="btn btn-xs btn-outline-danger"
+                                                    style="font-size:10px;padding:1px 6px;">✕</button>
+                                        </form>
+                                    </div>
+                                }
+                                <hr style="border-color:#ede8df;margin:8px 0;" />
+                            </div>
+                        }
+                    </div>
                 }
             </div>
         </div>
@@ -1457,6 +1628,8 @@ function togglePdfPasswordVisibility() {
 @section Scripts {
 <script>
 //  Add form: show/hide fields by MemberType 
+// filterTableRows() lives in site.js now — shared with Member Management's
+// status table, not just this page's Members/Families tables.
 function updateAddForm() {
     const type   = document.getElementById('add-memberType').value;
     const status = document.getElementById('add-memberStatus').value;

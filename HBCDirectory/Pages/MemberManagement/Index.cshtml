@@ -1,0 +1,156 @@
+@page
+@model HBCDirectory.Pages.MemberManagement.IndexModel
+@{
+    ViewData["Title"] = "Member Management | ";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title">Member Management</h2>
+</div>
+
+<p class="text-muted mb-4">
+    Leadership-only. Care Groups will land here in a follow-up update
+    for now, this covers roles, who holds them, and membership status.
+</p>
+
+<div class="admin-card mb-4">
+    <div class="card-header">Member status</div>
+    <div class="card-body">
+        <p class="text-muted small">
+            <strong>Pending Removal</strong> and <strong>Pending Discipline</strong> still show normally on the
+            public directory. Only the status label itself is Leadership-only, never visible to other members.
+            <strong>Resigned</strong> and <strong>Excommunicated</strong> are removed from the directory and PDF
+            export entirely (and lose their login). All four are Leadership-only, the regular Admin panel only
+            ever shows Members and Attendants.
+        </p>
+        <input type="text" id="mgmt-status-search" class="form-control form-control-sm mb-2" style="max-width:300px;"
+               placeholder="Search members…" onkeyup="filterTableRows('mgmt-status-search', 'mgmt-status-table')" />
+        <div style="max-height:420px;overflow-y:auto;">
+        <table class="table table-sm align-middle" id="mgmt-status-table">
+            <thead><tr><th>Member</th><th>Current status</th><th>Change to</th></tr></thead>
+            <tbody>
+                @foreach (var m in Model.AllMembers)
+                {
+                    var cur = m.MemberStatus ?? "Member";
+                    <tr data-search="@($"{m.Name} {m.Surname}".ToLowerInvariant())">
+                        <td>@m.DisplayName</td>
+                        <td><span class="badge @HBCDirectory.Pages.MemberManagement.IndexModel.StatusBadgeClass(cur)">@cur</span></td>
+                        <td>
+                            <form method="post" asp-page-handler="ChangeStatus" class="d-flex gap-2"
+                                  onsubmit="return confirm('Change status for @m.DisplayName?')">
+                                <input type="hidden" name="memberId" value="@m.Id" />
+                                <select name="newStatus" class="form-select form-select-sm" style="max-width:190px;">
+                                    @foreach (var s in HBCDirectory.Pages.MemberManagement.IndexModel.AllStatuses)
+                                    {
+                                        <option value="@s" selected="@(s == cur)">@s</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- ── Roles & assignments ─────────────────────────────────────── -->
+    <div class="col-lg-7">
+        <div class="admin-card">
+            <div class="card-header">Current role assignments</div>
+            <div class="card-body">
+            @if (!Model.Assignments.Any())
+            {
+                <p class="text-muted">Nobody has been granted a role yet.</p>
+            }
+            else
+            {
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr><th>Member</th><th>Role</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var a in Model.Assignments)
+                        {
+                            <tr>
+                                <td>@a.Member.DisplayName</td>
+                                <td><span class="badge bg-dark">@a.Role.Name</span></td>
+                                <td class="text-end">
+                                    <form method="post" asp-page-handler="RevokeRole" class="d-inline"
+                                          onsubmit="return confirm('Remove the \'@a.Role.Name\' role from @a.Member.DisplayName?')">
+                                        <input type="hidden" name="id" value="@a.Id" />
+                                        <button type="submit" class="btn btn-xs btn-outline-danger">Revoke</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            </div>
+        </div>
+
+        <div class="admin-card mt-4">
+            <div class="card-header">Grant a role</div>
+            <div class="card-body">
+            <form method="post" asp-page-handler="AssignRole" class="d-flex gap-2 flex-wrap align-items-end">
+                <div class="form-field" style="min-width:220px;">
+                    <label class="form-label">Member</label>
+                    <select name="memberId" class="form-select" required>
+                        <option value="" disabled selected>Choose a member…</option>
+                        @foreach (var m in Model.AllMembers)
+                        {
+                            <option value="@m.Id">@m.DisplayName</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-field" style="min-width:160px;">
+                    <label class="form-label">Role</label>
+                    <select name="roleId" class="form-select" required>
+                        <option value="" disabled selected>Choose a role…</option>
+                        @foreach (var r in Model.Roles)
+                        {
+                            <option value="@r.Id">@r.Name</option>
+                        }
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Grant</button>
+            </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Manage the role list itself ─────────────────────────────── -->
+    <div class="col-lg-5">
+        <div class="admin-card">
+            <div class="card-header">Roles</div>
+            <div class="card-body">
+            <ul class="list-unstyled mb-3">
+                @foreach (var r in Model.Roles)
+                {
+                    <li class="mb-1">
+                        <span class="badge bg-dark">@r.Name</span>
+                        @if (r.Name is "Admin" or "Leadership")
+                        {
+                            <span class="text-muted small ms-1"> built-in, controls actual access</span>
+                        }
+                    </li>
+                }
+            </ul>
+            <form method="post" asp-page-handler="AddRole" class="d-flex gap-2">
+                <input name="roleName" class="form-control form-control-sm"
+                       placeholder="e.g. Finance, Youth Leader" required />
+                <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Add role</button>
+            </form>
+            <p class="text-muted small mt-2 mb-0">
+                A new role here is just a label until it's wired up to control
+                something specific. "Admin" and "Leadership" are the only two
+                that currently grant real access.
+            </p>
+            </div>
+        </div>
+    </div>
+</div>

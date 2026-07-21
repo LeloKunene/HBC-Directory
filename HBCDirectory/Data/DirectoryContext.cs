@@ -19,6 +19,11 @@ namespace HBCDirectory.Data
         public DbSet<ChangeLog>         ChangeLogs         => Set<ChangeLog>();
         public DbSet<ApprovalSettings>  ApprovalSettings   => Set<ApprovalSettings>();
         public DbSet<PdfSettings> PdfSettings => Set<PdfSettings>();
+        public DbSet<Role>       Roles       => Set<Role>();
+        public DbSet<MemberRole> MemberRoles => Set<MemberRole>();
+        public DbSet<CareGroup>       CareGroups       => Set<CareGroup>();
+        public DbSet<CareGroupLeader> CareGroupLeaders => Set<CareGroupLeader>();
+        public DbSet<CareGroupMember> CareGroupMembers => Set<CareGroupMember>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -62,6 +67,49 @@ namespace HBCDirectory.Data
             modelBuilder.Entity<PendingUpdate>()
                 .HasOne(p => p.Member).WithMany()
                 .HasForeignKey(p => p.MemberId).OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<MemberRole>()
+                .HasOne(mr => mr.Member).WithMany()
+                .HasForeignKey(mr => mr.MemberId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<MemberRole>()
+                .HasOne(mr => mr.Role).WithMany(r => r.MemberRoles)
+                .HasForeignKey(mr => mr.RoleId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<MemberRole>()
+                .HasIndex(mr => new { mr.MemberId, mr.RoleId }).IsUnique();
+
+            // "Admin" and "Leadership" are seeded with fixed IDs because their
+            // exact Name strings are checked by [Authorize(Roles = "...")]
+            // throughout the app — they need to exist with the right spelling
+            // out of the box, not depend on an admin typing them correctly by
+            // hand. Any further roles created later through Member Management
+            // are plain labels with no special behavior unless separately
+            // wired up in code.
+            modelBuilder.Entity<Role>().HasData(
+                new Role { Id = 1, Name = "Admin",      DisplayOrder = 1 },
+                new Role { Id = 2, Name = "Leadership", DisplayOrder = 2 }
+            );
+
+            modelBuilder.Entity<CareGroupLeader>()
+                .HasOne(cgl => cgl.CareGroup).WithMany(cg => cg.Leaders)
+                .HasForeignKey(cgl => cgl.CareGroupId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<CareGroupLeader>()
+                .HasOne(cgl => cgl.Member).WithMany()
+                .HasForeignKey(cgl => cgl.MemberId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<CareGroupLeader>()
+                .HasIndex(cgl => new { cgl.CareGroupId, cgl.MemberId }).IsUnique();
+
+            modelBuilder.Entity<CareGroupMember>()
+                .HasOne(cgm => cgm.CareGroup).WithMany(cg => cg.Members)
+                .HasForeignKey(cgm => cgm.CareGroupId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<CareGroupMember>()
+                .HasOne(cgm => cgm.Member).WithMany()
+                .HasForeignKey(cgm => cgm.MemberId).OnDelete(DeleteBehavior.Cascade);
+            // One care group per member, unlike Groups/Ministries — a
+            // unique index on MemberId alone (not the (CareGroupId,
+            // MemberId) pair MemberGroup uses), so a member can never end
+            // up under two care groups' pastoral care at once.
+            modelBuilder.Entity<CareGroupMember>()
+                .HasIndex(cgm => cgm.MemberId).IsUnique();
         }
     }
 }

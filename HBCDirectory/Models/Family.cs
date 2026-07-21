@@ -18,7 +18,7 @@ namespace HBCDirectory.Models
 
         [NotMapped]
         public IEnumerable<Member> Adults =>
-            Members.Where(m => m.MemberType == "Adult")
+            Members.Where(m => m.MemberType == "Adult" && Member.IsVisibleToCongregation(m))
                    .OrderBy(m => m.Surname).ThenBy(m => m.Name);
 
         [NotMapped]

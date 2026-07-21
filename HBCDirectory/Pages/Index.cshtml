@@ -125,10 +125,11 @@
                      data-name="@m.DisplayName"
                      data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
                      data-email="@m.Email"
-                     data-status="@m.MemberStatus"
+                     data-status="@Model.PublicStatusFor(m)"
                      data-office="@m.ChurchOffice"
                      data-staffroles="@string.Join(", ", staffRoles)"
                      data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
+                     data-caregroup="@Model.CareGroupFor(m.Id)"
                      data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
                      data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                      data-address="@(m.ShowAddress ? m.Address : "")"
@@ -196,10 +197,11 @@
                      data-name="@m.DisplayName"
                      data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
                      data-email="@m.Email"
-                     data-status="@m.MemberStatus"
+                     data-status="@Model.PublicStatusFor(m)"
                      data-office="@m.ChurchOffice"
                      data-staffroles="@string.Join(", ", staffRoles)"
                      data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
+                     data-caregroup="@Model.CareGroupFor(m.Id)"
                      data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
                      data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                      data-address="@(m.ShowAddress ? m.Address : "")"
@@ -291,6 +293,7 @@
                             office = a.ChurchOffice,
                             staffRoles = Model.StaffRolesFor(a.Id),
                             groups = Model.GroupsFor(a.Id),
+                            careGroup = Model.CareGroupFor(a.Id),
                             phone = a.ShowPhone ? a.PhoneNumber : null,
                             email = a.Email,
                             birthdate = a.ShowBirthdate && a.Birthdate.HasValue
@@ -385,10 +388,11 @@
                          data-name="@m.DisplayName"
                          data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
                          data-email="@m.Email"
-                         data-status="@m.MemberStatus"
+                         data-status="@Model.PublicStatusFor(m)"
                          data-office="@m.ChurchOffice"
                          data-staffroles="@string.Join(",", staffRoles)"
                          data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
+                         data-caregroup="@Model.CareGroupFor(m.Id)"
                          data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
                          data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                          data-address="@(m.ShowAddress ? m.Address : "")"
@@ -418,9 +422,10 @@
                                 <p class="dir-card-sub">@m.PhoneNumber</p>
                             }
                             <div class="dir-card-badges">
-                                @if (!string.IsNullOrEmpty(m.MemberStatus))
+                                @{ var publicStatus = Model.PublicStatusFor(m); }
+                                @if (!string.IsNullOrEmpty(publicStatus))
                                 {
-                                    <span class="dir-badge dir-badge--@m.MemberStatus.ToLower()">@m.MemberStatus</span>
+                                    <span class="dir-badge dir-badge--@publicStatus.ToLower()">@publicStatus</span>
                                 }
                                 @if (!string.IsNullOrEmpty(m.ChurchOffice))
                                 {
@@ -501,6 +506,7 @@ else
                     <div id="mm-joined" class="dir-modal-row d-none"></div>
                     <div id="mm-address" class="dir-modal-row d-none"></div>
                     <div id="mm-groups" class="dir-modal-row d-none"></div>
+                    <div id="mm-caregroup" class="dir-modal-row d-none"></div>
                 </div>
             </div>
         </div>
@@ -516,6 +522,10 @@ document.getElementById('fm-photo').addEventListener('click', function () {
 document.getElementById('mm-photo').addEventListener('click', function () {
     if (!this.classList.contains('d-none')) window.openLightbox(this.src, this.alt);
 });
+
+// Household/children photos are re-rendered every time the family modal
+// opens, so a per-image listener would need re-attaching each time —
+// delegate to the (static) containers instead.
 document.getElementById('fm-household').addEventListener('click', function (e) {
     const img = e.target.closest('.dir-modal-person-photo');
     if (img) window.openLightbox(img.src, img.alt);
@@ -596,6 +606,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
                            ${a.dateJoined ? `<span><i class="fa-solid fa-calendar-check dir-icon"></i> Member since ${a.dateJoined}</span>` : ''}
                        </div>
                        ${(a.groups && a.groups.length) ? `<p class="dir-modal-person-groups"><i class="fa-solid fa-people-group dir-icon"></i> Groups/Ministries: ${a.groups.join(', ')}</p>` : ''}
+                       ${a.careGroup ? `<p class="dir-modal-person-groups"><i class="fa-solid fa-hand-holding-heart dir-icon"></i> Care Group: ${a.careGroup}</p>` : ''}
                    </div>
                </div>`;
     });
@@ -631,6 +642,7 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     const initials = get('initials');
     const family  = get('family');
     const groupsRaw = get('groups');
+    const careGroup  = get('caregroup');
 
     document.getElementById('mm-name').textContent = name;
 
@@ -700,6 +712,13 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
         groupsEl.innerHTML = `<i class="fa-solid fa-people-group dir-icon"></i> Groups/Ministries: ${groups.join(', ')}`;
         groupsEl.classList.remove('d-none');
     } else { groupsEl.classList.add('d-none'); }
+
+    // Care Group
+    const careGroupEl = document.getElementById('mm-caregroup');
+    if (careGroup) {
+        careGroupEl.innerHTML = `<i class="fa-solid fa-hand-holding-heart dir-icon"></i> Care Group: ${careGroup}`;
+        careGroupEl.classList.remove('d-none');
+    } else { careGroupEl.classList.add('d-none'); }
 });
 
 //  Instant, fully client-side search & filter 

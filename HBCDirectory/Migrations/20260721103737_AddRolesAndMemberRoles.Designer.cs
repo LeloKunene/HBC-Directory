@@ -3,6 +3,7 @@ using System;
 using HBCDirectory.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HBCDirectory.Migrations
 {
     [DbContext(typeof(DirectoryContext))]
-    partial class DirectoryContextModelSnapshot : ModelSnapshot
+    [Migration("20260721103737_AddRolesAndMemberRoles")]
+    partial class AddRolesAndMemberRoles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -45,71 +48,6 @@ namespace HBCDirectory.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ApprovalSettings");
-                });
-
-            modelBuilder.Entity("HBCDirectory.Models.CareGroup", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CareGroups");
-                });
-
-            modelBuilder.Entity("HBCDirectory.Models.CareGroupLeader", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CareGroupId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MemberId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MemberId");
-
-                    b.HasIndex("CareGroupId", "MemberId")
-                        .IsUnique();
-
-                    b.ToTable("CareGroupLeaders");
-                });
-
-            modelBuilder.Entity("HBCDirectory.Models.CareGroupMember", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CareGroupId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MemberId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CareGroupId");
-
-                    b.HasIndex("MemberId")
-                        .IsUnique();
-
-                    b.ToTable("CareGroupMembers");
                 });
 
             modelBuilder.Entity("HBCDirectory.Models.ChangeLog", b =>
@@ -533,44 +471,6 @@ namespace HBCDirectory.Migrations
                     b.ToTable("StaffRoles");
                 });
 
-            modelBuilder.Entity("HBCDirectory.Models.CareGroupLeader", b =>
-                {
-                    b.HasOne("HBCDirectory.Models.CareGroup", "CareGroup")
-                        .WithMany("Leaders")
-                        .HasForeignKey("CareGroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("HBCDirectory.Models.Member", "Member")
-                        .WithMany()
-                        .HasForeignKey("MemberId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CareGroup");
-
-                    b.Navigation("Member");
-                });
-
-            modelBuilder.Entity("HBCDirectory.Models.CareGroupMember", b =>
-                {
-                    b.HasOne("HBCDirectory.Models.CareGroup", "CareGroup")
-                        .WithMany("Members")
-                        .HasForeignKey("CareGroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("HBCDirectory.Models.Member", "Member")
-                        .WithMany()
-                        .HasForeignKey("MemberId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CareGroup");
-
-                    b.Navigation("Member");
-                });
-
             modelBuilder.Entity("HBCDirectory.Models.Family", b =>
                 {
                     b.HasOne("HBCDirectory.Models.Member", "HeadOfFamily")
@@ -668,13 +568,6 @@ namespace HBCDirectory.Migrations
                     b.Navigation("Member");
 
                     b.Navigation("StaffRole");
-                });
-
-            modelBuilder.Entity("HBCDirectory.Models.CareGroup", b =>
-                {
-                    b.Navigation("Leaders");
-
-                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("HBCDirectory.Models.Family", b =>

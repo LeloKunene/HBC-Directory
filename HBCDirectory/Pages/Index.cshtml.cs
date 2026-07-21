@@ -26,9 +26,9 @@ namespace HBCDirectory.Pages
         public List<Member>          IndividualMembers{ get; set; } = new();
 
         public Dictionary<int, List<string>> StaffRoleLookup { get; set; } = new();
-
-        // MemberId → group names e.g. ["Care Grop A", "Drivers"]
         public Dictionary<int, List<string>> GroupLookup { get; set; } = new();
+        public Dictionary<int, string> CareGroupLookup { get; set; } = new();
+        public Dictionary<int, List<string>> CareGroupLeaderLookup { get; set; } = new();
         public List<string> AllAssignedStaffRoles { get; set; } = new();
         public List<Group> AllGroups { get; set; } = new();
         public string? Q           { get; set; }
@@ -39,6 +39,7 @@ namespace HBCDirectory.Pages
         public string? CardTypeFilter  { get; set; }
         public List<Member> UpcomingBirthdays    { get; set; } = new();
         public List<AnniversaryDisplayItem> UpcomingAnniversaries { get; set; } = new();
+
         public class AnniversaryDisplayItem
         {
             public string Names { get; set; } = "";
@@ -66,19 +67,23 @@ namespace HBCDirectory.Pages
             var staffAssignmentsTask  = LoadStaffAssignmentsAsync();
             var groupsTask            = LoadGroupsAsync();
             var memberGroupsTask      = LoadMemberGroupsAsync();
+            var careGroupMembersTask  = LoadCareGroupMembersAsync();
+            var careGroupLeadersTask  = LoadCareGroupLeadersAsync();
             var leadershipTask        = LoadLeadershipAsync();
             var familiesTask          = LoadFamiliesAsync();
             var individualMembersTask = LoadIndividualMembersAsync();
 
             await Task.WhenAll(
-                staffAssignmentsTask, groupsTask, memberGroupsTask,
+                staffAssignmentsTask, groupsTask, memberGroupsTask, careGroupMembersTask, careGroupLeadersTask,
                 leadershipTask, familiesTask, individualMembersTask);
 
             StaffAssignments     = await staffAssignmentsTask;
             AllGroups            = await groupsTask;
             var allMemberGroups  = await memberGroupsTask;
+            var allCareGroupMembers = await careGroupMembersTask;
+            var allCareGroupLeaders = await careGroupLeadersTask;
             Leadership           = await leadershipTask;
-            Families             = await familiesTask;
+            Families             = (await familiesTask).Where(f => f.Adults.Any() || f.Children.Any()).ToList();
             IndividualMembers    = await individualMembersTask;
 
             StaffRoleLookup = StaffAssignments
@@ -95,6 +100,13 @@ namespace HBCDirectory.Pages
                 .GroupBy(mg => mg.MemberId)
                 .ToDictionary(g => g.Key, g => g.Select(mg => mg.Group.Name).ToList());
 
+            CareGroupLookup = allCareGroupMembers
+                .ToDictionary(cgm => cgm.MemberId, cgm => cgm.CareGroup.Name);
+
+            CareGroupLeaderLookup = allCareGroupLeaders
+                .GroupBy(cgl => cgl.MemberId)
+                .ToDictionary(g => g.Key, g => g.Select(cgl => cgl.CareGroup.Name).ToList());
+
             /* Notifications
                 The month/day-crossing-year-boundary check below still has to run
                 in memory (EF Core can't translate "does this recurring date fall
@@ -107,10 +119,12 @@ namespace HBCDirectory.Pages
 
             var birthdayCandidates = await _db.Members
                 .Where(m => m.Birthdate.HasValue && m.ShowBirthdate)
+                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
                 .ToListAsync();
 
             var anniversaryCandidates = await _db.Members
                 .Where(m => m.Anniversary.HasValue && m.ShowAnniversary)
+                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
                 .ToListAsync();
 
             UpcomingBirthdays = birthdayCandidates
@@ -169,7 +183,7 @@ namespace HBCDirectory.Pages
             }
         }
 
-        /* Parallel loaders for OnGetAsync ──────────────────────────────────
+        /* Parallel loaders for OnGetAsync
             Each opens its own DbContext via _dbFactory so these can run
             concurrently with Task.WhenAll above. Read-only — nothing here
             calls SaveChanges, so entities not being tracked by the page's
@@ -180,6 +194,7 @@ namespace HBCDirectory.Pages
             return await db.StaffAssignments
                 .Include(sa => sa.Member).ThenInclude(m => m.Family)
                 .Include(sa => sa.StaffRole)
+                .Where(sa => sa.Member.MemberStatus != "Resigned" && sa.Member.MemberStatus != "Excommunicated")
                 .OrderBy(sa => sa.DisplayOrder)
                 .ToListAsync();
         }
@@ -196,12 +211,25 @@ namespace HBCDirectory.Pages
             return await db.MemberGroups.Include(mg => mg.Group).ToListAsync();
         }
 
+        private async Task<List<CareGroupMember>> LoadCareGroupMembersAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.CareGroupMembers.Include(cgm => cgm.CareGroup).ToListAsync();
+        }
+
+        private async Task<List<CareGroupLeader>> LoadCareGroupLeadersAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.CareGroupLeaders.Include(cgl => cgl.CareGroup).ToListAsync();
+        }
+
         private async Task<List<Member>> LoadLeadershipAsync()
         {
             await using var db = await _dbFactory.CreateDbContextAsync();
             return await db.Members
                 .Include(m => m.Family)
                 .Where(m => m.ChurchOffice == "Elder" || m.ChurchOffice == "Deacon")
+                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
                 .OrderBy(m => m.ChurchOffice == "Elder" ? 0 : 1)
                 .ThenBy(m => m.Surname).ThenBy(m => m.Name)
                 .ToListAsync();
@@ -221,6 +249,7 @@ namespace HBCDirectory.Pages
             await using var db = await _dbFactory.CreateDbContextAsync();
             return await db.Members
                 .Where(m => m.FamilyId == null && m.MemberType == "Adult")
+                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
                 .OrderBy(m => m.Surname).ThenBy(m => m.Name)
                 .ToListAsync();
         }
@@ -230,6 +259,20 @@ namespace HBCDirectory.Pages
 
         public List<string> GroupsFor(int memberId) =>
             GroupLookup.TryGetValue(memberId, out var g) ? g : new();
+
+        public string? CareGroupFor(int memberId)
+        {
+            var parts = new List<string>();
+            var isLeaderOf = CareGroupLeaderLookup.TryGetValue(memberId, out var led) ? led : null;
+            if (isLeaderOf != null)
+                parts.AddRange(isLeaderOf.Select(name => $"{name} (Overseer)"));
+
+            if (CareGroupLookup.TryGetValue(memberId, out var memberOf) &&
+                (isLeaderOf == null || !isLeaderOf.Contains(memberOf)))
+                parts.Add(memberOf);
+
+            return parts.Count > 0 ? string.Join(", ", parts) : null;
+        }
 
         // Union of all adults' groups in a family
         public List<string> GroupsFor(Family f) =>
@@ -255,6 +298,8 @@ namespace HBCDirectory.Pages
                 if (!string.IsNullOrEmpty(m.ChurchOffice)) parts.Add(m.ChurchOffice);
                 parts.AddRange(StaffRolesFor(m.Id));
                 parts.AddRange(GroupsFor(m.Id));
+                var careGroup = CareGroupFor(m.Id);
+                if (!string.IsNullOrEmpty(careGroup)) parts.Add(careGroup);
             }
             return string.Join(" ", parts).ToLowerInvariant();
         }
@@ -262,22 +307,28 @@ namespace HBCDirectory.Pages
         public string SearchTextFor(Member m)
         {
             var parts = new List<string> { m.Name, m.Surname };
-            if (!string.IsNullOrEmpty(m.MemberStatus))  parts.Add(m.MemberStatus);
+            var publicStatus = Member.PublicStatus(m.MemberStatus);
+            if (!string.IsNullOrEmpty(publicStatus))    parts.Add(publicStatus);
             if (!string.IsNullOrEmpty(m.ChurchOffice))  parts.Add(m.ChurchOffice);
             parts.AddRange(StaffRolesFor(m.Id));
             parts.AddRange(GroupsFor(m.Id));
+            var careGroup = CareGroupFor(m.Id);
+            if (!string.IsNullOrEmpty(careGroup)) parts.Add(careGroup);
             return string.Join(" ", parts).ToLowerInvariant();
         }
 
         // Comma lists for family card filter attributes
         public string StatusesFor(Family f) =>
             string.Join(",", f.Members
-                .Where(m => !string.IsNullOrEmpty(m.MemberStatus))
-                .Select(m => m.MemberStatus).Distinct());
+                .Select(m => Member.PublicStatus(m.MemberStatus))
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Distinct());
 
         public string OfficesFor(Family f) =>
             string.Join(",", f.Members
                 .Where(m => !string.IsNullOrEmpty(m.ChurchOffice))
                 .Select(m => m.ChurchOffice).Distinct());
+
+        public string? PublicStatusFor(Member m) => Member.PublicStatus(m.MemberStatus);
     }
 }
