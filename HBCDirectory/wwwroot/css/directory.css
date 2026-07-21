@@ -177,6 +177,14 @@
 .dir-modal-person-groups { font-size: 12.5px; color: var(--dir-grey); margin: 4px 0 0; }
 .dir-modal-fallback { color: var(--dir-grey); font-style: italic; }
 
+/* Groups/Ministries: same muted grey for icon + text in both modals — the
+   member modal's #mm-groups would otherwise inherit .dir-modal-row's gold
+   like every other row; this keeps it visually matched to the family
+   modal's per-person groups line (.dir-modal-person-groups above), rather
+   than the icon-dark-grey/text-gold split the other rows use. */
+#mm-groups { color: var(--dir-grey); }
+#mm-caregroup { color: var(--dir-grey); }
+
 .dir-modal-children-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .dir-modal-child-chip {
     font-size: 12px; background: var(--dir-light); color: var(--dir-gold);
