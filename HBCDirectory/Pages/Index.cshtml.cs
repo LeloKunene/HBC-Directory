@@ -26,10 +26,9 @@ namespace HBCDirectory.Pages
         public List<Member>          IndividualMembers{ get; set; } = new();
 
         public Dictionary<int, List<string>> StaffRoleLookup { get; set; } = new();
-
-        // MemberId → group names e.g. ["Drivers"]
         public Dictionary<int, List<string>> GroupLookup { get; set; } = new();
         public Dictionary<int, string> CareGroupLookup { get; set; } = new();
+        public Dictionary<int, List<string>> CareGroupLeaderLookup { get; set; } = new();
         public List<string> AllAssignedStaffRoles { get; set; } = new();
         public List<Group> AllGroups { get; set; } = new();
         public string? Q           { get; set; }
@@ -40,6 +39,7 @@ namespace HBCDirectory.Pages
         public string? CardTypeFilter  { get; set; }
         public List<Member> UpcomingBirthdays    { get; set; } = new();
         public List<AnniversaryDisplayItem> UpcomingAnniversaries { get; set; } = new();
+
         public class AnniversaryDisplayItem
         {
             public string Names { get; set; } = "";
@@ -68,18 +68,20 @@ namespace HBCDirectory.Pages
             var groupsTask            = LoadGroupsAsync();
             var memberGroupsTask      = LoadMemberGroupsAsync();
             var careGroupMembersTask  = LoadCareGroupMembersAsync();
+            var careGroupLeadersTask  = LoadCareGroupLeadersAsync();
             var leadershipTask        = LoadLeadershipAsync();
             var familiesTask          = LoadFamiliesAsync();
             var individualMembersTask = LoadIndividualMembersAsync();
 
             await Task.WhenAll(
-                staffAssignmentsTask, groupsTask, memberGroupsTask, careGroupMembersTask,
+                staffAssignmentsTask, groupsTask, memberGroupsTask, careGroupMembersTask, careGroupLeadersTask,
                 leadershipTask, familiesTask, individualMembersTask);
 
             StaffAssignments     = await staffAssignmentsTask;
             AllGroups            = await groupsTask;
             var allMemberGroups  = await memberGroupsTask;
             var allCareGroupMembers = await careGroupMembersTask;
+            var allCareGroupLeaders = await careGroupLeadersTask;
             Leadership           = await leadershipTask;
             Families             = (await familiesTask).Where(f => f.Adults.Any() || f.Children.Any()).ToList();
             IndividualMembers    = await individualMembersTask;
@@ -97,6 +99,13 @@ namespace HBCDirectory.Pages
             GroupLookup = allMemberGroups
                 .GroupBy(mg => mg.MemberId)
                 .ToDictionary(g => g.Key, g => g.Select(mg => mg.Group.Name).ToList());
+
+            CareGroupLookup = allCareGroupMembers
+                .ToDictionary(cgm => cgm.MemberId, cgm => cgm.CareGroup.Name);
+
+            CareGroupLeaderLookup = allCareGroupLeaders
+                .GroupBy(cgl => cgl.MemberId)
+                .ToDictionary(g => g.Key, g => g.Select(cgl => cgl.CareGroup.Name).ToList());
 
             /* Notifications
                 The month/day-crossing-year-boundary check below still has to run
@@ -208,6 +217,12 @@ namespace HBCDirectory.Pages
             return await db.CareGroupMembers.Include(cgm => cgm.CareGroup).ToListAsync();
         }
 
+        private async Task<List<CareGroupLeader>> LoadCareGroupLeadersAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.CareGroupLeaders.Include(cgl => cgl.CareGroup).ToListAsync();
+        }
+
         private async Task<List<Member>> LoadLeadershipAsync()
         {
             await using var db = await _dbFactory.CreateDbContextAsync();
@@ -245,8 +260,19 @@ namespace HBCDirectory.Pages
         public List<string> GroupsFor(int memberId) =>
             GroupLookup.TryGetValue(memberId, out var g) ? g : new();
 
-        public string? CareGroupFor(int memberId) =>
-            CareGroupLookup.TryGetValue(memberId, out var cg) ? cg : null;
+        public string? CareGroupFor(int memberId)
+        {
+            var parts = new List<string>();
+            var isLeaderOf = CareGroupLeaderLookup.TryGetValue(memberId, out var led) ? led : null;
+            if (isLeaderOf != null)
+                parts.AddRange(isLeaderOf.Select(name => $"{name} (Overseer)"));
+
+            if (CareGroupLookup.TryGetValue(memberId, out var memberOf) &&
+                (isLeaderOf == null || !isLeaderOf.Contains(memberOf)))
+                parts.Add(memberOf);
+
+            return parts.Count > 0 ? string.Join(", ", parts) : null;
+        }
 
         // Union of all adults' groups in a family
         public List<string> GroupsFor(Family f) =>
