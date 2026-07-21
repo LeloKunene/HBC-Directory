@@ -125,7 +125,7 @@
                      data-name="@m.DisplayName"
                      data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
                      data-email="@m.Email"
-                     data-status="@m.MemberStatus"
+                     data-status="@Model.PublicStatusFor(m)"
                      data-office="@m.ChurchOffice"
                      data-staffroles="@string.Join(", ", staffRoles)"
                      data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
@@ -196,7 +196,7 @@
                      data-name="@m.DisplayName"
                      data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
                      data-email="@m.Email"
-                     data-status="@m.MemberStatus"
+                     data-status="@Model.PublicStatusFor(m)"
                      data-office="@m.ChurchOffice"
                      data-staffroles="@string.Join(", ", staffRoles)"
                      data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
@@ -385,7 +385,7 @@
                          data-name="@m.DisplayName"
                          data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
                          data-email="@m.Email"
-                         data-status="@m.MemberStatus"
+                         data-status="@Model.PublicStatusFor(m)"
                          data-office="@m.ChurchOffice"
                          data-staffroles="@string.Join(",", staffRoles)"
                          data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
@@ -418,9 +418,10 @@
                                 <p class="dir-card-sub">@m.PhoneNumber</p>
                             }
                             <div class="dir-card-badges">
-                                @if (!string.IsNullOrEmpty(m.MemberStatus))
+                                @{ var publicStatus = Model.PublicStatusFor(m); }
+                                @if (!string.IsNullOrEmpty(publicStatus))
                                 {
-                                    <span class="dir-badge dir-badge--@m.MemberStatus.ToLower()">@m.MemberStatus</span>
+                                    <span class="dir-badge dir-badge--@publicStatus.ToLower()">@publicStatus</span>
                                 }
                                 @if (!string.IsNullOrEmpty(m.ChurchOffice))
                                 {
@@ -516,6 +517,10 @@ document.getElementById('fm-photo').addEventListener('click', function () {
 document.getElementById('mm-photo').addEventListener('click', function () {
     if (!this.classList.contains('d-none')) window.openLightbox(this.src, this.alt);
 });
+
+// Household/children photos are re-rendered every time the family modal
+// opens, so a per-image listener would need re-attaching each time —
+// delegate to the (static) containers instead.
 document.getElementById('fm-household').addEventListener('click', function (e) {
     const img = e.target.closest('.dir-modal-person-photo');
     if (img) window.openLightbox(img.src, img.alt);

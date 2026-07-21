@@ -78,7 +78,7 @@ namespace HBCDirectory.Pages
             AllGroups            = await groupsTask;
             var allMemberGroups  = await memberGroupsTask;
             Leadership           = await leadershipTask;
-            Families             = await familiesTask;
+            Families             = (await familiesTask).Where(f => f.Adults.Any() || f.Children.Any()).ToList();
             IndividualMembers    = await individualMembersTask;
 
             StaffRoleLookup = StaffAssignments
@@ -107,10 +107,12 @@ namespace HBCDirectory.Pages
 
             var birthdayCandidates = await _db.Members
                 .Where(m => m.Birthdate.HasValue && m.ShowBirthdate)
+                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
                 .ToListAsync();
 
             var anniversaryCandidates = await _db.Members
                 .Where(m => m.Anniversary.HasValue && m.ShowAnniversary)
+                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
                 .ToListAsync();
 
             UpcomingBirthdays = birthdayCandidates
@@ -169,7 +171,7 @@ namespace HBCDirectory.Pages
             }
         }
 
-        /* Parallel loaders for OnGetAsync ──────────────────────────────────
+        /* Parallel loaders for OnGetAsync
             Each opens its own DbContext via _dbFactory so these can run
             concurrently with Task.WhenAll above. Read-only — nothing here
             calls SaveChanges, so entities not being tracked by the page's
@@ -180,6 +182,7 @@ namespace HBCDirectory.Pages
             return await db.StaffAssignments
                 .Include(sa => sa.Member).ThenInclude(m => m.Family)
                 .Include(sa => sa.StaffRole)
+                .Where(sa => sa.Member.MemberStatus != "Resigned" && sa.Member.MemberStatus != "Excommunicated")
                 .OrderBy(sa => sa.DisplayOrder)
                 .ToListAsync();
         }
@@ -202,6 +205,7 @@ namespace HBCDirectory.Pages
             return await db.Members
                 .Include(m => m.Family)
                 .Where(m => m.ChurchOffice == "Elder" || m.ChurchOffice == "Deacon")
+                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
                 .OrderBy(m => m.ChurchOffice == "Elder" ? 0 : 1)
                 .ThenBy(m => m.Surname).ThenBy(m => m.Name)
                 .ToListAsync();
@@ -221,6 +225,7 @@ namespace HBCDirectory.Pages
             await using var db = await _dbFactory.CreateDbContextAsync();
             return await db.Members
                 .Where(m => m.FamilyId == null && m.MemberType == "Adult")
+                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
                 .OrderBy(m => m.Surname).ThenBy(m => m.Name)
                 .ToListAsync();
         }
@@ -262,7 +267,8 @@ namespace HBCDirectory.Pages
         public string SearchTextFor(Member m)
         {
             var parts = new List<string> { m.Name, m.Surname };
-            if (!string.IsNullOrEmpty(m.MemberStatus))  parts.Add(m.MemberStatus);
+            var publicStatus = Member.PublicStatus(m.MemberStatus);
+            if (!string.IsNullOrEmpty(publicStatus))    parts.Add(publicStatus);
             if (!string.IsNullOrEmpty(m.ChurchOffice))  parts.Add(m.ChurchOffice);
             parts.AddRange(StaffRolesFor(m.Id));
             parts.AddRange(GroupsFor(m.Id));
@@ -272,12 +278,15 @@ namespace HBCDirectory.Pages
         // Comma lists for family card filter attributes
         public string StatusesFor(Family f) =>
             string.Join(",", f.Members
-                .Where(m => !string.IsNullOrEmpty(m.MemberStatus))
-                .Select(m => m.MemberStatus).Distinct());
+                .Select(m => Member.PublicStatus(m.MemberStatus))
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Distinct());
 
         public string OfficesFor(Family f) =>
             string.Join(",", f.Members
                 .Where(m => !string.IsNullOrEmpty(m.ChurchOffice))
                 .Select(m => m.ChurchOffice).Distinct());
+
+        public string? PublicStatusFor(Member m) => Member.PublicStatus(m.MemberStatus);
     }
 }

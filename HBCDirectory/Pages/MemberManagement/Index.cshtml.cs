@@ -14,9 +14,22 @@ namespace HBCDirectory.Pages.MemberManagement
 
         public IndexModel(DirectoryContext db) { _db = db; }
 
+        public static readonly string[] AllStatuses =
+            { "Member", "Attendant", "Pending Removal", "Pending Discipline", "Resigned", "Excommunicated" };
+
         public List<Role> Roles { get; set; } = new();
         public List<Member> AllMembers { get; set; } = new();
         public List<MemberRole> Assignments { get; set; } = new();
+
+        public static string StatusBadgeClass(string status) => status switch
+        {
+            "Member" => "bg-success",
+            "Attendant" => "bg-secondary",
+            "Pending Removal" or "Pending Discipline" => "bg-warning text-dark",
+            "Resigned" => "bg-dark",
+            "Excommunicated" => "bg-danger",
+            _ => "bg-secondary"
+        };
 
         public async Task OnGetAsync()
         {
@@ -91,6 +104,36 @@ namespace HBCDirectory.Pages.MemberManagement
                 "Revoked", $"Role: {assignment.Role.Name}");
 
             TempData["Success"] = $"'{assignment.Role.Name}' removed from '{assignment.Member.DisplayName}'.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostChangeStatusAsync(int memberId, string newStatus)
+        {
+            if (!AllStatuses.Contains(newStatus))
+            { TempData["Error"] = "Not a recognized status."; return RedirectToPage(); }
+
+            var member = await _db.Members.FindAsync(memberId);
+            if (member == null) return NotFound();
+            if (!member.IsAdult)
+            { TempData["Error"] = "Only adults can have a membership status."; return RedirectToPage(); }
+
+            var oldStatus = member.MemberStatus ?? "Member";
+            member.MemberStatus = newStatus;
+
+            if (newStatus != "Member")
+                member.ChurchOffice = null;
+
+            if (newStatus is "Resigned" or "Excommunicated")
+            {
+                var acct = await _db.MemberAccounts.FirstOrDefaultAsync(a => a.MemberId == memberId);
+                if (acct != null) _db.MemberAccounts.Remove(acct);
+            }
+
+            await _db.SaveChangesAsync();
+            await LogChangeAsync("Member", member.Id, member.DisplayName,
+                "Status changed", $"{oldStatus} → {newStatus}");
+
+            TempData["Success"] = $"'{member.DisplayName}' is now '{newStatus}'.";
             return RedirectToPage();
         }
 

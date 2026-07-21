@@ -9,10 +9,49 @@
 </div>
 
 <p class="text-muted mb-4">
-    Leadership-only. Member statuses (Resigned, Pending Discipline, etc.) and
-    Care Groups will land here in follow-up updates — for now, this covers
-    roles and who holds them.
+    Leadership-only. Care Groups will land here in a follow-up update
+    for now, this covers roles, who holds them, and membership status.
 </p>
+
+<div class="admin-card mb-4">
+    <div class="card-header">Member status</div>
+    <div class="card-body">
+        <p class="text-muted small">
+            <strong>Pending Removal</strong> and <strong>Pending Discipline</strong> still show normally on the
+            public directory — only the status label itself is Leadership-only, never visible to other members.
+            <strong>Resigned</strong> and <strong>Excommunicated</strong> are removed from the directory and PDF
+            export entirely (and lose their login), but stay fully visible here and in Admin.
+        </p>
+        <div style="max-height:420px;overflow-y:auto;">
+        <table class="table table-sm align-middle">
+            <thead><tr><th>Member</th><th>Current status</th><th>Change to</th></tr></thead>
+            <tbody>
+                @foreach (var m in Model.AllMembers)
+                {
+                    var cur = m.MemberStatus ?? "Member";
+                    <tr>
+                        <td>@m.DisplayName</td>
+                        <td><span class="badge @HBCDirectory.Pages.MemberManagement.IndexModel.StatusBadgeClass(cur)">@cur</span></td>
+                        <td>
+                            <form method="post" asp-page-handler="ChangeStatus" class="d-flex gap-2"
+                                  onsubmit="return confirm('Change status for @m.DisplayName?')">
+                                <input type="hidden" name="memberId" value="@m.Id" />
+                                <select name="newStatus" class="form-select form-select-sm" style="max-width:190px;">
+                                    @foreach (var s in HBCDirectory.Pages.MemberManagement.IndexModel.AllStatuses)
+                                    {
+                                        <option value="@s" selected="@(s == cur)">@s</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
 
 <div class="row g-4">
     <!-- ── Roles & assignments ─────────────────────────────────────── -->

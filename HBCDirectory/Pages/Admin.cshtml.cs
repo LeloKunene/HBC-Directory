@@ -666,13 +666,28 @@ namespace HBCDirectory.Pages
         {
             var families = await _db.Families
                 .Include(f => f.Members)
+                .AsNoTracking()
                 .OrderBy(f => f.FamilyName)
                 .ToListAsync();
 
             var unassigned = await _db.Members
                 .Where(m => m.FamilyId == null && m.MemberType == "Adult")
+                .AsNoTracking()
                 .OrderBy(m => m.Surname).ThenBy(m => m.Name)
                 .ToListAsync();
+
+            foreach (var f in families)
+                f.Members = f.Members
+                    .Where(Member.IsVisibleToCongregation)
+                    .Select(SanitizedForPdf)
+                    .ToList();
+            unassigned = unassigned.Where(Member.IsVisibleToCongregation).Select(SanitizedForPdf).ToList();
+
+            static Member SanitizedForPdf(Member m)
+            {
+                m.MemberStatus = Member.PublicStatus(m.MemberStatus);
+                return m;
+            }
 
             var pages = settings.GetPages();
             var bytes = await _pdfService.GenerateAsync(families, unassigned, pages);
