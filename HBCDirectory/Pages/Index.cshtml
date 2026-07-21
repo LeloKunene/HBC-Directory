@@ -34,9 +34,9 @@
                 <i class="fa-solid fa-ring notification-icon"></i>
                 <span class="notification-label"><strong>Upcoming anniversaries</strong> (next 30 days)</span>
                 <div class="notification-chips">
-                    @foreach (var m in annivs)
+                    @foreach (var a in annivs)
                     {
-                        <span class="notification-chip">@m.DisplayName <em>· @m.Anniversary!.Value.ToString("MMM d")</em></span>
+                        <span class="notification-chip">@a.Names @(a.Years is int y ? $"({(y == 0 ? "this year" : y == 1 ? "1 year" : $"{y} years")})" : "") <em>· @a.Date.ToString("MMM d")</em></span>
                     }
                 </div>
             </div>
@@ -237,14 +237,14 @@
 }
 
 <!-- ══════════════════════════════════════════════════════
-     MAIN ALPHABETICAL GRID (everyone: families, individuals,
-     leadership, and staff sorted alphabetically so search and
+     MAIN ALPHABETICAL GRID (everyone — families, individuals,
+     leadership, and staff — sorted alphabetically so search and
      filter apply uniformly to the whole directory)
 ════════════════════════════════════════════════════════ -->
 @{
-    /*  Build one alphabetical list: families + individuals merged, sorted by surname/familyName
-        NOTE: nothing is excluded here based on search/status/office — the full set always
-        renders, and filtering happens instantly client-side (see liveFilter() in Scripts below).*/
+    // Build one alphabetical list: families + individuals merged, sorted by surname/familyName
+    // NOTE: nothing is excluded here based on search/status/office — the full set always
+    // renders, and filtering happens instantly client-side (see liveFilter() in Scripts below).
     var allCards = new List<(string SortKey, string CardType, object Data)>();
 
     foreach (var f in Model.Families)
@@ -509,6 +509,7 @@ else
 
 @section Scripts {
 <script>
+//  Photo lightbox — click either modal's main photo to view full-size 
 document.getElementById('fm-photo').addEventListener('click', function () {
     if (!this.classList.contains('d-none')) window.openLightbox(this.src, this.alt);
 });
@@ -692,6 +693,12 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
         groupsEl.classList.remove('d-none');
     } else { groupsEl.classList.add('d-none'); }
 });
+
+//  Instant, fully client-side search & filter 
+// Everything needed to filter is already in the DOM (data-search / data-status /
+// data-office attributes on each card), so typing never triggers a page reload
+// or a server round trip — we just show/hide cards. Keystrokes are coalesced
+// with requestAnimationFrame so even fast typing stays perfectly smooth.
 
 let filterFrame = null;
 function liveFilter() {
