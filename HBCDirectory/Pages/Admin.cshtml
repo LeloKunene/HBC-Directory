@@ -113,7 +113,7 @@
                             <option value="">— Individual member —</option>
                             @foreach (var f in Model.Families)
                             {
-                                <option value="@f.Id">@f.FamilyName</option>
+                                <option value="@f.Id">@Model.FamilyDisambiguated(f)</option>
                             }
                         </select>
                     </div>
@@ -297,7 +297,24 @@
                                 </div>
                             }
                         </td>
-                        <td><strong>@f.FamilyName</strong></td>
+                        <td>
+                            <strong>@f.FamilyName</strong>
+                            @{ var sameNameCount = Model.Families.Count(x => x.FamilyName == f.FamilyName); }
+                            @if (sameNameCount > 1)
+                            {
+                                if (f.HeadOfFamily != null)
+                                {
+                                    <span class="text-muted small">(@f.HeadOfFamily.Name)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark small"
+                                          title="Multiple families share this surname — set a head from Edit Family so they can be told apart.">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> No head set
+                                    </span>
+                                }
+                            }
+                        </td>
                         <td class="text-muted small">@(f.Address ?? "—")</td>
                         <td class="text-muted small">@(f.FamilyPhone ?? "—")</td>
                         <td>
@@ -318,6 +335,7 @@
                                     data-address="@f.Address"
                                     data-familyphone="@f.FamilyPhone"
                                     data-notes="@f.AdditionalNotes"
+                                    data-headoffamilyid="@f.HeadOfFamilyId"
                                     data-members='@System.Text.Json.JsonSerializer.Serialize(f.Members.Select(m => new {
                                         id = m.Id,
                                         name = m.Name,
@@ -1266,7 +1284,7 @@ function togglePdfPasswordVisibility() {
                                 <option value="">— Individual member —</option>
                                 @foreach (var f in Model.Families)
                                 {
-                                    <option value="@f.Id">@f.FamilyName</option>
+                                    <option value="@f.Id">@Model.FamilyDisambiguated(f)</option>
                                 }
                             </select>
                         </div>
@@ -1358,6 +1376,16 @@ function togglePdfPasswordVisibility() {
                                 <div class="form-field">
                                     <label class="form-label">Group Photo</label>
                                     <input name="photo" type="file" class="form-control" accept="image/*" />
+                                </div>
+                                <div class="form-field">
+                                    <label class="form-label">
+                                        Head of Family
+                                        <i class="fa-solid fa-circle-info" style="cursor:help"
+                                           title="Only used to tell apart two families that share a surname — never shown on the public directory."></i>
+                                    </label>
+                                    <select name="headOfFamilyId" id="edit-fhead" class="form-select">
+                                        <option value="">— none set —</option>
+                                    </select>
                                 </div>
                                 <div class="form-field form-field--full">
                                     <label class="form-label">Additional Notes</label>
@@ -1524,6 +1552,18 @@ document.getElementById('editFamilyModal').addEventListener('show.bs.modal', e =
     // Right panel
     let members = [];
     try { members = JSON.parse(btn.getAttribute('data-members') || '[]'); } catch(e) {}
+
+    // Head of Family — only adults in *this* family are valid choices.
+    const headSelect = document.getElementById('edit-fhead');
+    const currentHeadId = btn.getAttribute('data-headoffamilyid') || '';
+    headSelect.innerHTML = '<option value="">— none set —</option>';
+    members.filter(m => m.type === 'Adult').forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name + ' ' + m.surname;
+        if (String(m.id) === currentHeadId) opt.selected = true;
+        headSelect.appendChild(opt);
+    });
 
     const adults   = members.filter(m => m.type === 'Adult');
     const children = members.filter(m => m.type === 'Child');

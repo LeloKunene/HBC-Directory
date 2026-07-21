@@ -48,11 +48,20 @@ namespace HBCDirectory.Pages
 
         public string PhotoUrl(string? f) => _photos.Url(f);
 
+        public string FamilyDisambiguated(Family f)
+        {
+            var sameNameCount = Families.Count(x => x.FamilyName == f.FamilyName);
+            if (sameNameCount <= 1) return f.FamilyName;
+            return f.HeadOfFamily != null
+                ? $"{f.FamilyName} ({f.HeadOfFamily.Name})"
+                : $"{f.FamilyName} — no head set";
+        }
+
         public async Task OnGetAsync()
         {
             Members = await _db.Members.Include(m => m.Family)
                 .OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
-            Families = await _db.Families.Include(f => f.Members)
+            Families = await _db.Families.Include(f => f.Members).Include(f => f.HeadOfFamily)
                 .OrderBy(f => f.FamilyName).ToListAsync();
             StaffRoles = await _db.StaffRoles.OrderBy(sr => sr.DisplayOrder).ToListAsync();
             StaffAssignments = await _db.StaffAssignments
@@ -212,6 +221,11 @@ namespace HBCDirectory.Pages
             m.DateJoined   = dateJoined;
             m.PhoneNumber  = phoneNumber?.Trim();
             m.Address      = address?.Trim();
+
+            var headOfFamily = await _db.Families.FirstOrDefaultAsync(fam => fam.HeadOfFamilyId == m.Id);
+            if (headOfFamily != null && (headOfFamily.Id != familyId || !isAdult))
+                headOfFamily.HeadOfFamilyId = null;
+
             m.FamilyId     = familyId;
             m.ShowPhone    = showPhone;
             m.ShowAddress  = showAddress;
@@ -304,12 +318,17 @@ namespace HBCDirectory.Pages
         //  Edit Family 
         public async Task<IActionResult> OnPostEditFamilyAsync(
             int id, string familyName, string? address, string? familyPhone,
-            string? additionalNotes, IFormFile? photo)
+            string? additionalNotes, int? headOfFamilyId, IFormFile? photo)
         {
-            var f = await _db.Families.FindAsync(id);
+            var f = await _db.Families.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == id);
             if (f == null) return NotFound();
             if (string.IsNullOrWhiteSpace(familyName))
             { TempData["Error"] = "Family name is required."; return RedirectToPage(); }
+
+            f.HeadOfFamilyId = headOfFamilyId.HasValue &&
+                f.Members.Any(m => m.Id == headOfFamilyId.Value && m.MemberType == "Adult")
+                    ? headOfFamilyId
+                    : null;
 
             f.FamilyName      = CapFirst(familyName);
             f.Address         = address?.Trim();
