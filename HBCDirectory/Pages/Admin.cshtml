@@ -136,8 +136,12 @@
     </div>
 
     <!-- Members Table -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <input type="text" id="members-search" class="form-control form-control-sm" style="max-width:300px;"
+               placeholder="Search members by name, email, or family…" onkeyup="filterTableRows('members-search', 'members-table')" />
+    </div>
     <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover" id="members-table">
             <thead>
                 <tr>
                     <th>Photo</th>
@@ -153,7 +157,7 @@
             <tbody>
                 @foreach (var m in Model.Members)
                 {
-                    <tr>
+                    <tr data-search="@($"{m.Name} {m.Surname} {m.Email} {m.Family?.FamilyName}".ToLowerInvariant())">
                         <td>
                             @if (!string.IsNullOrEmpty(m.PhotoFileName))
                             {
@@ -269,8 +273,12 @@
         </div>
     </div>
 
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <input type="text" id="families-search" class="form-control form-control-sm" style="max-width:300px;"
+               placeholder="Search families by name or member…" onkeyup="filterTableRows('families-search', 'families-table')" />
+    </div>
     <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover" id="families-table">
             <thead>
                 <tr>
                     <th>Photo</th>
@@ -284,7 +292,7 @@
             <tbody>
                 @foreach (var f in Model.Families)
                 {
-                    <tr>
+                    <tr data-search="@($"{f.FamilyName} {string.Join(" ", f.Members.Select(m => m.Name + " " + m.Surname))}".ToLowerInvariant())">
                         <td>
                             @if (!string.IsNullOrEmpty(f.PhotoFileName))
                             {
@@ -319,7 +327,7 @@
                         <td class="text-muted small">@(f.FamilyPhone ?? "—")</td>
                         <td>
                             <span class="text-muted small">
-                                @(string.Join(", ", f.Adults.Select(m => m.Name)))
+                                @(string.Join(", ", Model.VisibleAdultsFor(f).Select(m => m.Name)))
                                 @if (f.Children.Any())
                                 {
                                     <em> · @string.Join(", ", f.Children.Select(c => c.Name))</em>
@@ -336,7 +344,7 @@
                                     data-familyphone="@f.FamilyPhone"
                                     data-notes="@f.AdditionalNotes"
                                     data-headoffamilyid="@f.HeadOfFamilyId"
-                                    data-members='@System.Text.Json.JsonSerializer.Serialize(f.Members.Select(m => new {
+                                    data-members='@System.Text.Json.JsonSerializer.Serialize(Model.VisibleMembersFor(f).Select(m => new {
                                         id = m.Id,
                                         name = m.Name,
                                         surname = m.Surname,
@@ -1619,6 +1627,8 @@ function togglePdfPasswordVisibility() {
 @section Scripts {
 <script>
 //  Add form: show/hide fields by MemberType 
+// filterTableRows() lives in site.js now — shared with Member Management's
+// status table, not just this page's Members/Families tables.
 function updateAddForm() {
     const type   = document.getElementById('add-memberType').value;
     const status = document.getElementById('add-memberStatus').value;

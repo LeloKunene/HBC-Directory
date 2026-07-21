@@ -49,6 +49,16 @@ namespace HBCDirectory.Pages
 
         public string PhotoUrl(string? f) => _photos.Url(f);
 
+        public static bool IsOrdinaryStatus(Member m) =>
+            m.MemberStatus is null or "Member" or "Attendant";
+
+        public IEnumerable<Member> VisibleAdultsFor(Family f) =>
+            f.Members.Where(m => m.MemberType == "Adult" && IsOrdinaryStatus(m))
+                     .OrderBy(m => m.Surname).ThenBy(m => m.Name);
+
+        public IEnumerable<Member> VisibleMembersFor(Family f) =>
+            f.Members.Where(IsOrdinaryStatus);
+
         public string FamilyDisambiguated(Family f)
         {
             var sameNameCount = Families.Count(x => x.FamilyName == f.FamilyName);
@@ -61,6 +71,7 @@ namespace HBCDirectory.Pages
         public async Task OnGetAsync()
         {
             Members = await _db.Members.Include(m => m.Family)
+                .Where(m => m.MemberStatus == null || m.MemberStatus == "Member" || m.MemberStatus == "Attendant")
                 .OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
             Families = await _db.Families.Include(f => f.Members).Include(f => f.HeadOfFamily)
                 .OrderBy(f => f.FamilyName).ToListAsync();
@@ -78,7 +89,13 @@ namespace HBCDirectory.Pages
             PendingUpdates = await _db.PendingUpdates.Include(p => p.Member)
                 .Where(p => !p.IsApproved && !p.IsRejected)
                 .OrderBy(p => p.SubmittedAt).ToListAsync();
+            // Status changes (Member Management) are Leadership-only
+            // information — even the log entry itself ("Member → Pending
+            // Discipline") shouldn't surface in the general Admin activity
+            // feed. Excluded by Action, not EntityType, since ordinary
+            // member edits ("Updated", "Created") should still show.
             RecentChanges = await _db.ChangeLogs
+                .Where(c => c.Action != "Status changed")
                 .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
             PdfConfig = await _db.PdfSettings.FindAsync(1) ?? new PdfSettings();
 
@@ -101,7 +118,9 @@ namespace HBCDirectory.Pages
             PendingUpdates   = await _db.PendingUpdates.Include(p => p.Member)
                                    .Where(p => !p.IsApproved && !p.IsRejected)
                                    .OrderBy(p => p.SubmittedAt).ToListAsync();
-            RecentChanges    = await _db.ChangeLogs.OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
+            RecentChanges    = await _db.ChangeLogs
+                .Where(c => c.Action != "Status changed")
+                .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
             if (StaffAssignments.Any()) Stats.Add(("Staff", StaffAssignments.Count));
         }
 
@@ -116,9 +135,9 @@ namespace HBCDirectory.Pages
             bool isAdult   = memberType == "Adult";
             bool isMember  = (memberStatus ?? "Member") == "Member";
 
-            /*  Only Members get a login
-                Attendants shouldn't have directory access until they become a
-                Member, so there's no reason to force an email address on them.*/
+            // Only Members get a login (see the MemberAccount block below) —
+            // Attendants shouldn't have directory access until they become a
+            // Member, so there's no reason to force an email address on them.
             if (isAdult && isMember && string.IsNullOrWhiteSpace(email))
             { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
@@ -172,10 +191,11 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        /*  Grants directory login access: creates a MemberAccount with a
-            temporary password and emails the member a reset link. Only ever
-            called for Members with an email set. Attendants shouldn't have
-            access until they're promoted to Member*/
+        // Grants directory login access: creates a MemberAccount with a
+        // temporary password and emails the member a reset link. Only ever
+        // called for Members with an email set — Attendants shouldn't have
+        // access until they're promoted to Member (see OnPostAddMemberAsync
+        // and OnPostEditMemberAsync).
         private async Task CreateMemberAccountAsync(Member member)
         {
             var tmp = GenerateTempPassword();
@@ -210,6 +230,10 @@ namespace HBCDirectory.Pages
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
             { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
 
+            // Members need an email (it's their login username); Attendants
+            // don't, since they don't get directory access. Check against
+            // whichever email will actually be on file after this save —
+            // the field submitted, or (if left blank) whatever's already there.
             var effectiveEmail = !string.IsNullOrWhiteSpace(email) ? email.Trim() : m.Email;
             if (isAdult && isMember && string.IsNullOrWhiteSpace(effectiveEmail))
             { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
@@ -226,7 +250,12 @@ namespace HBCDirectory.Pages
             m.DateJoined   = dateJoined;
             m.PhoneNumber  = phoneNumber?.Trim();
             m.Address      = address?.Trim();
-
+            // If this member is currently designated as some family's head,
+            // but won't actually be that family's adult member anymore
+            // after this save (moved to a different family, unlinked
+            // entirely, or demoted to Child), clear that family's head
+            // designation — otherwise it'd keep pointing at someone who's
+            // no longer actually in it.
             var headOfFamily = await _db.Families.FirstOrDefaultAsync(fam => fam.HeadOfFamilyId == m.Id);
             if (headOfFamily != null && (headOfFamily.Id != familyId || !isAdult))
                 headOfFamily.HeadOfFamilyId = null;
@@ -261,9 +290,9 @@ namespace HBCDirectory.Pages
 
             await _db.SaveChangesAsync();
 
-            /*  Promoted from Attendant to Member (or was already a Member but
-                never had an account, e.g. was added before an email existed)
-                and now has an email —> grant directory access.*/
+            // Promoted from Attendant to Member (or was already a Member but
+            // never had an account, e.g. was added before an email existed)
+            // and now has an email — grant directory access.
             if (isAdult && isMember && !string.IsNullOrEmpty(m.Email))
             {
                 var hasAccount = await _db.MemberAccounts.AnyAsync(a => a.MemberId == id);
@@ -330,6 +359,10 @@ namespace HBCDirectory.Pages
             if (string.IsNullOrWhiteSpace(familyName))
             { TempData["Error"] = "Family name is required."; return RedirectToPage(); }
 
+            // Only an adult who's actually in this family can be designated
+            // head — ignore (rather than error on) anything else, since the
+            // dropdown only ever offers valid choices; a mismatched value
+            // here would only happen from a tampered request.
             f.HeadOfFamilyId = headOfFamilyId.HasValue &&
                 f.Members.Any(m => m.Id == headOfFamilyId.Value && m.MemberType == "Adult")
                     ? headOfFamilyId
@@ -534,7 +567,7 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
-        //  Care Groups (pastoral care -> standalone from Groups & Ministries) 
+        //  Care Groups (pastoral care — standalone from Groups & Ministries) 
         public async Task<IActionResult> OnPostAddCareGroupAsync(string careGroupName)
         {
             if (string.IsNullOrWhiteSpace(careGroupName))
@@ -581,6 +614,12 @@ namespace HBCDirectory.Pages
 
         public async Task<IActionResult> OnPostAddMemberToCareGroupAsync(int memberId, int careGroupId)
         {
+            // Unlike Groups/Ministries, care-group membership is exclusive —
+            // one member, one care group at a time (enforced by a unique
+            // index on MemberId). Adding someone who's already in a
+            // different care group MOVES them rather than erroring, since
+            // "this person's pastoral care has been reassigned" is the
+            // normal case this would come up for, not a mistake to block.
             var existing = await _db.CareGroupMembers.FirstOrDefaultAsync(m => m.MemberId == memberId);
             if (existing != null)
             {
@@ -718,6 +757,11 @@ namespace HBCDirectory.Pages
             else if (!string.IsNullOrWhiteSpace(password))
                 settings.Password = password.Trim();
 
+            // If a password was just removed and a PDF is already cached in R2,
+            // that cached file was encrypted at generation time — the setting
+            // alone can't strip it, so regenerate it now to match. This does
+            // the same R2 write + QuestPDF render as "Update PDF", so it draws
+            // from the same rate limit.
             if (removePassword && settings.R2Key != null)
             {
                 using var lease = await _pdfGenerateLimiter.AcquireAsync(1);
@@ -742,6 +786,10 @@ namespace HBCDirectory.Pages
 
         private async Task RegenerateAndCachePdfAsync(PdfSettings settings)
         {
+            // AsNoTracking — these Family/Member objects only exist to build
+            // this one PDF and are never saved back, so it's safe to mutate
+            // them below (filtering members out, sanitizing MemberStatus)
+            // without any risk of that accidentally persisting to the DB.
             var families = await _db.Families
                 .Include(f => f.Members)
                 .AsNoTracking()
@@ -754,6 +802,16 @@ namespace HBCDirectory.Pages
                 .OrderBy(m => m.Surname).ThenBy(m => m.Name)
                 .ToListAsync();
 
+            // The PDF is a document distributed to the whole congregation —
+            // same two rules as the public directory (see
+            // Member.IsVisibleToCongregation / Member.PublicStatus):
+            // Resigned/Excommunicated members don't appear in it at all, and
+            // anyone who does appear (including Pending Removal/Pending
+            // Discipline, who stay visible per the agreed design) never has
+            // their actual status printed — DirectoryPdfService prints
+            // whatever MemberStatus is right there on the card, so it's
+            // sanitized here before that ever happens, not inside the PDF
+            // service itself.
             foreach (var f in families)
                 f.Members = f.Members
                     .Where(Member.IsVisibleToCongregation)
@@ -772,18 +830,17 @@ namespace HBCDirectory.Pages
 
             if (settings.HasPassword)
                 bytes = PdfPasswordHelper.AddPassword(bytes, settings.Password!);
-
-            /* A predictable, date-based key would let anyone who guesses the
-                pattern download the directory PDF directly from R2 if the
-                bucket were ever accidentally made public — use a random key
-                instead so it's only reachable via the authenticated Download
-                page, which looks it up from settings.R2Key in the database.*/
+            // A predictable, date-based key would let anyone who guesses the
+            // pattern download the directory PDF directly from R2 if the
+            // bucket were ever accidentally made public — use a random key
+            // instead so it's only reachable via the authenticated Download
+            // page, which looks it up from settings.R2Key in the database.
             var key = $"pdf/hbc-directory-{Guid.NewGuid():N}.pdf";
 
-            /* Each generation used to write a brand-new key without removing
-                the previous one, so old PDFs (containing member photos, phone
-                numbers, addresses) accumulated in R2 forever. Keep track of the
-                old key and remove it once the new upload has succeeded.*/
+            // Each generation used to write a brand-new key without removing
+            // the previous one, so old PDFs (containing member photos, phone
+            // numbers, addresses) accumulated in R2 forever. Keep track of the
+            // old key and remove it once the new upload has succeeded.
             var previousKey = settings.R2Key;
 
             await _pdfService.UploadToR2Async(bytes, key);
@@ -878,12 +935,12 @@ namespace HBCDirectory.Pages
                 using var output = new MemoryStream();
                 var reader = new PdfReader(input);
 
-                /* The owner password grants full control over the PDF (removing
-                    the user password, changing permissions, etc). Deriving it from
-                    the user password ("<password>_o") meant anyone who knew the
-                    open password could trivially guess it. Thus we now use an independent
-                    random value each time so nobody needs to remember it,
-                    it only needs to exist so the encryption has an owner.*/
+                // The owner password grants full control over the PDF (removing
+                // the user password, changing permissions, etc). Deriving it from
+                // the user password ("<password>_o") meant anyone who knew the
+                // open password could trivially guess it. Use an independent
+                // random value each time instead — nobody needs to remember it,
+                // it only needs to exist so the encryption has an owner.
                 var ownerPassword = RandomNumberGenerator.GetBytes(32);
 
                 var writerProps = new WriterProperties()

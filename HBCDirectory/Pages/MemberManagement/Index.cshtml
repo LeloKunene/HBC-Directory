@@ -20,16 +20,19 @@
             <strong>Pending Removal</strong> and <strong>Pending Discipline</strong> still show normally on the
             public directory — only the status label itself is Leadership-only, never visible to other members.
             <strong>Resigned</strong> and <strong>Excommunicated</strong> are removed from the directory and PDF
-            export entirely (and lose their login), but stay fully visible here and in Admin.
+            export entirely (and lose their login). All four are Leadership-only, the regular Admin panel only
+            ever shows Members and Attendants.
         </p>
+        <input type="text" id="mgmt-status-search" class="form-control form-control-sm mb-2" style="max-width:300px;"
+               placeholder="Search members…" onkeyup="filterTableRows('mgmt-status-search', 'mgmt-status-table')" />
         <div style="max-height:420px;overflow-y:auto;">
-        <table class="table table-sm align-middle">
+        <table class="table table-sm align-middle" id="mgmt-status-table">
             <thead><tr><th>Member</th><th>Current status</th><th>Change to</th></tr></thead>
             <tbody>
                 @foreach (var m in Model.AllMembers)
                 {
                     var cur = m.MemberStatus ?? "Member";
-                    <tr>
+                    <tr data-search="@($"{m.Name} {m.Surname}".ToLowerInvariant())">
                         <td>@m.DisplayName</td>
                         <td><span class="badge @HBCDirectory.Pages.MemberManagement.IndexModel.StatusBadgeClass(cur)">@cur</span></td>
                         <td>
