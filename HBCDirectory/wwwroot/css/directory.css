@@ -129,6 +129,7 @@
 .dir-icon.fa-cake-candles   { color: #202222 !important; } /* Heritage Dark Grey */
 .dir-icon.fa-location-dot   { color: #202222 !important; } /* Heritage Dark Grey */
 .dir-icon.fa-ring           { color: #202222 !important; } /* Heritage Dark Grey */
+.dir-icon.fa-calendar-check { color: #202222 !important; } /* Heritage Dark Grey — "Member since" */
 
 /* Modals */
 .dir-modal-header { background: var(--dir-dark); color: white; border-bottom: 2px solid var(--dir-mustard); }
@@ -173,6 +174,7 @@
 .dir-modal-person-contact { font-size: 13px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; color: var(--dir-gold); }
 .dir-modal-person-contact a { color: var(--dir-gold); text-decoration: none; }
 .dir-modal-person-contact a:hover { text-decoration: underline; }
+.dir-modal-person-groups { font-size: 12.5px; color: var(--dir-grey); margin: 4px 0 0; }
 .dir-modal-fallback { color: var(--dir-grey); font-style: italic; }
 
 .dir-modal-children-row { display: flex; flex-wrap: wrap; gap: 8px; }

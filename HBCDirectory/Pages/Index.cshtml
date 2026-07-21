@@ -34,9 +34,9 @@
                 <i class="fa-solid fa-ring notification-icon"></i>
                 <span class="notification-label"><strong>Upcoming anniversaries</strong> (next 30 days)</span>
                 <div class="notification-chips">
-                    @foreach (var m in annivs)
+                    @foreach (var a in annivs)
                     {
-                        <span class="notification-chip">@m.DisplayName <em>· @m.Anniversary!.Value.ToString("MMM d")</em></span>
+                        <span class="notification-chip">@a.Names @(a.Years is int y ? $"({(y == 0 ? "this year" : y == 1 ? "1 year" : $"{y} years")})" : "") <em>· @a.Date.ToString("MMM d")</em></span>
                     }
                 </div>
             </div>
@@ -128,7 +128,9 @@
                      data-status="@m.MemberStatus"
                      data-office="@m.ChurchOffice"
                      data-staffroles="@string.Join(", ", staffRoles)"
+                     data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                      data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                     data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                      data-address="@(m.ShowAddress ? m.Address : "")"
                      data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
                      data-family="@m.Family?.FamilyName"
@@ -197,7 +199,9 @@
                      data-status="@m.MemberStatus"
                      data-office="@m.ChurchOffice"
                      data-staffroles="@string.Join(", ", staffRoles)"
+                     data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                      data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                     data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                      data-address="@(m.ShowAddress ? m.Address : "")"
                      data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
                      data-family="@m.Family?.FamilyName"
@@ -286,10 +290,13 @@
                             name = a.Name,
                             office = a.ChurchOffice,
                             staffRoles = Model.StaffRolesFor(a.Id),
+                            groups = Model.GroupsFor(a.Id),
                             phone = a.ShowPhone ? a.PhoneNumber : null,
                             email = a.Email,
                             birthdate = a.ShowBirthdate && a.Birthdate.HasValue
                                 ? a.Birthdate.Value.ToString("d MMM") : null,
+                            dateJoined = a.MemberStatus == "Member" && a.DateJoined.HasValue
+                                ? a.DateJoined.Value.ToString("MMMM yyyy") : null,
                             photo = string.IsNullOrEmpty(a.PhotoFileName) ? "" : Model.PhotoUrl(a.PhotoFileName),
                             initials = $"{a.Name.FirstOrDefault()}{a.Surname.FirstOrDefault()}".ToUpper()
                         }),
@@ -383,6 +390,7 @@
                          data-staffroles="@string.Join(",", staffRoles)"
                          data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                          data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
+                         data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                          data-address="@(m.ShowAddress ? m.Address : "")"
                          data-photo="@(string.IsNullOrEmpty(m.PhotoFileName) ? "" : Model.PhotoUrl(m.PhotoFileName))"
                          data-initials="@m.Name[0]@m.Surname[0]"
@@ -450,7 +458,7 @@ else
             </div>
             <div class="modal-body dir-modal-body">
                 <div class="dir-modal-photo-wrap">
-                    <img id="fm-photo" src="" alt="" class="dir-modal-photo d-none" />
+                    <img id="fm-photo" src="" alt="" class="dir-modal-photo lightbox-trigger d-none" />
                     <div id="fm-initials" class="dir-modal-initials"></div>
                 </div>
                 <div class="dir-modal-info">
@@ -481,7 +489,7 @@ else
             </div>
             <div class="modal-body dir-modal-body">
                 <div class="dir-modal-photo-wrap">
-                    <img id="mm-photo" src="" alt="" class="dir-modal-photo d-none" />
+                    <img id="mm-photo" src="" alt="" class="dir-modal-photo lightbox-trigger d-none" />
                     <div id="mm-initials" class="dir-modal-initials"></div>
                 </div>
                 <div class="dir-modal-info">
@@ -490,7 +498,9 @@ else
                     <div id="mm-email"  class="dir-modal-row d-none"></div>
                     <div id="mm-family" class="dir-modal-row d-none"></div>
                     <div id="mm-bd"     class="dir-modal-row d-none"></div>
+                    <div id="mm-joined" class="dir-modal-row d-none"></div>
                     <div id="mm-address" class="dir-modal-row d-none"></div>
+                    <div id="mm-groups" class="dir-modal-row d-none"></div>
                 </div>
             </div>
         </div>
@@ -499,6 +509,22 @@ else
 
 @section Scripts {
 <script>
+//  Photo lightbox — click either modal's main photo to view full-size 
+document.getElementById('fm-photo').addEventListener('click', function () {
+    if (!this.classList.contains('d-none')) window.openLightbox(this.src, this.alt);
+});
+document.getElementById('mm-photo').addEventListener('click', function () {
+    if (!this.classList.contains('d-none')) window.openLightbox(this.src, this.alt);
+});
+document.getElementById('fm-household').addEventListener('click', function (e) {
+    const img = e.target.closest('.dir-modal-person-photo');
+    if (img) window.openLightbox(img.src, img.alt);
+});
+document.getElementById('fm-children').addEventListener('click', function (e) {
+    const img = e.target.closest('.dir-modal-person-photo');
+    if (img) window.openLightbox(img.src, img.alt);
+});
+
 //  Family modal 
 document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     const btn = e.relatedTarget;
@@ -558,7 +584,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
             ? `<span class="dir-modal-fallback">Uses family contact above</span>`
             : `<span class="dir-modal-fallback">No contact on file</span>`;
         const avatar = a.photo
-            ? `<img class="dir-modal-person-photo" src="${a.photo}" alt="${a.name}" />`
+            ? `<img class="dir-modal-person-photo lightbox-trigger" src="${a.photo}" alt="${a.name}" />`
             : `<div class="dir-modal-person-initials">${a.initials || (a.name || '?')[0]}</div>`;
         hh += `<div class="dir-modal-person">
                    ${avatar}
@@ -567,7 +593,9 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
                        <div class="dir-modal-person-contact">
                            ${contact}
                            ${a.birthdate ? `<span><i class="fa-solid fa-cake-candles dir-icon"></i> ${a.birthdate}</span>` : ''}
+                           ${a.dateJoined ? `<span><i class="fa-solid fa-calendar-check dir-icon"></i> Member since ${a.dateJoined}</span>` : ''}
                        </div>
+                       ${(a.groups && a.groups.length) ? `<p class="dir-modal-person-groups"><i class="fa-solid fa-people-group dir-icon"></i> Groups/Ministries: ${a.groups.join(', ')}</p>` : ''}
                    </div>
                </div>`;
     });
@@ -578,7 +606,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
     let ch = '';
     children.forEach(c => {
         const avatar = c.photo
-            ? `<img class="dir-modal-person-photo dir-modal-person-photo--sm" src="${c.photo}" alt="${c.name}" />`
+            ? `<img class="dir-modal-person-photo dir-modal-person-photo--sm lightbox-trigger" src="${c.photo}" alt="${c.name}" />`
             : `<div class="dir-modal-person-initials dir-modal-person-initials--sm">${c.initials || (c.name || '?')[0]}</div>`;
         ch += `<span class="dir-modal-child-chip">${avatar}${c.name}${c.birthdate ? ` <i class="fa-solid fa-cake-candles dir-icon"></i> ${c.birthdate}` : ''}</span>`;
     });
@@ -598,9 +626,11 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     const office  = get('office');
     const staffRolesRaw = get('staffroles');
     const bd      = get('birthdate');
+    const joined  = get('datejoined');
     const photo   = get('photo');
     const initials = get('initials');
     const family  = get('family');
+    const groupsRaw = get('groups');
 
     document.getElementById('mm-name').textContent = name;
 
@@ -649,6 +679,10 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
     if (bd) { bdEl.innerHTML = `<i class="fa-solid fa-cake-candles dir-icon"></i> ${bd}`; bdEl.classList.remove('d-none'); }
     else { bdEl.classList.add('d-none'); }
 
+    const joinedEl = document.getElementById('mm-joined');
+    if (joined) { joinedEl.innerHTML = `<i class="fa-solid fa-calendar-check dir-icon"></i> Member since ${joined}`; joinedEl.classList.remove('d-none'); }
+    else { joinedEl.classList.add('d-none'); }
+
     // Individual member address
     const addrIndEl = document.getElementById('mm-address');
     if (addrIndEl) {
@@ -658,6 +692,14 @@ document.getElementById('memberModal').addEventListener('show.bs.modal', e => {
             addrIndEl.classList.remove('d-none');
         } else { addrIndEl.classList.add('d-none'); }
     }
+
+    // Groups/Ministries
+    const groupsEl = document.getElementById('mm-groups');
+    const groups = groupsRaw.split(',').map(g => g.trim()).filter(Boolean);
+    if (groups.length) {
+        groupsEl.innerHTML = `<i class="fa-solid fa-people-group dir-icon"></i> Groups/Ministries: ${groups.join(', ')}`;
+        groupsEl.classList.remove('d-none');
+    } else { groupsEl.classList.add('d-none'); }
 });
 
 //  Instant, fully client-side search & filter 

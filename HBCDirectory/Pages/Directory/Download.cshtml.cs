@@ -3,11 +3,13 @@ using HBCDirectory.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace HBCDirectory.Pages.Directory
 {
     [Authorize]
+    [EnableRateLimiting("pdf")]
     public class DownloadModel : PageModel
     {
         private readonly DirectoryContext _db;

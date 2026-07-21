@@ -44,7 +44,8 @@
     <div class="collapse" id="addMemberForm">
         <div class="form-card mb-4">
             <h6 class="form-card-title">Add New Member</h6>
-            <form method="post" asp-page-handler="AddMember" enctype="multipart/form-data">
+            <form method="post" asp-page-handler="AddMember" enctype="multipart/form-data"
+                  onsubmit="return combinePhone('add-phone-code','add-phone-local','add-phone-hidden')">
 
                 <div class="form-grid">
                     <div class="form-field">
@@ -78,9 +79,9 @@
                         </select>
                     </div>
                     <div class="form-field form-field--full" id="add-emailField">
-                        <label class="form-label">Email Address <span class="text-danger">*</span></label>
+                        <label class="form-label">Email Address <span class="text-danger" id="add-email-required-mark">*</span></label>
                         <input name="email" type="email" class="form-control" id="add-email"
-                               placeholder="Required for adults — used as login username" />
+                               placeholder="Used as login username — required for Members, optional for Attendants" />
                     </div>
                     <div class="form-field">
                         <label class="form-label">Birthdate</label>
@@ -92,7 +93,11 @@
                     </div>
                     <div class="form-field">
                         <label class="form-label">Phone</label>
-                        <input name="phoneNumber" class="form-control" placeholder="+27 ..." />
+                        <div class="phone-input-group">
+                            <select class="form-select phone-country-code" id="add-phone-code" data-default="+27"></select>
+                            <input type="tel" class="form-control" id="add-phone-local" placeholder="82 123 4567" />
+                        </div>
+                        <input type="hidden" name="phoneNumber" id="add-phone-hidden" />
                     </div>
                     <div class="form-field" id="add-dateJoinedField">
                         <label class="form-label">Date Became Member</label>
@@ -229,7 +234,8 @@
     <div class="collapse" id="addFamilyForm">
         <div class="form-card mb-4">
             <h6 class="form-card-title">Add New Family</h6>
-            <form method="post" asp-page-handler="AddFamily" enctype="multipart/form-data">
+            <form method="post" asp-page-handler="AddFamily" enctype="multipart/form-data"
+                  onsubmit="return combinePhone('add-fphone-code','add-fphone-local','add-fphone-hidden')">
                 <div class="form-grid">
                     <div class="form-field form-field--full">
                         <label class="form-label">Family Name <span class="text-danger">*</span></label>
@@ -241,7 +247,11 @@
                     </div>
                     <div class="form-field">
                         <label class="form-label">Family Phone</label>
-                        <input name="familyPhone" class="form-control" placeholder="+27 ..." />
+                        <div class="phone-input-group">
+                            <select class="form-select phone-country-code" id="add-fphone-code" data-default="+27"></select>
+                            <input type="tel" class="form-control" id="add-fphone-local" placeholder="82 123 4567" />
+                        </div>
+                        <input type="hidden" name="familyPhone" id="add-fphone-hidden" />
                     </div>
                     <div class="form-field">
                         <label class="form-label">Group Photo</label>
@@ -1027,7 +1037,8 @@ function togglePdfPasswordVisibility() {
                                 @if (!string.IsNullOrEmpty(member.PhotoFileName))
                                 {
                                     <img src="@Model.PhotoUrl(member.PhotoFileName)"
-                                         class="pending-photo" alt="Current photo" />
+                                         class="pending-photo lightbox-trigger" alt="Current photo"
+                                         onclick="openLightbox(this.src, this.alt)" />
                                 }
                                 else
                                 {
@@ -1058,7 +1069,8 @@ function togglePdfPasswordVisibility() {
                                 @if (hasPhoto)
                                 {
                                     <img src="@Model.PhotoUrl(p.PendingPhotoFileName)"
-                                         class="pending-photo pending-photo--new" alt="Pending photo" />
+                                         class="pending-photo pending-photo--new lightbox-trigger" alt="Pending photo"
+                                         onclick="openLightbox(this.src, this.alt)" />
                                     <span class="pending-photo-note" style="color:var(--dir-mustard);font-size:12px;font-weight:500;">
                                         <i class="fa-solid fa-image"></i> New photo
                                     </span>
@@ -1183,7 +1195,8 @@ function togglePdfPasswordVisibility() {
                 <h5 class="modal-title">Edit Member</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post" asp-page-handler="EditMember" enctype="multipart/form-data">
+            <form method="post" asp-page-handler="EditMember" enctype="multipart/form-data"
+                  onsubmit="return combinePhone('edit-phone-code','edit-phone-local','edit-phone-hidden')">
                 <div class="modal-body">
                     <input type="hidden" name="id" id="edit-id" />
                     <div class="form-grid">
@@ -1220,7 +1233,7 @@ function togglePdfPasswordVisibility() {
                             </select>
                         </div>
                         <div class="form-field form-field--full" id="edit-emailField">
-                            <label class="form-label">Email</label>
+                            <label class="form-label">Email <span class="text-danger" id="edit-email-required-mark">*</span></label>
                             <input name="email" id="edit-email" type="email" class="form-control" />
                         </div>
                         <div class="form-field">
@@ -1233,7 +1246,11 @@ function togglePdfPasswordVisibility() {
                         </div>
                         <div class="form-field">
                             <label class="form-label">Phone</label>
-                            <input name="phoneNumber" id="edit-phone" class="form-control" />
+                            <div class="phone-input-group">
+                                <select class="form-select phone-country-code" id="edit-phone-code" data-default="+27"></select>
+                                <input type="tel" class="form-control" id="edit-phone-local" placeholder="82 123 4567" />
+                            </div>
+                            <input type="hidden" name="phoneNumber" id="edit-phone-hidden" />
                         </div>
                         <div class="form-field">
                             <label class="form-label">Date Became Member</label>
@@ -1317,7 +1334,8 @@ function togglePdfPasswordVisibility() {
                     <!-- ── LEFT: Family details ──────────────────────── -->
                     <div class="col-md-6" style="padding:24px;border-right:1px solid var(--dir-light2);">
                         <p style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dir-gold);margin-bottom:16px;">Family Details</p>
-                        <form method="post" asp-page-handler="EditFamily" enctype="multipart/form-data">
+                        <form method="post" asp-page-handler="EditFamily" enctype="multipart/form-data"
+                              onsubmit="return combinePhone('edit-fphone-code','edit-fphone-local','edit-fphone-hidden')">
                             <input type="hidden" name="id" id="edit-fid" />
                             <div class="form-grid">
                                 <div class="form-field form-field--full">
@@ -1331,8 +1349,11 @@ function togglePdfPasswordVisibility() {
                                 </div>
                                 <div class="form-field">
                                     <label class="form-label">Family Phone</label>
-                                    <input name="familyPhone" id="edit-fphone" class="form-control"
-                                           placeholder="+27 ..." />
+                                    <div class="phone-input-group">
+                                        <select class="form-select phone-country-code" id="edit-fphone-code" data-default="+27"></select>
+                                        <input type="tel" class="form-control" id="edit-fphone-local" placeholder="82 123 4567" />
+                                    </div>
+                                    <input type="hidden" name="familyPhone" id="edit-fphone-hidden" />
                                 </div>
                                 <div class="form-field">
                                     <label class="form-label">Group Photo</label>
@@ -1418,7 +1439,12 @@ function updateAddForm() {
     document.getElementById('add-officeField').style.display       = isAdult && isMember ? '' : 'none';
     document.getElementById('add-emailField').style.display        = isAdult ? '' : 'none';
     document.getElementById('add-anniversaryField').style.display  = isAdult ? '' : 'none';
-    document.getElementById('add-email').required = isAdult;
+
+    // Attendants don't get directory access, so
+    // there's no reason to force an email address on them, only Members need one, since it becomes their login username.
+    const emailRequired = isAdult && isMember;
+    document.getElementById('add-email').required = emailRequired;
+    document.getElementById('add-email-required-mark').style.display = emailRequired ? '' : 'none';
 }
 
 //  Edit form: show/hide fields by MemberType 
@@ -1432,6 +1458,10 @@ function updateEditForm() {
     document.getElementById('edit-officeField').style.display       = isAdult && isMember ? '' : 'none';
     document.getElementById('edit-emailField').style.display        = isAdult ? '' : 'none';
     document.getElementById('edit-anniversaryField').style.display  = isAdult ? '' : 'none';
+
+    const emailRequired = isAdult && isMember;
+    document.getElementById('edit-email').required = emailRequired;
+    document.getElementById('edit-email-required-mark').style.display = emailRequired ? '' : 'none';
 }
 
 //  Populate Edit Member modal 
@@ -1445,7 +1475,10 @@ document.getElementById('editMemberModal').addEventListener('show.bs.modal', e =
     document.getElementById('edit-email').value       = get('email');
     document.getElementById('edit-birthdate').value   = get('birthdate');
     document.getElementById('edit-anniversary').value = get('anniversary');
-    document.getElementById('edit-phone').value       = get('phone');
+
+    const phoneParts = splitPhoneForEdit(get('phone'), '+27');
+    document.getElementById('edit-phone-code').value  = phoneParts.code;
+    document.getElementById('edit-phone-local').value = phoneParts.local;
 
     const mt = get('membertype');
     document.getElementById('edit-memberType').value     = mt || 'Adult';
@@ -1473,7 +1506,9 @@ document.getElementById('editFamilyModal').addEventListener('show.bs.modal', e =
     document.getElementById('edit-fid').value      = btn.getAttribute('data-id') || '';
     document.getElementById('edit-fname').value    = btn.getAttribute('data-familyname') || '';
     document.getElementById('edit-faddress').value = btn.getAttribute('data-address') || '';
-    document.getElementById('edit-fphone').value   = btn.getAttribute('data-familyphone') || '';
+    const fPhoneParts = splitPhoneForEdit(btn.getAttribute('data-familyphone') || '', '+27');
+    document.getElementById('edit-fphone-code').value  = fPhoneParts.code;
+    document.getElementById('edit-fphone-local').value = fPhoneParts.local;
     document.getElementById('edit-fnotes').value   = btn.getAttribute('data-notes') || '';
     document.getElementById('edit-family-title').textContent =
         'Edit — ' + (btn.getAttribute('data-familyname') || 'Family');

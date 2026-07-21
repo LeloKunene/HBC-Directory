@@ -8,21 +8,6 @@
     </a>
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show">
-        @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
 @if (Model.HasPendingUpdate)
 {
     <div class="alert d-flex align-items-center gap-2" style="background:#fff8e6;border:0.5px solid #e8c97a;color:#a07830;">
@@ -44,12 +29,26 @@
                 <div class="card-body">
 
                     <div class="text-center mb-4">
-                        <img src="@Model.PhotoUrl(Model.CurrentMember.PhotoFileName)"
-                             alt="Profile photo"
-                             style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:3px solid var(--color-primary)" />
+                        <div class="profile-photo-wrap">
+                            <img id="profile-photo-preview"
+                                 src="@Model.PhotoUrl(Model.CurrentMember.PhotoFileName)"
+                                 alt="Profile photo"
+                                 class="lightbox-trigger"
+                                 style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:3px solid var(--color-primary)"
+                                 onclick="openLightbox(this.src, this.alt)" />
+                            <button type="button" class="profile-photo-camera-btn"
+                                    title="Change photo" aria-label="Change photo"
+                                    onclick="document.getElementById('profile-photo-input').click()">
+                                <i class="fa-solid fa-camera"></i>
+                            </button>
+                        </div>
+                        <p class="small text-muted mt-2 mb-0 d-none" id="profile-photo-hint">
+                            New photo selected — click "Save changes" below to apply it.
+                        </p>
                     </div>
 
-                    <form method="post" enctype="multipart/form-data" class="admin-form-grid">
+                    <form method="post" enctype="multipart/form-data" class="admin-form-grid"
+                          onsubmit="return combinePhone('profile-phone-code','profile-phone-local','profile-phone-hidden')">
 
                         <div class="form-field">
                             <label class="form-label">
@@ -75,7 +74,11 @@
                                 @if (cfg.RequireApprovalForPhone) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
                                 else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
                             </label>
-                            <input name="phoneNumber" class="form-control" value="@Model.CurrentMember.PhoneNumber" />
+                            <div class="phone-input-group">
+                                <select class="form-select phone-country-code" id="profile-phone-code" data-default="+27"></select>
+                                <input type="tel" class="form-control" id="profile-phone-local" placeholder="82 123 4567" />
+                            </div>
+                            <input type="hidden" name="phoneNumber" id="profile-phone-hidden" />
                         </div>
 
                         <div class="form-field">
@@ -93,7 +96,8 @@
                                 @if (cfg.RequireApprovalForPhoto) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
                                 else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
                             </label>
-                            <input type="file" name="photo" class="form-control" accept="image/jpeg,image/png" />
+                            <input type="file" name="photo" id="profile-photo-input" class="form-control"
+                                   accept="image/jpeg,image/png" onchange="previewProfilePhoto(this)" />
                         </div>
 
                         <!-- Privacy: only phone and address -->
@@ -186,4 +190,26 @@
         </div>
 
     </div>
+}
+
+@section Scripts {
+<script>
+    function previewProfilePhoto(input) {
+        if (!input.files || !input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('profile-photo-preview').src = e.target.result;
+            document.getElementById('profile-photo-hint').classList.remove('d-none');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const codeSel = document.getElementById('profile-phone-code');
+        if (!codeSel) return; // no CurrentMember → the form (and this field) isn't on the page
+        const parts = splitPhoneForEdit(@Json.Serialize(Model.CurrentMember?.PhoneNumber), '+27');
+        codeSel.value = parts.code;
+        document.getElementById('profile-phone-local').value = parts.local;
+    });
+</script>
 }

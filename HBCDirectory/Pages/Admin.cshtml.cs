@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Security.Cryptography;
+using System.Threading.RateLimiting;
 
 namespace HBCDirectory.Pages
 {
@@ -22,11 +24,14 @@ namespace HBCDirectory.Pages
         private readonly TokenService      _tokens;
         private readonly EmailService      _email;
         private readonly DirectoryPdfService _pdfService;
+        private readonly RateLimiter        _pdfGenerateLimiter;
 
         public AdminModel(DirectoryContext db, IConfiguration config, PhotoService photos,
-                          TokenService tokens, EmailService email, DirectoryPdfService pdfService)
+                          TokenService tokens, EmailService email, DirectoryPdfService pdfService,
+                          [FromKeyedServices("pdfgenerate")] RateLimiter pdfGenerateLimiter)
         {
             _db = db; _config = config; _photos = photos; _tokens = tokens; _email = email; _pdfService = pdfService;
+            _pdfGenerateLimiter = pdfGenerateLimiter;
         }
 
         public List<Member>          Members          { get; set; } = new();
@@ -94,10 +99,14 @@ namespace HBCDirectory.Pages
             string? phoneNumber, string? address, int? familyId, IFormFile? photo)
         {
             memberType = string.IsNullOrWhiteSpace(memberType) ? "Adult" : memberType;
-            bool isAdult = memberType == "Adult";
+            bool isAdult   = memberType == "Adult";
+            bool isMember  = (memberStatus ?? "Member") == "Member";
 
-            if (isAdult && string.IsNullOrWhiteSpace(email))
-            { TempData["Error"] = "Email is required for adults."; return RedirectToPage(); }
+            /*  Only Members get a login
+                Attendants shouldn't have directory access until they become a
+                Member, so there's no reason to force an email address on them.*/
+            if (isAdult && isMember && string.IsNullOrWhiteSpace(email))
+            { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
             { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
 
@@ -114,7 +123,7 @@ namespace HBCDirectory.Pages
                 {
                     Name         = CapFirst(name),
                     Surname      = CapFirst(surname),
-                    Email        = isAdult ? email!.Trim().ToLower() : null,
+                    Email        = isAdult && !string.IsNullOrWhiteSpace(email) ? email.Trim().ToLower() : null,
                     MemberType   = memberType,
                     MemberStatus = isAdult ? (memberStatus ?? "Member") : null,
                     ChurchOffice = isAdult && memberStatus == "Member"
@@ -139,27 +148,34 @@ namespace HBCDirectory.Pages
                 _db.Members.Add(member);
                 await _db.SaveChangesAsync();
 
-                if (isAdult && !string.IsNullOrEmpty(member.Email))
-                {
-                    var tmp  = GenerateTempPassword();
-                    _db.MemberAccounts.Add(new MemberAccount
-                    {
-                        MemberId     = member.Id,
-                        Username     = member.Email,
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(tmp)
-                    });
-                    await _db.SaveChangesAsync();
-
-                    var token = await _tokens.CreateTokenAsync(member.Email, TimeSpan.FromHours(24));
-                    var link  = $"{Request.Scheme}://{Request.Host}/ResetPassword?token={token}";
-                    await _email.SendWelcomeEmailAsync(member.Email, member.DisplayName, tmp, link);
-                }
+                if (isAdult && isMember && !string.IsNullOrEmpty(member.Email))
+                    await CreateMemberAccountAsync(member);
 
                 TempData["Success"] = $"'{member.DisplayName}' added.";
                 await LogChangeAsync("Member", member.Id, member.DisplayName, "Created");
             }
             catch (Exception ex) { Console.WriteLine(ex.Message); TempData["Error"] = "Could not add member."; }
             return RedirectToPage();
+        }
+
+        /*  Grants directory login access: creates a MemberAccount with a
+            temporary password and emails the member a reset link. Only ever
+            called for Members with an email set. Attendants shouldn't have
+            access until they're promoted to Member*/
+        private async Task CreateMemberAccountAsync(Member member)
+        {
+            var tmp = GenerateTempPassword();
+            _db.MemberAccounts.Add(new MemberAccount
+            {
+                MemberId     = member.Id,
+                Username     = member.Email!,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(tmp)
+            });
+            await _db.SaveChangesAsync();
+
+            var token = await _tokens.CreateTokenAsync(member.Email!, TimeSpan.FromHours(24));
+            var link  = $"{Request.Scheme}://{Request.Host}/ResetPassword?token={token}";
+            await _email.SendWelcomeEmailAsync(member.Email!, member.DisplayName, tmp, link);
         }
 
         //  Edit Member 
@@ -174,9 +190,15 @@ namespace HBCDirectory.Pages
             var m = await _db.Members.FindAsync(id);
             if (m == null) return NotFound();
 
-            bool isAdult = memberType == "Adult";
+            bool isAdult  = memberType == "Adult";
+            bool isMember = (memberStatus ?? "Member") == "Member";
+
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
             { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
+
+            var effectiveEmail = !string.IsNullOrWhiteSpace(email) ? email.Trim() : m.Email;
+            if (isAdult && isMember && string.IsNullOrWhiteSpace(effectiveEmail))
+            { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
 
             m.Name         = CapFirst(name);
             m.Surname      = CapFirst(surname);
@@ -219,6 +241,17 @@ namespace HBCDirectory.Pages
             }
 
             await _db.SaveChangesAsync();
+
+            /*  Promoted from Attendant to Member (or was already a Member but
+                never had an account, e.g. was added before an email existed)
+                and now has an email —> grant directory access.*/
+            if (isAdult && isMember && !string.IsNullOrEmpty(m.Email))
+            {
+                var hasAccount = await _db.MemberAccounts.AnyAsync(a => a.MemberId == id);
+                if (!hasAccount)
+                    await CreateMemberAccountAsync(m);
+            }
+
             await LogChangeAsync("Member", m.Id, m.DisplayName, "Updated");
             TempData["Success"] = $"'{m.DisplayName}' updated.";
             return RedirectToPage();
@@ -555,6 +588,13 @@ namespace HBCDirectory.Pages
 
         public async Task<IActionResult> OnPostGeneratePdfAsync()
         {
+            using var lease = await _pdfGenerateLimiter.AcquireAsync(1);
+            if (!lease.IsAcquired)
+            {
+                TempData["Error"] = "PDF generation is limited to 10 per hour. Please try again later.";
+                return RedirectToPage();
+            }
+
             var settings = await _db.PdfSettings.FindAsync(1);
             if (settings == null)
             {
@@ -581,11 +621,16 @@ namespace HBCDirectory.Pages
             else if (!string.IsNullOrWhiteSpace(password))
                 settings.Password = password.Trim();
 
-            // If a password was just removed and a PDF is already cached in R2,
-            // that cached file was encrypted at generation time — the setting
-            // alone can't strip it, so regenerate it now to match.
             if (removePassword && settings.R2Key != null)
             {
+                using var lease = await _pdfGenerateLimiter.AcquireAsync(1);
+                if (!lease.IsAcquired)
+                {
+                    TempData["Error"] = "PDF generation is limited to 10 per hour. The password field was saved, but the stored PDF could not be regenerated yet — try 'Update PDF' shortly.";
+                    await _db.SaveChangesAsync();
+                    return RedirectToPage();
+                }
+
                 await RegenerateAndCachePdfAsync(settings);
                 TempData["Success"] = "Password removed. The stored PDF has been updated.";
             }
@@ -616,11 +661,26 @@ namespace HBCDirectory.Pages
             if (settings.HasPassword)
                 bytes = PdfPasswordHelper.AddPassword(bytes, settings.Password!);
 
-            var key = $"pdf/hbc-directory-{DateTime.Today:yyyy-MM-dd}.pdf";
+            /* A predictable, date-based key would let anyone who guesses the
+                pattern download the directory PDF directly from R2 if the
+                bucket were ever accidentally made public — use a random key
+                instead so it's only reachable via the authenticated Download
+                page, which looks it up from settings.R2Key in the database.*/
+            var key = $"pdf/hbc-directory-{Guid.NewGuid():N}.pdf";
+
+            /* Each generation used to write a brand-new key without removing
+                the previous one, so old PDFs (containing member photos, phone
+                numbers, addresses) accumulated in R2 forever. Keep track of the
+                old key and remove it once the new upload has succeeded.*/
+            var previousKey = settings.R2Key;
+
             await _pdfService.UploadToR2Async(bytes, key);
 
             settings.R2Key         = key;
             settings.LastGenerated = DateTime.UtcNow;
+
+            if (!string.IsNullOrEmpty(previousKey) && previousKey != key)
+                await DeleteFromR2Async(previousKey);
         }
 
         //  Helpers 
@@ -705,10 +765,19 @@ namespace HBCDirectory.Pages
                 using var input  = new MemoryStream(pdfBytes);
                 using var output = new MemoryStream();
                 var reader = new PdfReader(input);
+
+                /* The owner password grants full control over the PDF (removing
+                    the user password, changing permissions, etc). Deriving it from
+                    the user password ("<password>_o") meant anyone who knew the
+                    open password could trivially guess it. Thus we now use an independent
+                    random value each time so nobody needs to remember it,
+                    it only needs to exist so the encryption has an owner.*/
+                var ownerPassword = RandomNumberGenerator.GetBytes(32);
+
                 var writerProps = new WriterProperties()
                     .SetStandardEncryption(
                         System.Text.Encoding.UTF8.GetBytes(password),
-                        System.Text.Encoding.UTF8.GetBytes(password + "_o"),
+                        ownerPassword,
                         EncryptionConstants.ALLOW_PRINTING | EncryptionConstants.ALLOW_COPY,
                         EncryptionConstants.ENCRYPTION_AES_128
                     );
