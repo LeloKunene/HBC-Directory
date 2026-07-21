@@ -155,7 +155,8 @@ namespace HBCDirectory.Pages
             return await db.Members
                 .Include(m => m.Family)
                 .Where(m => m.ChurchOffice == "Elder" || m.ChurchOffice == "Deacon")
-                .OrderBy(m => m.ChurchOffice).ThenBy(m => m.Surname).ThenBy(m => m.Name)
+                .OrderBy(m => m.ChurchOffice == "Elder" ? 0 : 1)
+                .ThenBy(m => m.Surname).ThenBy(m => m.Name)
                 .ToListAsync();
         }
 
