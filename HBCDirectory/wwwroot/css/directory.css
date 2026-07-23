@@ -552,6 +552,26 @@
   border-color: var(--dir-mustard);
 }
 
+.dir-bell-toggle {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid var(--dir-light2);
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: var(--dir-dark);
+  transition: border-color 0.15s;
+}
+
+.dir-bell-toggle:hover {
+  border-color: var(--dir-mustard);
+}
+
 .filter-dot {
   position: absolute;
   top: 6px;
