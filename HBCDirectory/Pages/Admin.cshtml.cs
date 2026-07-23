@@ -523,6 +523,21 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
+        public async Task<IActionResult> OnPostEditGroupAsync(int id, string groupName, string? description)
+        {
+            if (string.IsNullOrWhiteSpace(groupName))
+            { TempData["Error"] = "Group name is required."; return RedirectToPage(); }
+
+            var group = await _db.Groups.FindAsync(id);
+            if (group == null) return NotFound();
+
+            group.Name = groupName.Trim();
+            group.Description = description?.Trim();
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Group renamed to '{group.Name}'.";
+            return RedirectToPage();
+        }
+
         public async Task<IActionResult> OnPostDeleteGroupAsync(int id)
         {
             var group = await _db.Groups.FindAsync(id);
@@ -565,6 +580,20 @@ namespace HBCDirectory.Pages
             _db.CareGroups.Add(new CareGroup { Name = careGroupName.Trim() });
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Care group '{careGroupName}' created.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostEditCareGroupAsync(int id, string careGroupName)
+        {
+            if (string.IsNullOrWhiteSpace(careGroupName))
+            { TempData["Error"] = "Care group name is required."; return RedirectToPage(); }
+
+            var cg = await _db.CareGroups.FindAsync(id);
+            if (cg == null) return NotFound();
+
+            cg.Name = careGroupName.Trim();
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Care group renamed to '{cg.Name}'.";
             return RedirectToPage();
         }
 
