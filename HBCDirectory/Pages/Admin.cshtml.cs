@@ -42,6 +42,7 @@ namespace HBCDirectory.Pages
         public List<MemberGroup>   MemberGroups   { get; set; } = new();
         public List<CareGroup>     CareGroups     { get; set; } = new();
         public List<PendingUpdate> PendingUpdates { get; set; } = new();
+        public List<PendingFamilyPhoto> PendingFamilyPhotos { get; set; } = new();
         public List<ChangeLog>     RecentChanges  { get; set; } = new();
         public List<(string Label, int Value)> Stats { get; set; } = new();
         public ApprovalSettings ApprovalConfig { get; set; } = new();
@@ -89,6 +90,9 @@ namespace HBCDirectory.Pages
             PendingUpdates = await _db.PendingUpdates.Include(p => p.Member)
                 .Where(p => !p.IsApproved && !p.IsRejected)
                 .OrderBy(p => p.SubmittedAt).ToListAsync();
+            PendingFamilyPhotos = await _db.PendingFamilyPhotos.Include(p => p.Family)
+                .Where(p => !p.IsApproved && !p.IsRejected)
+                .OrderBy(p => p.SubmittedAt).ToListAsync();
             // Status changes (Member Management) are Leadership-only
             // information — even the log entry itself ("Member → Pending
             // Discipline") shouldn't surface in the general Admin activity
@@ -116,6 +120,9 @@ namespace HBCDirectory.Pages
             Groups           = await _db.Groups.OrderBy(g => g.DisplayOrder).ToListAsync();
             MemberGroups     = await _db.MemberGroups.Include(mg => mg.Member).Include(mg => mg.Group).ToListAsync();
             PendingUpdates   = await _db.PendingUpdates.Include(p => p.Member)
+                                   .Where(p => !p.IsApproved && !p.IsRejected)
+                                   .OrderBy(p => p.SubmittedAt).ToListAsync();
+            PendingFamilyPhotos = await _db.PendingFamilyPhotos.Include(p => p.Family)
                                    .Where(p => !p.IsApproved && !p.IsRejected)
                                    .OrderBy(p => p.SubmittedAt).ToListAsync();
             RecentChanges    = await _db.ChangeLogs
@@ -722,6 +729,47 @@ namespace HBCDirectory.Pages
             await _db.SaveChangesAsync();
 
             TempData["Success"] = $"Update for '{pending.Member.DisplayName}' rejected.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostApprovePendingFamilyPhotoAsync(int id)
+        {
+            var pending = await _db.PendingFamilyPhotos
+                .Include(p => p.Family)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (pending == null) return NotFound();
+
+            var family = pending.Family;
+
+            if (!string.IsNullOrEmpty(family.PhotoFileName))
+                await DeleteFromR2Async(family.PhotoFileName);
+            family.PhotoFileName = pending.PendingPhotoFileName;
+
+            pending.IsApproved = true;
+            pending.ReviewedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            await LogChangeAsync("Family", family.Id, family.FamilyName, "Updated", "Family photo approved");
+
+            TempData["Success"] = $"Family photo for '{family.FamilyName}' approved.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostRejectPendingFamilyPhotoAsync(int id, string? reviewNote)
+        {
+            var pending = await _db.PendingFamilyPhotos
+                .Include(p => p.Family)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (pending == null) return NotFound();
+
+            await DeleteFromR2Async(pending.PendingPhotoFileName);
+
+            pending.IsRejected = true;
+            pending.ReviewedAt = DateTime.UtcNow;
+            pending.ReviewNote = reviewNote?.Trim();
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"Family photo submission for '{pending.Family.FamilyName}' rejected.";
             return RedirectToPage();
         }
 

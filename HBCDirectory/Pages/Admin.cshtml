@@ -1344,6 +1344,86 @@ function togglePdfPasswordVisibility() {
 </div>
 
 <!-- ══════════════════════════════════════════════════════
+     PENDING FAMILY PHOTOS — submitted by a family's designated head via
+     their own Profile page; always require approval, no setting to skip.
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5">
+    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Pending Family Photos</h4>
+        @if (Model.PendingFamilyPhotos.Any())
+        {
+            <span class="badge bg-warning text-dark ms-2">@Model.PendingFamilyPhotos.Count</span>
+        }
+    </div>
+    @if (!Model.PendingFamilyPhotos.Any())
+    {
+        <p class="text-muted">No pending family photos. Submissions from a family's head appear here.</p>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3">
+            @foreach (var p in Model.PendingFamilyPhotos)
+            {
+                var family = p.Family;
+                <div class="pending-update-card">
+                    <div class="pending-update-header">
+                        <div>
+                            <strong>@family.FamilyName</strong>
+                            <span class="text-muted ms-2" style="font-size:12px;">
+                                Submitted @p.SubmittedAt.ToString("d MMM yyyy") at @p.SubmittedAt.ToString("HH:mm")
+                            </span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <form method="post" asp-page-handler="ApprovePendingFamilyPhoto">
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="fa-solid fa-check me-1"></i>Approve
+                                </button>
+                            </form>
+                            <form method="post" asp-page-handler="RejectPendingFamilyPhoto"
+                                  onsubmit="return confirm('Reject this photo submission for @family.FamilyName?')">
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fa-solid fa-xmark me-1"></i>Reject
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="pending-update-body">
+                        <div class="pending-col">
+                            <p class="pending-col-label">Current</p>
+                            <div class="pending-photo-row">
+                                @if (!string.IsNullOrEmpty(family.PhotoFileName))
+                                {
+                                    <img src="@Model.PhotoUrl(family.PhotoFileName)"
+                                         class="pending-photo lightbox-trigger" alt="Current family photo"
+                                         onclick="openLightbox(this.src, this.alt)" />
+                                }
+                                else
+                                {
+                                    <div class="pending-photo-placeholder">@family.FamilyName[0]</div>
+                                }
+                            </div>
+                        </div>
+                        <div class="pending-col">
+                            <p class="pending-col-label pending-col-label--proposed">Proposed</p>
+                            <div class="pending-photo-row">
+                                <img src="@Model.PhotoUrl(p.PendingPhotoFileName)"
+                                     class="pending-photo pending-photo--new lightbox-trigger" alt="Proposed family photo"
+                                     onclick="openLightbox(this.src, this.alt)" />
+                                <span class="pending-photo-note" style="color:var(--dir-mustard);font-size:12px;font-weight:500;">
+                                    <i class="fa-solid fa-image"></i> New photo
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- ══════════════════════════════════════════════════════
      CHANGE HISTORY (Audit Log)
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5">

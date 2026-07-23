@@ -31,6 +31,7 @@ namespace HBCDirectory.Pages.Profile
         public bool HasPendingUpdate { get; set; }
         public List<HBCDirectory.Models.MemberGroup> MemberGroups { get; set; } = new();
         public Family? MyFamily { get; set; }
+        public bool HasPendingFamilyPhoto { get; set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -64,7 +65,11 @@ namespace HBCDirectory.Pages.Profile
                 {
                     var family = await _db.Families.FindAsync(CurrentMember.FamilyId.Value);
                     if (family != null && family.HeadOfFamilyId == CurrentMember.Id)
+                    {
                         MyFamily = family;
+                        HasPendingFamilyPhoto = await _db.PendingFamilyPhotos
+                            .AnyAsync(p => p.FamilyId == family.Id && !p.IsApproved && !p.IsRejected);
+                    }
                 }
             }
 
@@ -227,17 +232,18 @@ namespace HBCDirectory.Pages.Profile
                 return RedirectToPage();
             }
 
+            var existingPending = await _db.PendingFamilyPhotos
+                .FirstOrDefaultAsync(p => p.FamilyId == family.Id && !p.IsApproved && !p.IsRejected);
+            if (existingPending != null)
+            {
+                existingPending.IsRejected = true;
+                existingPending.ReviewNote = "Superseded by a newer submission";
+            }
+
             var credentials = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
             var s3Config    = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
             using var client = new AmazonS3Client(credentials, s3Config);
-
-            if (!string.IsNullOrEmpty(family.PhotoFileName))
-            {
-                try { await client.DeleteObjectAsync(_config["R2:BucketName"], family.PhotoFileName); }
-                catch { }
-            }
-
-            var fileName = Guid.NewGuid() + Path.GetExtension(familyPhoto.FileName).ToLowerInvariant();
+            var fileName = "pending-" + Guid.NewGuid() + Path.GetExtension(familyPhoto.FileName).ToLowerInvariant();
             using var stream = familyPhoto.OpenReadStream();
             await client.PutObjectAsync(new PutObjectRequest
             {
@@ -248,10 +254,15 @@ namespace HBCDirectory.Pages.Profile
                 DisablePayloadSigning = true
             });
 
-            family.PhotoFileName = fileName;
+            _db.PendingFamilyPhotos.Add(new PendingFamilyPhoto
+            {
+                FamilyId = family.Id,
+                PendingPhotoFileName = fileName,
+                SubmittedAt = DateTime.UtcNow
+            });
             await _db.SaveChangesAsync();
 
-            TempData["Success"] = $"'{family.FamilyName}' family photo updated.";
+            TempData["Success"] = $"Photo submitted for '{family.FamilyName}' — it'll show on the directory once an admin approves it.";
             return RedirectToPage();
         }
 

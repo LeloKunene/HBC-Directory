@@ -174,17 +174,28 @@
                     <div class="card-header"><i class="fa-solid fa-image me-2"></i>Family Photo</div>
                     <div class="card-body">
                         <p class="text-muted small mb-3">
-                            You're the head of the @Model.MyFamily.FamilyName family — you can update the
-                            family photo shown on the directory.
+                            You're the head of the @Model.MyFamily.FamilyName family, you can update the
+                            family photo shown on the directory. Changes need admin approval before they
+                            go live for everyone.
                         </p>
+                        @if (Model.HasPendingFamilyPhoto)
+                        {
+                            <div class="alert alert-warning py-2 px-3 small mb-3">
+                                <i class="fa-solid fa-clock me-1"></i>
+                                A new family photo is awaiting admin approval. The photo below is still the
+                                one everyone else currently sees.
+                            </div>
+                        }
                         <div class="text-center mb-3">
                             <img src="@Model.PhotoUrl(Model.MyFamily.PhotoFileName)" alt="Family photo"
-                                 style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:3px solid var(--color-primary)" />
+                                 class="lightbox-trigger"
+                                 style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:3px solid var(--color-primary);cursor:pointer;"
+                                 onclick="openLightbox(this.src, this.alt)" />
                         </div>
                         <form method="post" asp-page-handler="UpdateFamilyPhoto" enctype="multipart/form-data">
                             <input type="file" name="familyPhoto" class="form-control form-control-sm mb-2"
                                    accept="image/jpeg,image/png" required />
-                            <button type="submit" class="btn btn-sm btn-primary w-100">Update Family Photo</button>
+                            <button type="submit" class="btn btn-sm btn-primary w-100">Submit Family Photo</button>
                         </form>
                     </div>
                 </div>
