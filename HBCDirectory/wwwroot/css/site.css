@@ -90,6 +90,9 @@ a:hover {
   background: var(--color-dark) !important;
   border-bottom: 3px solid var(--color-primary);
   box-shadow: 0 2px 20px rgba(32, 34, 34, 0.4);
+  position: sticky;
+  top: 0;
+  z-index: 1020;
 }
 
 .navbar-brand {
@@ -1412,5 +1415,5 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /*  Phone number: country code + local number   */
 .phone-input-group { display: flex; gap: 8px; }
-.phone-input-group .phone-country-code { flex: 0 0 auto; width: 80px; }
+.phone-input-group .phone-country-code { flex: 0 0 auto; width: 130px; }
 .phone-input-group input[type="tel"] { flex: 1 1 auto; min-width: 0; }
