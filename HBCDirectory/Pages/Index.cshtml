@@ -45,20 +45,10 @@
                 <option value="Elder"  selected="@(Model.OfficeFilter == "Elder")">Elders</option>
                 <option value="Deacon" selected="@(Model.OfficeFilter == "Deacon")">Deacons</option>
             </select>
-            @if (Model.AllAssignedStaffRoles.Any())
-            {
-                <select name="staffrole" class="dir-filter-select" onchange="liveFilter()">
-                    <option value="">All staff roles</option>
-                    @foreach (var r in Model.AllAssignedStaffRoles)
-                    {
-                        <option value="@r" selected="@(Model.StaffRoleFilter == r)">@r</option>
-                    }
-                </select>
-            }
             @if (Model.AllGroups.Any())
             {
                 <select name="group" class="dir-filter-select" onchange="liveFilter()">
-                    <option value="">All groups</option>
+                    <option value="">All ministries</option>
                     @foreach (var g in Model.AllGroups)
                     {
                         <option value="@g.Name" selected="@(Model.GroupFilter == g.Name)">@g.Name</option>
@@ -816,11 +806,9 @@ function runFilter() {
     const q          = (document.querySelector('[name="q"]').value || '').trim().toLowerCase();
     const status     = document.querySelector('[name="status"]').value;
     const office     = document.querySelector('[name="office"]').value;
-    const staffRoleSel = document.querySelector('[name="staffrole"]');
     const groupSel     = document.querySelector('[name="group"]');
     const careGroupSel = document.querySelector('[name="caregroup"]');
     const cardTypeSel  = document.querySelector('[name="cardtype"]');
-    const staffRole  = staffRoleSel ? staffRoleSel.value : '';
     const group      = groupSel     ? groupSel.value     : '';
     const careGroup  = careGroupSel ? careGroupSel.value : '';
     const cardType   = cardTypeSel  ? cardTypeSel.value  : '';
@@ -832,12 +820,6 @@ function runFilter() {
         if (q && !search.includes(q)) return false;
 
         if (cardType && card.getAttribute('data-cardtype') !== cardType) return false;
-
-        if (staffRole) {
-            const roles = (card.getAttribute('data-staffroles') || '')
-                .split(',').map(r => r.trim()).filter(Boolean);
-            if (!roles.includes(staffRole)) return false;
-        }
 
         if (group) {
             const groups = (card.getAttribute('data-groups') || '')
@@ -866,7 +848,7 @@ function runFilter() {
         return true;
     }
 
-    const anyActive = !!(q || status || office || staffRole || group || careGroup || cardType);
+    const anyActive = !!(q || status || office || group || careGroup || cardType);
 
     function filterSection(gridId, sectionId, countId, noResultsId) {
         const grid = document.getElementById(gridId);
@@ -906,7 +888,7 @@ function runFilter() {
 
     // Filter dot — shows when any filter besides text search is active
     const dot = document.getElementById('filterDot');
-    if (dot) dot.classList.toggle('d-none', !(status || office || staffRole || group || careGroup || cardType));
+    if (dot) dot.classList.toggle('d-none', !(status || office || group || careGroup || cardType));
 
     const clearBtn = document.getElementById('clearFiltersBtn');
     if (clearBtn) clearBtn.classList.toggle('d-none', !anyActive);
@@ -917,7 +899,6 @@ function runFilter() {
     setOrDel('q',         q);
     setOrDel('status',    status);
     setOrDel('office',    office);
-    setOrDel('staffrole', staffRole);
     setOrDel('group',     group);
     setOrDel('caregroup', careGroup);
     setOrDel('cardtype',  cardType);
@@ -928,11 +909,9 @@ function clearFilters() {
     document.querySelector('[name="q"]').value = '';
     document.querySelector('[name="status"]').value = '';
     document.querySelector('[name="office"]').value = '';
-    const sr = document.querySelector('[name="staffrole"]');
     const gr = document.querySelector('[name="group"]');
     const cg = document.querySelector('[name="caregroup"]');
     const ct = document.querySelector('[name="cardtype"]');
-    if (sr) sr.value = '';
     if (gr) gr.value = '';
     if (cg) cg.value = '';
     if (ct) ct.value = '';
@@ -962,15 +941,13 @@ function toggleSection(name) {
     const row      = document.getElementById('filterRow');
     const status   = document.querySelector('[name="status"]').value;
     const office   = document.querySelector('[name="office"]').value;
-    const srEl     = document.querySelector('[name="staffrole"]');
     const grEl     = document.querySelector('[name="group"]');
     const cgEl     = document.querySelector('[name="caregroup"]');
     const ctEl     = document.querySelector('[name="cardtype"]');
-    const staffRole= srEl ? srEl.value : '';
     const group    = grEl ? grEl.value : '';
     const careGroup= cgEl ? cgEl.value : '';
     const cardType = ctEl ? ctEl.value : '';
-    if (status || office || staffRole || group || careGroup || cardType)
+    if (status || office || group || careGroup || cardType)
         row.classList.add('dir-filter-row--open');
     runFilter();
 })();

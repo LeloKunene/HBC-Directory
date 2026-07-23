@@ -24,24 +24,23 @@ namespace HBCDirectory.Pages
         public List<StaffAssignment> StaffAssignments { get; set; } = new();
         public List<Family>          Families         { get; set; } = new();
         public List<Member>          IndividualMembers{ get; set; } = new();
-        
+
         public Dictionary<int, List<string>> StaffRoleLookup { get; set; } = new();
         public Dictionary<int, List<string>> GroupLookup { get; set; } = new();
         public Dictionary<int, string> CareGroupLookup { get; set; } = new();
         // care group.
         public Dictionary<int, List<string>> CareGroupLeaderLookup { get; set; } = new();
-        public List<string> AllAssignedStaffRoles { get; set; } = new();
         public List<Group> AllGroups { get; set; } = new();
         public List<CareGroup> AllCareGroups { get; set; } = new();
         public string? Q           { get; set; }
         public string? StatusFilter { get; set; }
         public string? OfficeFilter { get; set; }
-        public string? StaffRoleFilter { get; set; }
         public string? GroupFilter     { get; set; }
         public string? CareGroupFilter { get; set; }
         public string? CardTypeFilter  { get; set; }
         public List<Member> UpcomingBirthdays    { get; set; } = new();
         public List<AnniversaryDisplayItem> UpcomingAnniversaries { get; set; } = new();
+
         public List<UpcomingItem> UpcomingCombined { get; set; } = new();
 
         public class UpcomingItem
@@ -74,12 +73,11 @@ namespace HBCDirectory.Pages
 
         public async Task OnGetAsync(
             string? q, string? status, string? office,
-            string? staffrole, string? group, string? caregroup, string? cardtype)
+            string? group, string? caregroup, string? cardtype)
         {
             Q              = q?.Trim();
             StatusFilter   = status;
             OfficeFilter   = office;
-            StaffRoleFilter = staffrole;
             GroupFilter    = group;
             CareGroupFilter = caregroup;
             CardTypeFilter = cardtype;
@@ -114,12 +112,6 @@ namespace HBCDirectory.Pages
             StaffRoleLookup = StaffAssignments
                 .GroupBy(sa => sa.MemberId)
                 .ToDictionary(g => g.Key, g => g.Select(sa => sa.StaffRole.RoleName).ToList());
-
-            AllAssignedStaffRoles = StaffAssignments
-                .Select(sa => sa.StaffRole.RoleName)
-                .Distinct()
-                .OrderBy(r => r)
-                .ToList();
 
             GroupLookup = allMemberGroups
                 .GroupBy(mg => mg.MemberId)
