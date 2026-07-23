@@ -24,7 +24,7 @@ namespace HBCDirectory.Pages
         public List<StaffAssignment> StaffAssignments { get; set; } = new();
         public List<Family>          Families         { get; set; } = new();
         public List<Member>          IndividualMembers{ get; set; } = new();
-
+        
         public Dictionary<int, List<string>> StaffRoleLookup { get; set; } = new();
         public Dictionary<int, List<string>> GroupLookup { get; set; } = new();
         public Dictionary<int, string> CareGroupLookup { get; set; } = new();
@@ -49,6 +49,8 @@ namespace HBCDirectory.Pages
             public DateTime Date { get; set; }
             public string DateLabel { get; set; } = "";
             public string Kind { get; set; } = "birthday"; // "birthday" | "anniversary"
+            public string DisplayLabel { get; set; } = ""; // name(s) shown in the modal list
+            public int? Years { get; set; } // anniversary years married; null for birthdays
             public string TargetType { get; set; } = "member"; // "member" | "family"
             public int TargetId { get; set; }
             public int? FamilyIdFallback { get; set; }
@@ -205,7 +207,7 @@ namespace HBCDirectory.Pages
                         InitialsFallback = string.Join("", pair.Take(2).Select(x => x.Member.Name.FirstOrDefault()))
                     };
                 })
-                .OrderBy(x => x.Date) // chronological: soonest first, correctly across a year boundary
+                .OrderBy(x => x.Date) // chronological — soonest first, correctly across a year boundary
                 .ToList();
 
             // Single merged, sorted feed for the "Coming up this month" strip.
@@ -218,6 +220,7 @@ namespace HBCDirectory.Pages
                         Date = next,
                         DateLabel = next.ToString("MMM d"),
                         Kind = "birthday",
+                        DisplayLabel = m.DisplayName,
                         TargetType = "member",
                         TargetId = m.Id,
                         FamilyIdFallback = m.FamilyId,
@@ -230,6 +233,8 @@ namespace HBCDirectory.Pages
                     Date = a.Date,
                     DateLabel = a.Date.ToString("MMM d"),
                     Kind = "anniversary",
+                    DisplayLabel = a.Names,
+                    Years = a.Years,
                     TargetType = a.TargetType,
                     TargetId = a.TargetId,
                     FamilyIdFallback = a.FamilyId,

@@ -6,47 +6,8 @@
     ViewData["Title"] = "Home | ";
 }
 
-<!--  Notifications bar  -->
 @{
     var upcoming = Model.UpcomingCombined;
-}
-@if (upcoming.Any())
-{
-    <div class="notification-bar">
-        <div class="notification-header">
-            <span class="notification-title">Coming up this month</span>
-            <span class="notification-sub">next 30 days</span>
-        </div>
-        <div class="notification-strip">
-            @foreach (var item in upcoming)
-            {
-                <div class="notification-avatar" tabindex="0" role="button"
-                     data-target-type="@item.TargetType" data-target-id="@item.TargetId"
-                     data-family-fallback="@item.FamilyIdFallback"
-                     aria-label="@(item.Kind == "birthday" ? "Birthday" : "Anniversary") @item.DateLabel">
-                    @if (item.PhotoUrls.Count >= 2)
-                    {
-                        <div class="notification-avatar-overlap">
-                            <img src="@item.PhotoUrls[1]" alt="" class="notification-avatar-img notification-avatar-img--back" />
-                            <img src="@item.PhotoUrls[0]" alt="" class="notification-avatar-img notification-avatar-img--front" />
-                        </div>
-                    }
-                    else if (item.PhotoUrls.Count == 1)
-                    {
-                        <img src="@item.PhotoUrls[0]" alt="" class="notification-avatar-img" />
-                    }
-                    else
-                    {
-                        <div class="notification-avatar-initials">@item.InitialsFallback</div>
-                    }
-                    <span class="notification-avatar-type">
-                        <i class="fa-solid @(item.Kind == "birthday" ? "fa-cake-candles" : "fa-heart")"></i>
-                    </span>
-                    <span class="notification-avatar-date">@item.DateLabel</span>
-                </div>
-            }
-        </div>
-    </div>
 }
 
 <!--  Search bar (fully client-side — filters instantly as you type, no page reload) -->
@@ -59,6 +20,14 @@
                        class="dir-search-input" placeholder="Search by name..."
                        oninput="liveFilter()" />
             </div>
+            @if (upcoming.Any())
+            {
+                <button type="button" class="dir-filter-toggle" data-bs-toggle="modal" data-bs-target="#upcomingModal"
+                        aria-label="Upcoming birthdays and anniversaries" title="Upcoming birthdays and anniversaries">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="filter-dot"></span>
+                </button>
+            }
             <button type="button" class="dir-filter-toggle" onclick="toggleFilters()"
                     aria-label="Toggle filters">
                 <i class="fa-solid fa-sliders"></i>
@@ -471,6 +440,64 @@ else
 }
 
 <!-- ══════════════════════════════════════════════════════
+     UPCOMING BIRTHDAYS/ANNIVERSARIES MODAL — opened on demand from the
+     bell button next to search, instead of a permanent banner.
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="upcomingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upcoming birthdays &amp; anniversaries</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!upcoming.Any())
+                {
+                    <p class="text-muted text-center my-3">Nothing in the next 30 days.</p>
+                }
+                else
+                {
+                    <div class="upcoming-list-label">Next 30 days</div>
+                    @foreach (var item in upcoming)
+                    {
+                        <div class="upcoming-list-row" tabindex="0" role="button"
+                             data-target-type="@item.TargetType" data-target-id="@item.TargetId"
+                             data-family-fallback="@item.FamilyIdFallback">
+                            @if (item.PhotoUrls.Count >= 2)
+                            {
+                                <div class="upcoming-list-overlap">
+                                    <img src="@item.PhotoUrls[1]" alt="" class="upcoming-list-photo upcoming-list-photo--back" />
+                                    <img src="@item.PhotoUrls[0]" alt="" class="upcoming-list-photo upcoming-list-photo--front" />
+                                </div>
+                            }
+                            else if (item.PhotoUrls.Count == 1)
+                            {
+                                <img src="@item.PhotoUrls[0]" alt="" class="upcoming-list-photo" />
+                            }
+                            else
+                            {
+                                <div class="upcoming-list-initials">@item.InitialsFallback</div>
+                            }
+                            <span class="upcoming-list-name">
+                                @item.DisplayLabel
+                                @if (item.Years is int y)
+                                {
+                                    <span class="upcoming-list-years">(@(y == 0 ? "this year" : y == 1 ? "1 year" : $"{y} years"))</span>
+                                }
+                            </span>
+                            <span class="upcoming-list-date">
+                                <i class="fa-solid @(item.Kind == "birthday" ? "fa-cake-candles" : "fa-heart")"></i>
+                                @item.DateLabel
+                            </span>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
      FAMILY MODAL
 ════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="familyModal" tabindex="-1">
@@ -534,23 +561,36 @@ else
 
 @section Scripts {
 <script>
-document.querySelectorAll('.notification-avatar').forEach(function (el) {
+//  Upcoming modal — click a row to open the same modal that person's
+//  (or family's) real card elsewhere on the page would. Since this
+//  itself lives inside a modal, close it first and open the target
+//  only after the close transition finishes — Bootstrap doesn't like
+//  one modal opening directly on top of another.
+document.querySelectorAll('.upcoming-list-row').forEach(function (row) {
     function openTarget() {
-        const type = el.getAttribute('data-target-type');
-        const id   = el.getAttribute('data-target-id');
+        const type = row.getAttribute('data-target-type');
+        const id   = row.getAttribute('data-target-id');
         const selector = type === 'family' ? `[data-familyid="${id}"]` : `[data-memberid="${id}"]`;
         let card = document.querySelector(selector);
         if (!card && type === 'member') {
-            const familyFallback = el.getAttribute('data-family-fallback');
+            // This member has no standalone card (not Leadership/Staff/
+            // family-less) — only their family card exists on the page.
+            const familyFallback = row.getAttribute('data-family-fallback');
             if (familyFallback && familyFallback !== '') {
                 card = document.querySelector(`[data-familyid="${familyFallback}"]`);
             }
         }
         if (card) card.click();
     }
-    el.addEventListener('click', openTarget);
-    el.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTarget(); }
+    function closeThenOpen() {
+        const modalEl = document.getElementById('upcomingModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modalEl.addEventListener('hidden.bs.modal', openTarget, { once: true });
+        if (modal) modal.hide(); else openTarget();
+    }
+    row.addEventListener('click', closeThenOpen);
+    row.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeThenOpen(); }
     });
 });
 
