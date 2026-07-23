@@ -65,6 +65,11 @@ body > .container {
   flex: 1 0 auto;
 }
 
+header {
+  flex-shrink: 0;
+  height: 50px;
+}
+
 h1,
 h2,
 h3,
@@ -90,9 +95,41 @@ a:hover {
   background: var(--color-dark) !important;
   border-bottom: 3px solid var(--color-primary);
   box-shadow: 0 2px 20px rgba(32, 34, 34, 0.4);
-  position: sticky;
+  /* position:sticky was extensively diagnosed live (getComputedStyle on
+     every ancestor, getBoundingClientRect while scrolling) and ruled out
+     every documented cause of sticky failing — no overflow/transform/
+     will-change/contain on any ancestor from nav up to html, top:0px
+     computing correctly, html confirmed as the real scrolling container.
+     Despite that, the measured position never clamped at 0 across an
+     entire scroll session — it just tracked scroll distance like a
+     normal static element the whole way. Since sticky should have
+     worked per spec and empirically didn't, switched to fixed instead:
+     it positions relative to the viewport directly, sidestepping
+     whatever containing-block subtlety was actually happening, rather
+     than continuing to chase an explanation. See header/main below for
+     the flow-compensation this requires. */
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1020;
+}
+
+/* nav is no longer in normal flow (position:fixed), so header's own
+   height would otherwise collapse to 0 and the page's actual content
+   would render underneath/behind the fixed nav bar. header's height
+   above holds that space open; main-content's padding-top here pushes
+   the actual content down to clear the fixed nav sitting on top of it.
+   Replaces Bootstrap's pt-4 utility (used previously) — Bootstrap
+   utilities are !important by design, so a plain CSS rule couldn't
+   have overridden it to get the extra clearance needed here. */
+.main-content {
+  /* header (70px, above) already reserves the flow-space the fixed nav
+     needs — this is just the small visual gap below it, roughly
+     matching what Bootstrap's pt-4 (1.5rem) gave before. Previously
+     90px here on top of header's 70px meant ~160px of empty space
+     before content started, not the ~90px intended. */
+  padding-top: 24px;
 }
 
 .navbar-brand {
