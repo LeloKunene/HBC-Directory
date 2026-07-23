@@ -15,15 +15,6 @@
   font-size: 13px; color: var(--dir-dark); display: flex; gap: 8px; align-items: center;
 }
 
-/* Search */
-.dir-search-bar { margin-bottom: 28px; }
-.dir-search-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.dir-search-input-wrap { position: relative; flex: 2; min-width: 200px; }
-.dir-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--dir-grey); font-size: 13px; }
-.dir-search-input { width: 100%; padding: 9px 12px 9px 34px; border: 1.5px solid var(--dir-light2); border-radius: 6px; font-size: 14px; background: white; }
-.dir-search-input:focus { outline: none; border-color: var(--dir-mustard); }
-.dir-filter-select { height: 38px; padding: 0 10px; border: 1.5px solid var(--dir-light2); border-radius: 6px; font-size: 13px; flex: 1; min-width: 140px; }
-
 /* Section rules */
 .dir-section { margin-bottom: 36px; }
 .dir-section-rule { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -423,56 +414,105 @@
 
 /* ─── Notifications bar ─── */
 .notification-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
   background: #fff8e6;
   border: 0.5px solid #e8c97a;
-  border-radius: 8px;
-  padding: 10px 14px;
+  border-radius: 10px;
+  padding: 10px 0 10px 14px;
   margin-bottom: 16px;
 }
 
-.notification-item {
+.notification-header {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 13px;
-  color: #704b0a;
-  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 14px;
+  margin-bottom: 10px;
 }
 
-.notification-icon {
+.notification-title { font-size: 13px; font-weight: 700; color: #704b0a; }
+.notification-sub   { font-size: 11px; color: #a07830; flex-shrink: 0; }
+
+.notification-strip {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.notification-strip::-webkit-scrollbar { display: none; }
+
+.notification-avatar {
+  flex: 0 0 auto;
+  position: relative;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+}
+.notification-avatar:focus-visible { outline: 2px solid var(--dir-mustard); outline-offset: 3px; border-radius: 50%; }
+
+.notification-avatar-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fffdf7;
+  display: block;
+}
+
+.notification-avatar-initials {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--dir-mustard);
+  color: #fff;
+  border: 2px solid #fffdf7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Two-photo overlap for anniversaries with no family photo on file */
+.notification-avatar-overlap { position: relative; width: 48px; height: 48px; }
+.notification-avatar-overlap .notification-avatar-img--back {
+  position: absolute; top: 0; left: 8px; width: 40px; height: 40px; z-index: 1;
+}
+.notification-avatar-overlap .notification-avatar-img--front {
+  position: absolute; bottom: 0; left: 0; width: 40px; height: 40px; z-index: 2;
+}
+
+.notification-avatar-type {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff8e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
   color: var(--dir-mustard);
-  margin-top: 2px;
-  flex-shrink: 0;
+  z-index: 3;
 }
 
-.notification-label {
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.notification-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  flex: 1;
-}
-
-.notification-chip {
-  background: #fffdf7;
-  border: 0.5px solid #e8c97a;
-  border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 12px;
-  color: #704b0a;
+.notification-avatar-date {
+  position: absolute;
+  bottom: -3px;
+  right: -6px;
+  background: #704b0a;
+  color: #fff8e6;
+  font-size: 8px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 2px 5px;
+  line-height: 1;
+  border: 1.5px solid #fff8e6;
   white-space: nowrap;
-}
-
-.notification-chip em {
-  font-style: normal;
-  color: #a07830;
+  z-index: 3;
 }
 
 /* ─── Responsive search bar ─── */
