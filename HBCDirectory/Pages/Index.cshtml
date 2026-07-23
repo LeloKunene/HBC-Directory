@@ -6,42 +6,8 @@
     ViewData["Title"] = "Home | ";
 }
 
-<!--  Notifications bar  -->
 @{
-    var bdays   = Model.UpcomingBirthdays;
-    var annivs  = Model.UpcomingAnniversaries;
-    bool hasAny = bdays.Any() || annivs.Any();
-}
-@if (hasAny)
-{
-    <div class="notification-bar">
-        @if (bdays.Any())
-        {
-            <div class="notification-item">
-                <i class="fa-solid fa-cake-candles notification-icon"></i>
-                <span class="notification-label"><strong>Upcoming birthdays</strong> (next 30 days)</span>
-                <div class="notification-chips">
-                    @foreach (var m in bdays)
-                    {
-                        <span class="notification-chip">@m.DisplayName <em>· @m.Birthdate!.Value.ToString("MMM d")</em></span>
-                    }
-                </div>
-            </div>
-        }
-        @if (annivs.Any())
-        {
-            <div class="notification-item">
-                <i class="fa-solid fa-ring notification-icon"></i>
-                <span class="notification-label"><strong>Upcoming anniversaries</strong> (next 30 days)</span>
-                <div class="notification-chips">
-                    @foreach (var a in annivs)
-                    {
-                        <span class="notification-chip">@a.Names @(a.Years is int y ? $"({(y == 0 ? "this year" : y == 1 ? "1 year" : $"{y} years")})" : "") <em>· @a.Date.ToString("MMM d")</em></span>
-                    }
-                </div>
-            </div>
-        }
-    </div>
+    var upcoming = Model.UpcomingCombined;
 }
 
 <!--  Search bar (fully client-side — filters instantly as you type, no page reload) -->
@@ -54,6 +20,14 @@
                        class="dir-search-input" placeholder="Search by name..."
                        oninput="liveFilter()" />
             </div>
+            @if (upcoming.Any())
+            {
+                <button type="button" class="dir-filter-toggle" data-bs-toggle="modal" data-bs-target="#upcomingModal"
+                        aria-label="Upcoming birthdays and anniversaries" title="Upcoming birthdays and anniversaries">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="filter-dot"></span>
+                </button>
+            }
             <button type="button" class="dir-filter-toggle" onclick="toggleFilters()"
                     aria-label="Toggle filters">
                 <i class="fa-solid fa-sliders"></i>
@@ -71,23 +45,23 @@
                 <option value="Elder"  selected="@(Model.OfficeFilter == "Elder")">Elders</option>
                 <option value="Deacon" selected="@(Model.OfficeFilter == "Deacon")">Deacons</option>
             </select>
-            @if (Model.AllAssignedStaffRoles.Any())
-            {
-                <select name="staffrole" class="dir-filter-select" onchange="liveFilter()">
-                    <option value="">All staff roles</option>
-                    @foreach (var r in Model.AllAssignedStaffRoles)
-                    {
-                        <option value="@r" selected="@(Model.StaffRoleFilter == r)">@r</option>
-                    }
-                </select>
-            }
             @if (Model.AllGroups.Any())
             {
                 <select name="group" class="dir-filter-select" onchange="liveFilter()">
-                    <option value="">All groups</option>
+                    <option value="">All ministries</option>
                     @foreach (var g in Model.AllGroups)
                     {
                         <option value="@g.Name" selected="@(Model.GroupFilter == g.Name)">@g.Name</option>
+                    }
+                </select>
+            }
+            @if (Model.AllCareGroups.Any())
+            {
+                <select name="caregroup" class="dir-filter-select" onchange="liveFilter()">
+                    <option value="">All care groups</option>
+                    @foreach (var cg in Model.AllCareGroups)
+                    {
+                        <option value="@cg.Name" selected="@(Model.CareGroupFilter == cg.Name)">@cg.Name</option>
                     }
                 </select>
             }
@@ -122,6 +96,7 @@
                 var staffRoles = Model.StaffRolesFor(m.Id);
                 <div class="dir-card dir-card--leadership" data-bs-toggle="modal"
                      data-bs-target="#memberModal"
+                     data-memberid="@m.Id"
                      data-name="@m.DisplayName"
                      data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
                      data-email="@m.Email"
@@ -130,6 +105,7 @@
                      data-staffroles="@string.Join(", ", staffRoles)"
                      data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                      data-caregroup="@Model.CareGroupFor(m.Id)"
+                     data-caregroupnames="@string.Join(",", Model.CareGroupNamesFor(m.Id))"
                      data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
                      data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                      data-address="@(m.ShowAddress ? m.Address : "")"
@@ -194,6 +170,7 @@
                 var staffRoles = Model.StaffRolesFor(m.Id);
                 <div class="dir-card dir-card--staff" data-bs-toggle="modal"
                      data-bs-target="#memberModal"
+                     data-memberid="@m.Id"
                      data-name="@m.DisplayName"
                      data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
                      data-email="@m.Email"
@@ -202,6 +179,7 @@
                      data-staffroles="@string.Join(", ", staffRoles)"
                      data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                      data-caregroup="@Model.CareGroupFor(m.Id)"
+                     data-caregroupnames="@string.Join(",", Model.CareGroupNamesFor(m.Id))"
                      data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
                      data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                      data-address="@(m.ShowAddress ? m.Address : "")"
@@ -244,9 +222,6 @@
      filter apply uniformly to the whole directory)
 ════════════════════════════════════════════════════════ -->
 @{
-    // Build one alphabetical list: families + individuals merged, sorted by surname/familyName
-    // NOTE: nothing is excluded here based on search/status/office — the full set always
-    // renders, and filtering happens instantly client-side (see liveFilter() in Scripts below).
     var allCards = new List<(string SortKey, string CardType, object Data)>();
 
     foreach (var f in Model.Families)
@@ -324,6 +299,7 @@
                          data-offices="@Model.OfficesFor(f)"
                          data-staffroles="@string.Join(",", Model.StaffRolesFor(f))"
                          data-groups="@string.Join(",", Model.GroupsFor(f))"
+                         data-caregroupnames="@string.Join(",", Model.CareGroupsFor(f))"
                          data-photo="@(string.IsNullOrEmpty(f.PhotoFileName) ? "" : Model.PhotoUrl(f.PhotoFileName))">
                         <div class="dir-card-photo dir-card-photo--family">
                             @if (!string.IsNullOrEmpty(f.PhotoFileName))
@@ -385,6 +361,7 @@
                     var staffRoles = Model.StaffRolesFor(m.Id);
                     <div class="dir-card dir-card--individual" data-bs-toggle="modal"
                          data-bs-target="#memberModal"
+                         data-memberid="@m.Id"
                          data-name="@m.DisplayName"
                          data-phone="@(m.ShowPhone ? m.PhoneNumber : "")"
                          data-email="@m.Email"
@@ -393,6 +370,7 @@
                          data-staffroles="@string.Join(",", staffRoles)"
                          data-groups="@string.Join(",", Model.GroupsFor(m.Id))"
                          data-caregroup="@Model.CareGroupFor(m.Id)"
+                         data-caregroupnames="@string.Join(",", Model.CareGroupNamesFor(m.Id))"
                          data-birthdate="@(m.ShowBirthdate && m.Birthdate.HasValue ? m.Birthdate.Value.ToString("d MMM") : "")"
                          data-datejoined="@(m.MemberStatus == "Member" && m.DateJoined.HasValue ? m.DateJoined.Value.ToString("MMMM yyyy") : "")"
                          data-address="@(m.ShowAddress ? m.Address : "")"
@@ -450,6 +428,64 @@ else
 {
     <p class="text-center text-muted mt-5">No results found.</p>
 }
+
+<!-- ══════════════════════════════════════════════════════
+     UPCOMING BIRTHDAYS/ANNIVERSARIES MODAL — opened on demand from the
+     bell button next to search, instead of a permanent banner.
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="upcomingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upcoming birthdays &amp; anniversaries</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!upcoming.Any())
+                {
+                    <p class="text-muted text-center my-3">Nothing in the next 30 days.</p>
+                }
+                else
+                {
+                    <div class="upcoming-list-label">Next 30 days</div>
+                    @foreach (var item in upcoming)
+                    {
+                        <div class="upcoming-list-row" tabindex="0" role="button"
+                             data-target-type="@item.TargetType" data-target-id="@item.TargetId"
+                             data-family-fallback="@item.FamilyIdFallback">
+                            @if (item.PhotoUrls.Count >= 2)
+                            {
+                                <div class="upcoming-list-overlap">
+                                    <img src="@item.PhotoUrls[1]" alt="" class="upcoming-list-photo upcoming-list-photo--back" />
+                                    <img src="@item.PhotoUrls[0]" alt="" class="upcoming-list-photo upcoming-list-photo--front" />
+                                </div>
+                            }
+                            else if (item.PhotoUrls.Count == 1)
+                            {
+                                <img src="@item.PhotoUrls[0]" alt="" class="upcoming-list-photo" />
+                            }
+                            else
+                            {
+                                <div class="upcoming-list-initials">@item.InitialsFallback</div>
+                            }
+                            <span class="upcoming-list-name">
+                                @item.DisplayLabel
+                                @if (item.Years is int y)
+                                {
+                                    <span class="upcoming-list-years">(@(y == 0 ? "this year" : y == 1 ? "1 year" : $"{y} years"))</span>
+                                }
+                            </span>
+                            <span class="upcoming-list-date">
+                                <i class="fa-solid @(item.Kind == "birthday" ? "fa-cake-candles" : "fa-heart")"></i>
+                                @item.DateLabel
+                            </span>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- ══════════════════════════════════════════════════════
      FAMILY MODAL
@@ -515,6 +551,39 @@ else
 
 @section Scripts {
 <script>
+//  Upcoming modal — click a row to open the same modal that person's
+//  (or family's) real card elsewhere on the page would. Since this
+//  itself lives inside a modal, close it first and open the target
+//  only after the close transition finishes — Bootstrap doesn't like
+//  one modal opening directly on top of another.
+document.querySelectorAll('.upcoming-list-row').forEach(function (row) {
+    function openTarget() {
+        const type = row.getAttribute('data-target-type');
+        const id   = row.getAttribute('data-target-id');
+        const selector = type === 'family' ? `[data-familyid="${id}"]` : `[data-memberid="${id}"]`;
+        let card = document.querySelector(selector);
+        if (!card && type === 'member') {
+            // This member has no standalone card (not Leadership/Staff/
+            // family-less) — only their family card exists on the page.
+            const familyFallback = row.getAttribute('data-family-fallback');
+            if (familyFallback && familyFallback !== '') {
+                card = document.querySelector(`[data-familyid="${familyFallback}"]`);
+            }
+        }
+        if (card) card.click();
+    }
+    function closeThenOpen() {
+        const modalEl = document.getElementById('upcomingModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modalEl.addEventListener('hidden.bs.modal', openTarget, { once: true });
+        if (modal) modal.hide(); else openTarget();
+    }
+    row.addEventListener('click', closeThenOpen);
+    row.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeThenOpen(); }
+    });
+});
+
 //  Photo lightbox — click either modal's main photo to view full-size 
 document.getElementById('fm-photo').addEventListener('click', function () {
     if (!this.classList.contains('d-none')) window.openLightbox(this.src, this.alt);
@@ -737,11 +806,11 @@ function runFilter() {
     const q          = (document.querySelector('[name="q"]').value || '').trim().toLowerCase();
     const status     = document.querySelector('[name="status"]').value;
     const office     = document.querySelector('[name="office"]').value;
-    const staffRoleSel = document.querySelector('[name="staffrole"]');
     const groupSel     = document.querySelector('[name="group"]');
+    const careGroupSel = document.querySelector('[name="caregroup"]');
     const cardTypeSel  = document.querySelector('[name="cardtype"]');
-    const staffRole  = staffRoleSel ? staffRoleSel.value : '';
     const group      = groupSel     ? groupSel.value     : '';
+    const careGroup  = careGroupSel ? careGroupSel.value : '';
     const cardType   = cardTypeSel  ? cardTypeSel.value  : '';
 
     function matchCard(card) {
@@ -752,16 +821,16 @@ function runFilter() {
 
         if (cardType && card.getAttribute('data-cardtype') !== cardType) return false;
 
-        if (staffRole) {
-            const roles = (card.getAttribute('data-staffroles') || '')
-                .split(',').map(r => r.trim()).filter(Boolean);
-            if (!roles.includes(staffRole)) return false;
-        }
-
         if (group) {
             const groups = (card.getAttribute('data-groups') || '')
                 .split(',').map(g => g.trim()).filter(Boolean);
             if (!groups.includes(group)) return false;
+        }
+
+        if (careGroup) {
+            const careGroups = (card.getAttribute('data-caregroupnames') || '')
+                .split(',').map(g => g.trim()).filter(Boolean);
+            if (!careGroups.includes(careGroup)) return false;
         }
 
         if (status || office) {
@@ -779,7 +848,7 @@ function runFilter() {
         return true;
     }
 
-    const anyActive = !!(q || status || office || staffRole || group || cardType);
+    const anyActive = !!(q || status || office || group || careGroup || cardType);
 
     function filterSection(gridId, sectionId, countId, noResultsId) {
         const grid = document.getElementById(gridId);
@@ -819,7 +888,7 @@ function runFilter() {
 
     // Filter dot — shows when any filter besides text search is active
     const dot = document.getElementById('filterDot');
-    if (dot) dot.classList.toggle('d-none', !(status || office || staffRole || group || cardType));
+    if (dot) dot.classList.toggle('d-none', !(status || office || group || careGroup || cardType));
 
     const clearBtn = document.getElementById('clearFiltersBtn');
     if (clearBtn) clearBtn.classList.toggle('d-none', !anyActive);
@@ -830,8 +899,8 @@ function runFilter() {
     setOrDel('q',         q);
     setOrDel('status',    status);
     setOrDel('office',    office);
-    setOrDel('staffrole', staffRole);
     setOrDel('group',     group);
+    setOrDel('caregroup', careGroup);
     setOrDel('cardtype',  cardType);
     window.history.replaceState({}, '', url);
 }
@@ -840,11 +909,11 @@ function clearFilters() {
     document.querySelector('[name="q"]').value = '';
     document.querySelector('[name="status"]').value = '';
     document.querySelector('[name="office"]').value = '';
-    const sr = document.querySelector('[name="staffrole"]');
     const gr = document.querySelector('[name="group"]');
+    const cg = document.querySelector('[name="caregroup"]');
     const ct = document.querySelector('[name="cardtype"]');
-    if (sr) sr.value = '';
     if (gr) gr.value = '';
+    if (cg) cg.value = '';
     if (ct) ct.value = '';
     runFilter();
 }
@@ -872,13 +941,13 @@ function toggleSection(name) {
     const row      = document.getElementById('filterRow');
     const status   = document.querySelector('[name="status"]').value;
     const office   = document.querySelector('[name="office"]').value;
-    const srEl     = document.querySelector('[name="staffrole"]');
     const grEl     = document.querySelector('[name="group"]');
+    const cgEl     = document.querySelector('[name="caregroup"]');
     const ctEl     = document.querySelector('[name="cardtype"]');
-    const staffRole= srEl ? srEl.value : '';
     const group    = grEl ? grEl.value : '';
+    const careGroup= cgEl ? cgEl.value : '';
     const cardType = ctEl ? ctEl.value : '';
-    if (status || office || staffRole || group || cardType)
+    if (status || office || group || careGroup || cardType)
         row.classList.add('dir-filter-row--open');
     runFilter();
 })();

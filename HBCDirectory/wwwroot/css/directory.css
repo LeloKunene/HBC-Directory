@@ -15,15 +15,6 @@
   font-size: 13px; color: var(--dir-dark); display: flex; gap: 8px; align-items: center;
 }
 
-/* Search */
-.dir-search-bar { margin-bottom: 28px; }
-.dir-search-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.dir-search-input-wrap { position: relative; flex: 2; min-width: 200px; }
-.dir-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--dir-grey); font-size: 13px; }
-.dir-search-input { width: 100%; padding: 9px 12px 9px 34px; border: 1.5px solid var(--dir-light2); border-radius: 6px; font-size: 14px; background: white; }
-.dir-search-input:focus { outline: none; border-color: var(--dir-mustard); }
-.dir-filter-select { height: 38px; padding: 0 10px; border: 1.5px solid var(--dir-light2); border-radius: 6px; font-size: 13px; flex: 1; min-width: 140px; }
-
 /* Section rules */
 .dir-section { margin-bottom: 36px; }
 .dir-section-rule { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -421,58 +412,79 @@
   color: var(--dir-gold);
 }
 
-/* ─── Notifications bar ─── */
-.notification-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: #fff8e6;
-  border: 0.5px solid #e8c97a;
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
+/* ─── Upcoming birthdays/anniversaries modal (opened from the bell
+   button next to search — see #upcomingModal) ─── */
+.upcoming-list-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dir-gold);
+  margin-bottom: 8px;
 }
 
-.notification-item {
+.upcoming-list-row {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 13px;
-  color: #704b0a;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 4px;
+  border-bottom: 0.5px solid var(--dir-light2);
+  cursor: pointer;
+}
+.upcoming-list-row:last-child { border-bottom: none; }
+.upcoming-list-row:hover { background: var(--dir-light); }
+.upcoming-list-row:focus-visible { outline: 2px solid var(--dir-mustard); outline-offset: -2px; }
+
+.upcoming-list-photo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
 }
 
-.notification-icon {
-  color: var(--dir-mustard);
-  margin-top: 2px;
+.upcoming-list-initials {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--dir-mustard);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
-.notification-label {
-  flex-shrink: 0;
-  margin-top: 1px;
+/* Two-photo overlap for anniversaries with no family photo on file */
+.upcoming-list-overlap { position: relative; width: 40px; height: 40px; flex-shrink: 0; }
+.upcoming-list-photo--back {
+  position: absolute; top: 0; left: 7px; width: 33px; height: 33px; z-index: 1;
+  border: 2px solid #fff;
+}
+.upcoming-list-photo--front {
+  position: absolute; bottom: 0; left: 0; width: 33px; height: 33px; z-index: 2;
+  border: 2px solid #fff;
 }
 
-.notification-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.upcoming-list-name {
   flex: 1;
+  font-size: 14px;
+  color: var(--dir-dark);
 }
+.upcoming-list-years { color: var(--dir-gold); font-size: 12.5px; }
 
-.notification-chip {
-  background: #fffdf7;
-  border: 0.5px solid #e8c97a;
-  border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 12px;
-  color: #704b0a;
+.upcoming-list-date {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--dir-gold);
+  display: flex;
+  align-items: center;
+  gap: 5px;
   white-space: nowrap;
-}
-
-.notification-chip em {
-  font-style: normal;
-  color: #a07830;
 }
 
 /* ─── Responsive search bar ─── */

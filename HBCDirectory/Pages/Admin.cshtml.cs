@@ -42,6 +42,7 @@ namespace HBCDirectory.Pages
         public List<MemberGroup>   MemberGroups   { get; set; } = new();
         public List<CareGroup>     CareGroups     { get; set; } = new();
         public List<PendingUpdate> PendingUpdates { get; set; } = new();
+        public List<PendingFamilyPhoto> PendingFamilyPhotos { get; set; } = new();
         public List<ChangeLog>     RecentChanges  { get; set; } = new();
         public List<(string Label, int Value)> Stats { get; set; } = new();
         public ApprovalSettings ApprovalConfig { get; set; } = new();
@@ -89,11 +90,9 @@ namespace HBCDirectory.Pages
             PendingUpdates = await _db.PendingUpdates.Include(p => p.Member)
                 .Where(p => !p.IsApproved && !p.IsRejected)
                 .OrderBy(p => p.SubmittedAt).ToListAsync();
-            // Status changes (Member Management) are Leadership-only
-            // information — even the log entry itself ("Member → Pending
-            // Discipline") shouldn't surface in the general Admin activity
-            // feed. Excluded by Action, not EntityType, since ordinary
-            // member edits ("Updated", "Created") should still show.
+            PendingFamilyPhotos = await _db.PendingFamilyPhotos.Include(p => p.Family)
+                .Where(p => !p.IsApproved && !p.IsRejected)
+                .OrderBy(p => p.SubmittedAt).ToListAsync();
             RecentChanges = await _db.ChangeLogs
                 .Where(c => c.Action != "Status changed")
                 .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
@@ -118,6 +117,9 @@ namespace HBCDirectory.Pages
             PendingUpdates   = await _db.PendingUpdates.Include(p => p.Member)
                                    .Where(p => !p.IsApproved && !p.IsRejected)
                                    .OrderBy(p => p.SubmittedAt).ToListAsync();
+            PendingFamilyPhotos = await _db.PendingFamilyPhotos.Include(p => p.Family)
+                                   .Where(p => !p.IsApproved && !p.IsRejected)
+                                   .OrderBy(p => p.SubmittedAt).ToListAsync();
             RecentChanges    = await _db.ChangeLogs
                 .Where(c => c.Action != "Status changed")
                 .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
@@ -135,9 +137,6 @@ namespace HBCDirectory.Pages
             bool isAdult   = memberType == "Adult";
             bool isMember  = (memberStatus ?? "Member") == "Member";
 
-            // Only Members get a login (see the MemberAccount block below) —
-            // Attendants shouldn't have directory access until they become a
-            // Member, so there's no reason to force an email address on them.
             if (isAdult && isMember && string.IsNullOrWhiteSpace(email))
             { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
@@ -202,7 +201,7 @@ namespace HBCDirectory.Pages
             });
             await _db.SaveChangesAsync();
 
-            var token = await _tokens.CreateTokenAsync(member.Email!, TimeSpan.FromHours(24));
+            var token = await _tokens.CreateTokenAsync(member.Email!, TimeSpan.FromDays(3));
             var link  = $"{Request.Scheme}://{Request.Host}/ResetPassword?token={token}";
             await _email.SendWelcomeEmailAsync(member.Email!, member.DisplayName, tmp, link);
         }
@@ -523,6 +522,21 @@ namespace HBCDirectory.Pages
             return RedirectToPage();
         }
 
+        public async Task<IActionResult> OnPostEditGroupAsync(int id, string groupName, string? description)
+        {
+            if (string.IsNullOrWhiteSpace(groupName))
+            { TempData["Error"] = "Group name is required."; return RedirectToPage(); }
+
+            var group = await _db.Groups.FindAsync(id);
+            if (group == null) return NotFound();
+
+            group.Name = groupName.Trim();
+            group.Description = description?.Trim();
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Group renamed to '{group.Name}'.";
+            return RedirectToPage();
+        }
+
         public async Task<IActionResult> OnPostDeleteGroupAsync(int id)
         {
             var group = await _db.Groups.FindAsync(id);
@@ -565,6 +579,20 @@ namespace HBCDirectory.Pages
             _db.CareGroups.Add(new CareGroup { Name = careGroupName.Trim() });
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Care group '{careGroupName}' created.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostEditCareGroupAsync(int id, string careGroupName)
+        {
+            if (string.IsNullOrWhiteSpace(careGroupName))
+            { TempData["Error"] = "Care group name is required."; return RedirectToPage(); }
+
+            var cg = await _db.CareGroups.FindAsync(id);
+            if (cg == null) return NotFound();
+
+            cg.Name = careGroupName.Trim();
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Care group renamed to '{cg.Name}'.";
             return RedirectToPage();
         }
 
@@ -693,6 +721,47 @@ namespace HBCDirectory.Pages
             await _db.SaveChangesAsync();
 
             TempData["Success"] = $"Update for '{pending.Member.DisplayName}' rejected.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostApprovePendingFamilyPhotoAsync(int id)
+        {
+            var pending = await _db.PendingFamilyPhotos
+                .Include(p => p.Family)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (pending == null) return NotFound();
+
+            var family = pending.Family;
+
+            if (!string.IsNullOrEmpty(family.PhotoFileName))
+                await DeleteFromR2Async(family.PhotoFileName);
+            family.PhotoFileName = pending.PendingPhotoFileName;
+
+            pending.IsApproved = true;
+            pending.ReviewedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            await LogChangeAsync("Family", family.Id, family.FamilyName, "Updated", "Family photo approved");
+
+            TempData["Success"] = $"Family photo for '{family.FamilyName}' approved.";
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostRejectPendingFamilyPhotoAsync(int id, string? reviewNote)
+        {
+            var pending = await _db.PendingFamilyPhotos
+                .Include(p => p.Family)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (pending == null) return NotFound();
+
+            await DeleteFromR2Async(pending.PendingPhotoFileName);
+
+            pending.IsRejected = true;
+            pending.ReviewedAt = DateTime.UtcNow;
+            pending.ReviewNote = reviewNote?.Trim();
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"Family photo submission for '{pending.Family.FamilyName}' rejected.";
             return RedirectToPage();
         }
 

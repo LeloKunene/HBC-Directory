@@ -30,6 +30,8 @@ namespace HBCDirectory.Pages.Profile
         public Member? CurrentMember { get; set; }
         public bool HasPendingUpdate { get; set; }
         public List<HBCDirectory.Models.MemberGroup> MemberGroups { get; set; } = new();
+        public Family? MyFamily { get; set; }
+        public bool HasPendingFamilyPhoto { get; set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -58,6 +60,17 @@ namespace HBCDirectory.Pages.Profile
                     .Include(mg => mg.Group)
                     .Where(mg => mg.MemberId == memberId.Value)
                     .ToListAsync();
+
+                if (CurrentMember.FamilyId.HasValue)
+                {
+                    var family = await _db.Families.FindAsync(CurrentMember.FamilyId.Value);
+                    if (family != null && family.HeadOfFamilyId == CurrentMember.Id)
+                    {
+                        MyFamily = family;
+                        HasPendingFamilyPhoto = await _db.PendingFamilyPhotos
+                            .AnyAsync(p => p.FamilyId == family.Id && !p.IsApproved && !p.IsRejected);
+                    }
+                }
             }
 
             if (CurrentMember == null) return NotFound();
@@ -193,6 +206,63 @@ namespace HBCDirectory.Pages.Profile
                 TempData["Success"] = "Profile updated successfully.";
             }
 
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostUpdateFamilyPhotoAsync(IFormFile? familyPhoto)
+        {
+            var memberId = GetMemberId();
+            if (memberId == null) return RedirectToPage("/Login");
+
+            var member = await _db.Members.FindAsync(memberId.Value);
+            if (member == null || !member.FamilyId.HasValue) return NotFound();
+
+            var family = await _db.Families.FindAsync(member.FamilyId.Value);
+            if (family == null) return NotFound();
+
+            if (family.HeadOfFamilyId != member.Id)
+            {
+                TempData["Error"] = "Only the head of your family can change the family photo.";
+                return RedirectToPage();
+            }
+
+            if (familyPhoto == null || familyPhoto.Length == 0)
+            {
+                TempData["Error"] = "Choose a photo to upload.";
+                return RedirectToPage();
+            }
+
+            var existingPending = await _db.PendingFamilyPhotos
+                .FirstOrDefaultAsync(p => p.FamilyId == family.Id && !p.IsApproved && !p.IsRejected);
+            if (existingPending != null)
+            {
+                existingPending.IsRejected = true;
+                existingPending.ReviewNote = "Superseded by a newer submission";
+            }
+
+            var credentials = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
+            var s3Config    = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
+            using var client = new AmazonS3Client(credentials, s3Config);
+            var fileName = "pending-" + Guid.NewGuid() + Path.GetExtension(familyPhoto.FileName).ToLowerInvariant();
+            using var stream = familyPhoto.OpenReadStream();
+            await client.PutObjectAsync(new PutObjectRequest
+            {
+                BucketName            = _config["R2:BucketName"],
+                Key                   = fileName,
+                InputStream           = stream,
+                ContentType           = familyPhoto.ContentType,
+                DisablePayloadSigning = true
+            });
+
+            _db.PendingFamilyPhotos.Add(new PendingFamilyPhoto
+            {
+                FamilyId = family.Id,
+                PendingPhotoFileName = fileName,
+                SubmittedAt = DateTime.UtcNow
+            });
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"Photo submitted for '{family.FamilyName}' — it'll show on the directory once an admin approves it.";
             return RedirectToPage();
         }
 

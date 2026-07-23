@@ -28,36 +28,58 @@ namespace HBCDirectory.Pages
         public Dictionary<int, List<string>> StaffRoleLookup { get; set; } = new();
         public Dictionary<int, List<string>> GroupLookup { get; set; } = new();
         public Dictionary<int, string> CareGroupLookup { get; set; } = new();
+        // care group.
         public Dictionary<int, List<string>> CareGroupLeaderLookup { get; set; } = new();
-        public List<string> AllAssignedStaffRoles { get; set; } = new();
         public List<Group> AllGroups { get; set; } = new();
+        public List<CareGroup> AllCareGroups { get; set; } = new();
         public string? Q           { get; set; }
         public string? StatusFilter { get; set; }
         public string? OfficeFilter { get; set; }
-        public string? StaffRoleFilter { get; set; }
         public string? GroupFilter     { get; set; }
+        public string? CareGroupFilter { get; set; }
         public string? CardTypeFilter  { get; set; }
         public List<Member> UpcomingBirthdays    { get; set; } = new();
         public List<AnniversaryDisplayItem> UpcomingAnniversaries { get; set; } = new();
+
+        public List<UpcomingItem> UpcomingCombined { get; set; } = new();
+
+        public class UpcomingItem
+        {
+            public DateTime Date { get; set; }
+            public string DateLabel { get; set; } = "";
+            public string Kind { get; set; } = "birthday"; // "birthday" | "anniversary"
+            public string DisplayLabel { get; set; } = ""; // name(s) shown in the modal list
+            public int? Years { get; set; } // anniversary years married; null for birthdays
+            public string TargetType { get; set; } = "member"; // "member" | "family"
+            public int TargetId { get; set; }
+            public int? FamilyIdFallback { get; set; }
+            public List<string> PhotoUrls { get; set; } = new(); // 0, 1, or 2 (overlap)
+            public string InitialsFallback { get; set; } = "";
+        }
 
         public class AnniversaryDisplayItem
         {
             public string Names { get; set; } = "";
             public DateTime Date { get; set; }
             public int? Years { get; set; }
+            public int? FamilyId { get; set; }
+            public string TargetType { get; set; } = "member"; // "member" | "family"
+            public int TargetId { get; set; }
+            public List<string> PhotoUrls { get; set; } = new(); // family photo, or up to 2 spouse photos
+            public string InitialsFallback { get; set; } = "";
         }
 
         public string PhotoUrl(string? f) => _photos.Url(f);
 
         public async Task OnGetAsync(
             string? q, string? status, string? office,
-            string? staffrole, string? group, string? cardtype)
+            string? group, string? caregroup, string? cardtype)
         {
             Q              = q?.Trim();
             StatusFilter   = status;
             OfficeFilter   = office;
-            StaffRoleFilter = staffrole;
             GroupFilter    = group;
+            CareGroupFilter = caregroup;
             CardTypeFilter = cardtype;
 
             /* These six reads don't depend on each other, so run them
@@ -79,6 +101,7 @@ namespace HBCDirectory.Pages
 
             StaffAssignments     = await staffAssignmentsTask;
             AllGroups            = await groupsTask;
+            AllCareGroups        = await _db.CareGroups.OrderBy(cg => cg.Name).ToListAsync();
             var allMemberGroups  = await memberGroupsTask;
             var allCareGroupMembers = await careGroupMembersTask;
             var allCareGroupLeaders = await careGroupLeadersTask;
@@ -90,19 +113,16 @@ namespace HBCDirectory.Pages
                 .GroupBy(sa => sa.MemberId)
                 .ToDictionary(g => g.Key, g => g.Select(sa => sa.StaffRole.RoleName).ToList());
 
-            AllAssignedStaffRoles = StaffAssignments
-                .Select(sa => sa.StaffRole.RoleName)
-                .Distinct()
-                .OrderBy(r => r)
-                .ToList();
-
             GroupLookup = allMemberGroups
                 .GroupBy(mg => mg.MemberId)
                 .ToDictionary(g => g.Key, g => g.Select(mg => mg.Group.Name).ToList());
 
+            // Exclusive — one care group per member (enforced at the DB
+            // level), so this is Id → single name, not Id → list.
             CareGroupLookup = allCareGroupMembers
                 .ToDictionary(cgm => cgm.MemberId, cgm => cgm.CareGroup.Name);
 
+            // Not exclusive — one person can lead more than one care group.
             CareGroupLeaderLookup = allCareGroupLeaders
                 .GroupBy(cgl => cgl.MemberId)
                 .ToDictionary(g => g.Key, g => g.Select(cgl => cgl.CareGroup.Name).ToList());
@@ -154,14 +174,66 @@ namespace HBCDirectory.Pages
                         ? $"{pair[0].Member.Name} & {pair[1].Member.Name} {pair[0].Member.Surname}"
                         : string.Join(" & ", pair.Select(x => x.Member.DisplayName));
 
+                    var familyId = pair[0].Member.FamilyId;
+                    var family = familyId.HasValue ? Families.FirstOrDefault(f => f.Id == familyId.Value) : null;
+
+                    List<string> photoUrls;
+                    if (family != null && !string.IsNullOrEmpty(family.PhotoFileName))
+                        photoUrls = new List<string> { PhotoUrl(family.PhotoFileName) };
+                    else
+                        photoUrls = pair
+                            .Where(x => !string.IsNullOrEmpty(x.Member.PhotoFileName))
+                            .Take(2)
+                            .Select(x => PhotoUrl(x.Member.PhotoFileName))
+                            .ToList();
+
                     return new AnniversaryDisplayItem
                     {
                         Names = names,
                         Date  = next,
-                        Years = years >= 0 ? years : null // guards against a bad/placeholder year on file
+                        Years = years >= 0 ? years : null, // guards against a bad/placeholder year on file
+                        FamilyId = familyId,
+                        TargetType = family != null ? "family" : "member",
+                        TargetId = family != null ? family.Id : pair[0].Member.Id,
+                        PhotoUrls = photoUrls,
+                        InitialsFallback = string.Join("", pair.Take(2).Select(x => x.Member.Name.FirstOrDefault()))
                     };
                 })
                 .OrderBy(x => x.Date) // chronological — soonest first, correctly across a year boundary
+                .ToList();
+
+            // Single merged, sorted feed for the "Coming up this month" strip.
+            UpcomingCombined = UpcomingBirthdays
+                .Select(m =>
+                {
+                    var next = NextOccurrence(m.Birthdate!.Value, today, in30days)!.Value;
+                    return new UpcomingItem
+                    {
+                        Date = next,
+                        DateLabel = next.ToString("MMM d"),
+                        Kind = "birthday",
+                        DisplayLabel = m.DisplayName,
+                        TargetType = "member",
+                        TargetId = m.Id,
+                        FamilyIdFallback = m.FamilyId,
+                        PhotoUrls = string.IsNullOrEmpty(m.PhotoFileName) ? new() : new List<string> { PhotoUrl(m.PhotoFileName) },
+                        InitialsFallback = $"{m.Name.FirstOrDefault()}{m.Surname.FirstOrDefault()}"
+                    };
+                })
+                .Concat(UpcomingAnniversaries.Select(a => new UpcomingItem
+                {
+                    Date = a.Date,
+                    DateLabel = a.Date.ToString("MMM d"),
+                    Kind = "anniversary",
+                    DisplayLabel = a.Names,
+                    Years = a.Years,
+                    TargetType = a.TargetType,
+                    TargetId = a.TargetId,
+                    FamilyIdFallback = a.FamilyId,
+                    PhotoUrls = a.PhotoUrls,
+                    InitialsFallback = a.InitialsFallback
+                }))
+                .OrderBy(x => x.Date)
                 .ToList();
         }
 
@@ -265,7 +337,7 @@ namespace HBCDirectory.Pages
             var parts = new List<string>();
             var isLeaderOf = CareGroupLeaderLookup.TryGetValue(memberId, out var led) ? led : null;
             if (isLeaderOf != null)
-                parts.AddRange(isLeaderOf.Select(name => $"{name} (Overseer)"));
+                parts.AddRange(isLeaderOf.Select(name => $"{name} (Leader)"));
 
             if (CareGroupLookup.TryGetValue(memberId, out var memberOf) &&
                 (isLeaderOf == null || !isLeaderOf.Contains(memberOf)))
@@ -274,10 +346,25 @@ namespace HBCDirectory.Pages
             return parts.Count > 0 ? string.Join(", ", parts) : null;
         }
 
+        public List<string> CareGroupNamesFor(int memberId)
+        {
+            var names = new List<string>();
+            if (CareGroupLeaderLookup.TryGetValue(memberId, out var led)) names.AddRange(led);
+            if (CareGroupLookup.TryGetValue(memberId, out var memberOf) && !names.Contains(memberOf))
+                names.Add(memberOf);
+            return names;
+        }
+
         // Union of all adults' groups in a family
         public List<string> GroupsFor(Family f) =>
             f.Adults
              .SelectMany(a => GroupsFor(a.Id))
+             .Distinct()
+             .ToList();
+
+        public List<string> CareGroupsFor(Family f) =>
+            f.Adults
+             .SelectMany(a => CareGroupNamesFor(a.Id))
              .Distinct()
              .ToList();
 

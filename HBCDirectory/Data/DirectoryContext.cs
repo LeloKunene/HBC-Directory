@@ -16,6 +16,7 @@ namespace HBCDirectory.Data
         public DbSet<Group>             Groups             => Set<Group>();
         public DbSet<MemberGroup>       MemberGroups       => Set<MemberGroup>();
         public DbSet<PendingUpdate>     PendingUpdates     => Set<PendingUpdate>();
+        public DbSet<PendingFamilyPhoto> PendingFamilyPhotos => Set<PendingFamilyPhoto>();
         public DbSet<ChangeLog>         ChangeLogs         => Set<ChangeLog>();
         public DbSet<ApprovalSettings>  ApprovalSettings   => Set<ApprovalSettings>();
         public DbSet<PdfSettings> PdfSettings => Set<PdfSettings>();
@@ -67,6 +68,10 @@ namespace HBCDirectory.Data
             modelBuilder.Entity<PendingUpdate>()
                 .HasOne(p => p.Member).WithMany()
                 .HasForeignKey(p => p.MemberId).OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PendingFamilyPhoto>()
+                .HasOne(p => p.Family).WithMany()
+                .HasForeignKey(p => p.FamilyId).OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<MemberRole>()
                 .HasOne(mr => mr.Member).WithMany()
