@@ -167,6 +167,29 @@
                 </div>
             </div>
 
+            <!-- Family photo card — only the designated head of family sees this -->
+            @if (Model.MyFamily != null)
+            {
+                <div class="admin-card mb-3">
+                    <div class="card-header"><i class="fa-solid fa-image me-2"></i>Family Photo</div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            You're the head of the @Model.MyFamily.FamilyName family — you can update the
+                            family photo shown on the directory.
+                        </p>
+                        <div class="text-center mb-3">
+                            <img src="@Model.PhotoUrl(Model.MyFamily.PhotoFileName)" alt="Family photo"
+                                 style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:3px solid var(--color-primary)" />
+                        </div>
+                        <form method="post" asp-page-handler="UpdateFamilyPhoto" enctype="multipart/form-data">
+                            <input type="file" name="familyPhoto" class="form-control form-control-sm mb-2"
+                                   accept="image/jpeg,image/png" required />
+                            <button type="submit" class="btn btn-sm btn-primary w-100">Update Family Photo</button>
+                        </form>
+                    </div>
+                </div>
+            }
+
             <!-- Groups card -->
             @if (Model.MemberGroups.Any())
             {

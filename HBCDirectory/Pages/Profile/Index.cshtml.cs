@@ -30,6 +30,7 @@ namespace HBCDirectory.Pages.Profile
         public Member? CurrentMember { get; set; }
         public bool HasPendingUpdate { get; set; }
         public List<HBCDirectory.Models.MemberGroup> MemberGroups { get; set; } = new();
+        public Family? MyFamily { get; set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -58,6 +59,13 @@ namespace HBCDirectory.Pages.Profile
                     .Include(mg => mg.Group)
                     .Where(mg => mg.MemberId == memberId.Value)
                     .ToListAsync();
+
+                if (CurrentMember.FamilyId.HasValue)
+                {
+                    var family = await _db.Families.FindAsync(CurrentMember.FamilyId.Value);
+                    if (family != null && family.HeadOfFamilyId == CurrentMember.Id)
+                        MyFamily = family;
+                }
             }
 
             if (CurrentMember == null) return NotFound();
@@ -193,6 +201,57 @@ namespace HBCDirectory.Pages.Profile
                 TempData["Success"] = "Profile updated successfully.";
             }
 
+            return RedirectToPage();
+        }
+
+        public async Task<IActionResult> OnPostUpdateFamilyPhotoAsync(IFormFile? familyPhoto)
+        {
+            var memberId = GetMemberId();
+            if (memberId == null) return RedirectToPage("/Login");
+
+            var member = await _db.Members.FindAsync(memberId.Value);
+            if (member == null || !member.FamilyId.HasValue) return NotFound();
+
+            var family = await _db.Families.FindAsync(member.FamilyId.Value);
+            if (family == null) return NotFound();
+
+            if (family.HeadOfFamilyId != member.Id)
+            {
+                TempData["Error"] = "Only the head of your family can change the family photo.";
+                return RedirectToPage();
+            }
+
+            if (familyPhoto == null || familyPhoto.Length == 0)
+            {
+                TempData["Error"] = "Choose a photo to upload.";
+                return RedirectToPage();
+            }
+
+            var credentials = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
+            var s3Config    = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
+            using var client = new AmazonS3Client(credentials, s3Config);
+
+            if (!string.IsNullOrEmpty(family.PhotoFileName))
+            {
+                try { await client.DeleteObjectAsync(_config["R2:BucketName"], family.PhotoFileName); }
+                catch { }
+            }
+
+            var fileName = Guid.NewGuid() + Path.GetExtension(familyPhoto.FileName).ToLowerInvariant();
+            using var stream = familyPhoto.OpenReadStream();
+            await client.PutObjectAsync(new PutObjectRequest
+            {
+                BucketName            = _config["R2:BucketName"],
+                Key                   = fileName,
+                InputStream           = stream,
+                ContentType           = familyPhoto.ContentType,
+                DisablePayloadSigning = true
+            });
+
+            family.PhotoFileName = fileName;
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"'{family.FamilyName}' family photo updated.";
             return RedirectToPage();
         }
 
