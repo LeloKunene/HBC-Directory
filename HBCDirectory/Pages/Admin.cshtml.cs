@@ -93,11 +93,6 @@ namespace HBCDirectory.Pages
             PendingFamilyPhotos = await _db.PendingFamilyPhotos.Include(p => p.Family)
                 .Where(p => !p.IsApproved && !p.IsRejected)
                 .OrderBy(p => p.SubmittedAt).ToListAsync();
-            // Status changes (Member Management) are Leadership-only
-            // information — even the log entry itself ("Member → Pending
-            // Discipline") shouldn't surface in the general Admin activity
-            // feed. Excluded by Action, not EntityType, since ordinary
-            // member edits ("Updated", "Created") should still show.
             RecentChanges = await _db.ChangeLogs
                 .Where(c => c.Action != "Status changed")
                 .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
@@ -142,9 +137,6 @@ namespace HBCDirectory.Pages
             bool isAdult   = memberType == "Adult";
             bool isMember  = (memberStatus ?? "Member") == "Member";
 
-            // Only Members get a login (see the MemberAccount block below) —
-            // Attendants shouldn't have directory access until they become a
-            // Member, so there's no reason to force an email address on them.
             if (isAdult && isMember && string.IsNullOrWhiteSpace(email))
             { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
@@ -209,7 +201,7 @@ namespace HBCDirectory.Pages
             });
             await _db.SaveChangesAsync();
 
-            var token = await _tokens.CreateTokenAsync(member.Email!, TimeSpan.FromHours(24));
+            var token = await _tokens.CreateTokenAsync(member.Email!, TimeSpan.FromDays(3));
             var link  = $"{Request.Scheme}://{Request.Host}/ResetPassword?token={token}";
             await _email.SendWelcomeEmailAsync(member.Email!, member.DisplayName, tmp, link);
         }
