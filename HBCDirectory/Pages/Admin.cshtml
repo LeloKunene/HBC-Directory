@@ -81,7 +81,7 @@
                     <div class="form-field form-field--full" id="add-emailField">
                         <label class="form-label">Email Address <span class="text-danger" id="add-email-required-mark">*</span></label>
                         <input name="email" type="email" class="form-control" id="add-email"
-                               placeholder="Used as login username — required for Members, optional for Attendants" />
+                               placeholder="Used as login username (required for Members, optional for Attendants)" />
                     </div>
                     <div class="form-field">
                         <label class="form-label">Birthdate</label>
@@ -110,7 +110,7 @@
                     <div class="form-field">
                         <label class="form-label">Family</label>
                         <select name="familyId" class="form-select">
-                            <option value="">— Individual member —</option>
+                            <option value="">-Individual member-</option>
                             @foreach (var f in Model.Families)
                             {
                                 <option value="@f.Id">@Model.FamilyDisambiguated(f)</option>
@@ -1546,7 +1546,7 @@ function togglePdfPasswordVisibility() {
                         <div class="form-field">
                             <label class="form-label">Family</label>
                             <select name="familyId" id="edit-familyId" class="form-select">
-                                <option value="">— Individual member —</option>
+                                <option value="">—Individual member—</option>
                                 @foreach (var f in Model.Families)
                                 {
                                     <option value="@f.Id">@Model.FamilyDisambiguated(f)</option>

@@ -337,7 +337,7 @@ namespace HBCDirectory.Pages
             var parts = new List<string>();
             var isLeaderOf = CareGroupLeaderLookup.TryGetValue(memberId, out var led) ? led : null;
             if (isLeaderOf != null)
-                parts.AddRange(isLeaderOf.Select(name => $"{name} (Leader)"));
+                parts.AddRange(isLeaderOf.Select(name => $"{name} (Overseer)"));
 
             if (CareGroupLookup.TryGetValue(memberId, out var memberOf) &&
                 (isLeaderOf == null || !isLeaderOf.Contains(memberOf)))
