@@ -19,6 +19,7 @@ namespace HBCDirectory.Pages
     public class AdminModel : PageModel
     {
         private readonly DirectoryContext _db;
+        private readonly IDbContextFactory<DirectoryContext> _dbFactory;
         private readonly IConfiguration   _config;
         private readonly PhotoService      _photos;
         private readonly TokenService      _tokens;
@@ -26,11 +27,12 @@ namespace HBCDirectory.Pages
         private readonly DirectoryPdfService _pdfService;
         private readonly RateLimiter        _pdfGenerateLimiter;
 
-        public AdminModel(DirectoryContext db, IConfiguration config, PhotoService photos,
+        public AdminModel(DirectoryContext db, IDbContextFactory<DirectoryContext> dbFactory,
+                          IConfiguration config, PhotoService photos,
                           TokenService tokens, EmailService email, DirectoryPdfService pdfService,
                           [FromKeyedServices("pdfgenerate")] RateLimiter pdfGenerateLimiter)
         {
-            _db = db; _config = config; _photos = photos; _tokens = tokens; _email = email; _pdfService = pdfService;
+            _db = db; _dbFactory = dbFactory; _config = config; _photos = photos; _tokens = tokens; _email = email; _pdfService = pdfService;
             _pdfGenerateLimiter = pdfGenerateLimiter;
         }
 
@@ -71,32 +73,36 @@ namespace HBCDirectory.Pages
 
         public async Task OnGetAsync()
         {
-            Members = await _db.Members.Include(m => m.Family)
-                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
-                .OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
-            Families = await _db.Families.Include(f => f.Members).Include(f => f.HeadOfFamily)
-                .OrderBy(f => f.FamilyName).ToListAsync();
-            StaffRoles = await _db.StaffRoles.OrderBy(sr => sr.DisplayOrder).ToListAsync();
-            StaffAssignments = await _db.StaffAssignments
-                .Include(sa => sa.Member).Include(sa => sa.StaffRole)
-                .OrderBy(sa => sa.DisplayOrder).ToListAsync();
-            Groups = await _db.Groups.OrderBy(g => g.DisplayOrder).ToListAsync();
-            MemberGroups = await _db.MemberGroups
-                .Include(mg => mg.Member).Include(mg => mg.Group).ToListAsync();
-            CareGroups = await _db.CareGroups
-                .Include(cg => cg.Leaders).ThenInclude(l => l.Member)
-                .Include(cg => cg.Members).ThenInclude(m => m.Member)
-                .OrderBy(cg => cg.Name).ToListAsync();
-            PendingUpdates = await _db.PendingUpdates.Include(p => p.Member)
-                .Where(p => !p.IsApproved && !p.IsRejected)
-                .OrderBy(p => p.SubmittedAt).ToListAsync();
-            PendingFamilyPhotos = await _db.PendingFamilyPhotos.Include(p => p.Family)
-                .Where(p => !p.IsApproved && !p.IsRejected)
-                .OrderBy(p => p.SubmittedAt).ToListAsync();
-            RecentChanges = await _db.ChangeLogs
-                .Where(c => c.Action != "Status changed")
-                .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
-            PdfConfig = await _db.PdfSettings.FindAsync(1) ?? new PdfSettings();
+            var membersTask            = LoadMembersAsync();
+            var familiesTask           = LoadFamiliesAsync();
+            var staffRolesTask         = LoadStaffRolesAsync();
+            var staffAssignmentsTask   = LoadStaffAssignmentsAsync();
+            var groupsTask             = LoadGroupsAsync();
+            var memberGroupsTask       = LoadMemberGroupsAsync();
+            var careGroupsTask         = LoadCareGroupsAsync();
+            var pendingUpdatesTask     = LoadPendingUpdatesAsync();
+            var pendingFamilyPhotosTask = LoadPendingFamilyPhotosAsync();
+            var recentChangesTask      = LoadRecentChangesAsync();
+            var pdfConfigTask          = LoadPdfConfigAsync();
+            var approvalConfigTask     = LoadApprovalConfigAsync();
+
+            await Task.WhenAll(
+                membersTask, familiesTask, staffRolesTask, staffAssignmentsTask,
+                groupsTask, memberGroupsTask, careGroupsTask, pendingUpdatesTask,
+                pendingFamilyPhotosTask, recentChangesTask, pdfConfigTask, approvalConfigTask);
+
+            Members             = await membersTask;
+            Families            = await familiesTask;
+            StaffRoles          = await staffRolesTask;
+            StaffAssignments    = await staffAssignmentsTask;
+            Groups              = await groupsTask;
+            MemberGroups        = await memberGroupsTask;
+            CareGroups          = await careGroupsTask;
+            PendingUpdates      = await pendingUpdatesTask;
+            PendingFamilyPhotos = await pendingFamilyPhotosTask;
+            RecentChanges       = await recentChangesTask;
+            PdfConfig           = await pdfConfigTask;
+            ApprovalConfig      = await approvalConfigTask;
 
             var adults   = Members.Count(m => m.MemberType == "Adult");
             var children = Members.Count(m => m.MemberType == "Child");
@@ -110,20 +116,93 @@ namespace HBCDirectory.Pages
                 ("Children",  children),
             };
             if (leaders > 0)            Stats.Add(("Leadership", leaders));
+            if (StaffAssignments.Any()) Stats.Add(("Staff", StaffAssignments.Count));
+        }
 
-            ApprovalConfig   = await _db.ApprovalSettings.FindAsync(1) ?? new ApprovalSettings();
-            Groups           = await _db.Groups.OrderBy(g => g.DisplayOrder).ToListAsync();
-            MemberGroups     = await _db.MemberGroups.Include(mg => mg.Member).Include(mg => mg.Group).ToListAsync();
-            PendingUpdates   = await _db.PendingUpdates.Include(p => p.Member)
-                                   .Where(p => !p.IsApproved && !p.IsRejected)
-                                   .OrderBy(p => p.SubmittedAt).ToListAsync();
-            PendingFamilyPhotos = await _db.PendingFamilyPhotos.Include(p => p.Family)
-                                   .Where(p => !p.IsApproved && !p.IsRejected)
-                                   .OrderBy(p => p.SubmittedAt).ToListAsync();
-            RecentChanges    = await _db.ChangeLogs
+        private async Task<List<Member>> LoadMembersAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.Members.Include(m => m.Family)
+                .Where(m => m.MemberStatus != "Resigned" && m.MemberStatus != "Excommunicated")
+                .OrderBy(m => m.Surname).ThenBy(m => m.Name).ToListAsync();
+        }
+
+        private async Task<List<Family>> LoadFamiliesAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.Families.Include(f => f.Members).Include(f => f.HeadOfFamily)
+                .OrderBy(f => f.FamilyName).ToListAsync();
+        }
+
+        private async Task<List<StaffRole>> LoadStaffRolesAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.StaffRoles.OrderBy(sr => sr.DisplayOrder).ToListAsync();
+        }
+
+        private async Task<List<StaffAssignment>> LoadStaffAssignmentsAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.StaffAssignments
+                .Include(sa => sa.Member).Include(sa => sa.StaffRole)
+                .OrderBy(sa => sa.DisplayOrder).ToListAsync();
+        }
+
+        private async Task<List<Group>> LoadGroupsAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.Groups.OrderBy(g => g.DisplayOrder).ToListAsync();
+        }
+
+        private async Task<List<MemberGroup>> LoadMemberGroupsAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.MemberGroups.Include(mg => mg.Member).Include(mg => mg.Group).ToListAsync();
+        }
+
+        private async Task<List<CareGroup>> LoadCareGroupsAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.CareGroups
+                .Include(cg => cg.Leaders).ThenInclude(l => l.Member)
+                .Include(cg => cg.Members).ThenInclude(m => m.Member)
+                .OrderBy(cg => cg.Name).ToListAsync();
+        }
+
+        private async Task<List<PendingUpdate>> LoadPendingUpdatesAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.PendingUpdates.Include(p => p.Member)
+                .Where(p => !p.IsApproved && !p.IsRejected)
+                .OrderBy(p => p.SubmittedAt).ToListAsync();
+        }
+
+        private async Task<List<PendingFamilyPhoto>> LoadPendingFamilyPhotosAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.PendingFamilyPhotos.Include(p => p.Family)
+                .Where(p => !p.IsApproved && !p.IsRejected)
+                .OrderBy(p => p.SubmittedAt).ToListAsync();
+        }
+
+        private async Task<List<ChangeLog>> LoadRecentChangesAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.ChangeLogs
                 .Where(c => c.Action != "Status changed")
                 .OrderByDescending(c => c.ChangedAt).Take(30).ToListAsync();
-            if (StaffAssignments.Any()) Stats.Add(("Staff", StaffAssignments.Count));
+        }
+
+        private async Task<PdfSettings> LoadPdfConfigAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.PdfSettings.FindAsync(1) ?? new PdfSettings();
+        }
+
+        private async Task<ApprovalSettings> LoadApprovalConfigAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.ApprovalSettings.FindAsync(1) ?? new ApprovalSettings();
         }
 
         //  Add Member 
@@ -138,15 +217,15 @@ namespace HBCDirectory.Pages
             bool isMember  = (memberStatus ?? "Member") == "Member";
 
             if (isAdult && isMember && string.IsNullOrWhiteSpace(email))
-            { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
+            { TempData["Error"] = "Email is required for members."; return Redirect("/Admin#section-members"); }
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
-            { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
+            { TempData["Error"] = "Name and surname are required."; return Redirect("/Admin#section-members"); }
 
             if (isAdult && !string.IsNullOrWhiteSpace(email))
             {
                 var lower = email.Trim().ToLower();
                 if (await _db.Members.AnyAsync(m => m.Email == lower))
-                { TempData["Error"] = $"Email '{email}' already exists."; return RedirectToPage(); }
+                { TempData["Error"] = $"Email '{email}' already exists."; return Redirect("/Admin#section-members"); }
             }
 
             try
@@ -172,8 +251,8 @@ namespace HBCDirectory.Pages
                 if (photo is { Length: > 0 })
                 {
                     var err = ValidatePhoto(photo);
-                    if (err != null) { TempData["Error"] = err; return RedirectToPage(); }
-                    if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return RedirectToPage(); }
+                    if (err != null) { TempData["Error"] = err; return Redirect("/Admin#section-members"); }
+                    if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return Redirect("/Admin#section-members"); }
                     member.PhotoFileName = await SavePhotoAsync(photo);
                 }
 
@@ -187,7 +266,7 @@ namespace HBCDirectory.Pages
                 await LogChangeAsync("Member", member.Id, member.DisplayName, "Created");
             }
             catch (Exception ex) { Console.WriteLine(ex.Message); TempData["Error"] = "Could not add member."; }
-            return RedirectToPage();
+            return Redirect("/Admin#section-members");
         }
 
         private async Task CreateMemberAccountAsync(Member member)
@@ -222,11 +301,11 @@ namespace HBCDirectory.Pages
             bool isMember = (memberStatus ?? "Member") == "Member";
 
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
-            { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
+            { TempData["Error"] = "Name and surname are required."; return Redirect("/Admin#section-members"); }
 
             var effectiveEmail = !string.IsNullOrWhiteSpace(email) ? email.Trim() : m.Email;
             if (isAdult && isMember && string.IsNullOrWhiteSpace(effectiveEmail))
-            { TempData["Error"] = "Email is required for members."; return RedirectToPage(); }
+            { TempData["Error"] = "Email is required for members."; return Redirect("/Admin#section-members"); }
 
             var hasLeadershipManagedStatus = m.MemberStatus is
                 "Pending Removal" or "Pending Discipline" or "Resigned" or "Excommunicated";
@@ -262,7 +341,7 @@ namespace HBCDirectory.Pages
                 if (newEmail != m.Email)
                 {
                     if (await _db.Members.AnyAsync(x => x.Email == newEmail && x.Id != id))
-                    { TempData["Error"] = $"Email '{email}' is already in use."; return RedirectToPage(); }
+                    { TempData["Error"] = $"Email '{email}' is already in use."; return Redirect("/Admin#section-members"); }
                     m.Email = newEmail;
                     var acct = await _db.MemberAccounts.FirstOrDefaultAsync(a => a.MemberId == id);
                     if (acct != null) acct.Username = newEmail;
@@ -273,8 +352,8 @@ namespace HBCDirectory.Pages
             {
                 if (!string.IsNullOrEmpty(m.PhotoFileName)) await DeleteFromR2Async(m.PhotoFileName);
                 var err = ValidatePhoto(photo);
-                if (err != null) { TempData["Error"] = err; return RedirectToPage(); }
-                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return RedirectToPage(); }
+                if (err != null) { TempData["Error"] = err; return Redirect("/Admin#section-members"); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return Redirect("/Admin#section-members"); }
                 m.PhotoFileName = await SavePhotoAsync(photo);
             }
 
@@ -290,7 +369,7 @@ namespace HBCDirectory.Pages
 
             await LogChangeAsync("Member", m.Id, m.DisplayName, "Updated");
             TempData["Success"] = $"'{m.DisplayName}' updated.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-members");
         }
 
         //  Delete Member 
@@ -304,7 +383,7 @@ namespace HBCDirectory.Pages
             await _db.SaveChangesAsync();
             await LogChangeAsync("Member", id, memberName, "Deleted");
             TempData["Success"] = "Member deleted.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-members");
         }
 
         //  Add Family 
@@ -313,7 +392,7 @@ namespace HBCDirectory.Pages
             string? additionalNotes, IFormFile? photo)
         {
             if (string.IsNullOrWhiteSpace(familyName))
-            { TempData["Error"] = "Family name is required."; return RedirectToPage(); }
+            { TempData["Error"] = "Family name is required."; return Redirect("/Admin#section-families"); }
 
             var f = new Family
             {
@@ -326,15 +405,15 @@ namespace HBCDirectory.Pages
             if (photo is { Length: > 0 })
             {
                 var err = ValidatePhoto(photo);
-                if (err != null) { TempData["Error"] = err; return RedirectToPage(); }
-                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return RedirectToPage(); }
+                if (err != null) { TempData["Error"] = err; return Redirect("/Admin#section-families"); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return Redirect("/Admin#section-families"); }
                 f.PhotoFileName = await SavePhotoAsync(photo);
             }
 
             _db.Families.Add(f);
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Family '{f.FamilyName}' created.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-families");
         }
 
         //  Edit Family 
@@ -345,12 +424,7 @@ namespace HBCDirectory.Pages
             var f = await _db.Families.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == id);
             if (f == null) return NotFound();
             if (string.IsNullOrWhiteSpace(familyName))
-            { TempData["Error"] = "Family name is required."; return RedirectToPage(); }
-
-            // Only an adult who's actually in this family can be designated
-            // head — ignore (rather than error on) anything else, since the
-            // dropdown only ever offers valid choices; a mismatched value
-            // here would only happen from a tampered request.
+            { TempData["Error"] = "Family name is required."; return Redirect("/Admin#section-families"); }
             f.HeadOfFamilyId = headOfFamilyId.HasValue &&
                 f.Members.Any(m => m.Id == headOfFamilyId.Value && m.MemberType == "Adult")
                     ? headOfFamilyId
@@ -365,14 +439,14 @@ namespace HBCDirectory.Pages
             {
                 if (!string.IsNullOrEmpty(f.PhotoFileName)) await DeleteFromR2Async(f.PhotoFileName);
                 var err = ValidatePhoto(photo);
-                if (err != null) { TempData["Error"] = err; return RedirectToPage(); }
-                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return RedirectToPage(); }
+                if (err != null) { TempData["Error"] = err; return Redirect("/Admin#section-families"); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return Redirect("/Admin#section-families"); }
                 f.PhotoFileName = await SavePhotoAsync(photo);
             }
 
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Family '{f.FamilyName}' updated.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-families");
         }
 
         //  Delete Family 
@@ -394,20 +468,20 @@ namespace HBCDirectory.Pages
             _db.Families.Remove(family);
             await _db.SaveChangesAsync();
             TempData["Success"] = "Family deleted. Adults moved to Individual Members.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-families");
         }
 
         //  Staff Role Management 
         public async Task<IActionResult> OnPostAddStaffRoleAsync(string roleName)
         {
             if (string.IsNullOrWhiteSpace(roleName))
-            { TempData["Error"] = "Role name is required."; return RedirectToPage(); }
+            { TempData["Error"] = "Role name is required."; return Redirect("/Admin#section-staff"); }
             var maxOrd = await _db.StaffRoles.AnyAsync()
                 ? await _db.StaffRoles.MaxAsync(sr => sr.DisplayOrder) : 0;
             _db.StaffRoles.Add(new StaffRole { RoleName = roleName.Trim(), DisplayOrder = maxOrd + 1 });
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Staff role '{roleName}' created.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-staff");
         }
 
         public async Task<IActionResult> OnPostDeleteStaffRoleAsync(int id)
@@ -417,7 +491,7 @@ namespace HBCDirectory.Pages
             _db.StaffRoles.Remove(role);
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Staff role deleted.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-staff");
         }
 
         public async Task<IActionResult> OnPostAssignStaffAsync(
@@ -432,7 +506,7 @@ namespace HBCDirectory.Pages
             });
             await _db.SaveChangesAsync();
             TempData["Success"] = "Staff assignment saved.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-staff");
         }
 
         public async Task<IActionResult> OnPostRemoveStaffAsync(int id)
@@ -442,7 +516,7 @@ namespace HBCDirectory.Pages
             _db.StaffAssignments.Remove(sa);
             await _db.SaveChangesAsync();
             TempData["Success"] = "Staff assignment removed.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-staff");
         }
 
         // Children: no email, no login account, no MemberStatus, no ChurchOffice.
@@ -451,7 +525,7 @@ namespace HBCDirectory.Pages
             DateTime? birthdate, IFormFile? photo)
         {
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(surname))
-            { TempData["Error"] = "Name and surname are required."; return RedirectToPage(); }
+            { TempData["Error"] = "Name and surname are required."; return Redirect("/Admin#section-families"); }
 
             var family = await _db.Families.FindAsync(familyId);
             if (family == null) return NotFound();
@@ -471,15 +545,15 @@ namespace HBCDirectory.Pages
             if (photo is { Length: > 0 })
             {
                 var err = ValidatePhoto(photo);
-                if (err != null) { TempData["Error"] = err; return RedirectToPage(); }
-                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return RedirectToPage(); }
+                if (err != null) { TempData["Error"] = err; return Redirect("/Admin#section-families"); }
+                if (!await IsImageAsync(photo)) { TempData["Error"] = "Invalid image."; return Redirect("/Admin#section-families"); }
                 child.PhotoFileName = await SavePhotoAsync(photo);
             }
 
             _db.Members.Add(child);
             await _db.SaveChangesAsync();
             TempData["Success"] = $"\'{child.DisplayName}\' added to {family.FamilyName} family.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-families");
         }
 
         // To remove an adult from a family, use Edit Member and clear the family field.
@@ -491,7 +565,7 @@ namespace HBCDirectory.Pages
             if (child.MemberType != "Child")
             {
                 TempData["Error"] = "To remove an adult from a family use Edit Member.";
-                return RedirectToPage();
+                return Redirect("/Admin#section-families");
             }
 
             if (!string.IsNullOrEmpty(child.PhotoFileName))
@@ -500,13 +574,13 @@ namespace HBCDirectory.Pages
             _db.Members.Remove(child);
             await _db.SaveChangesAsync();
             TempData["Success"] = $"\'{child.DisplayName}\' removed.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-families");
         }
 
         public async Task<IActionResult> OnPostAddGroupAsync(string groupName, string? description)
         {
             if (string.IsNullOrWhiteSpace(groupName))
-            { TempData["Error"] = "Group name is required."; return RedirectToPage(); }
+            { TempData["Error"] = "Group name is required."; return Redirect("/Admin#section-groups"); }
 
             var maxOrd = await _db.Groups.AnyAsync()
                 ? await _db.Groups.MaxAsync(g => g.DisplayOrder) : 0;
@@ -519,13 +593,13 @@ namespace HBCDirectory.Pages
             });
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Group '{groupName}' created.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-groups");
         }
 
         public async Task<IActionResult> OnPostEditGroupAsync(int id, string groupName, string? description)
         {
             if (string.IsNullOrWhiteSpace(groupName))
-            { TempData["Error"] = "Group name is required."; return RedirectToPage(); }
+            { TempData["Error"] = "Group name is required."; return Redirect("/Admin#section-groups"); }
 
             var group = await _db.Groups.FindAsync(id);
             if (group == null) return NotFound();
@@ -534,7 +608,7 @@ namespace HBCDirectory.Pages
             group.Description = description?.Trim();
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Group renamed to '{group.Name}'.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-groups");
         }
 
         public async Task<IActionResult> OnPostDeleteGroupAsync(int id)
@@ -544,7 +618,7 @@ namespace HBCDirectory.Pages
             _db.Groups.Remove(group);
             await _db.SaveChangesAsync();
             TempData["Success"] = "Group deleted.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-groups");
         }
 
         public async Task<IActionResult> OnPostAddMemberToGroupAsync(int memberId, int groupId)
@@ -557,7 +631,7 @@ namespace HBCDirectory.Pages
                 await _db.SaveChangesAsync();
             }
             TempData["Success"] = "Member added to group.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-groups");
         }
 
         public async Task<IActionResult> OnPostRemoveMemberFromGroupAsync(int id)
@@ -567,25 +641,25 @@ namespace HBCDirectory.Pages
             _db.MemberGroups.Remove(mg);
             await _db.SaveChangesAsync();
             TempData["Success"] = "Member removed from group.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-groups");
         }
 
         //  Care Groups (pastoral care — standalone from Groups & Ministries) 
         public async Task<IActionResult> OnPostAddCareGroupAsync(string careGroupName)
         {
             if (string.IsNullOrWhiteSpace(careGroupName))
-            { TempData["Error"] = "Care group name is required."; return RedirectToPage(); }
+            { TempData["Error"] = "Care group name is required."; return Redirect("/Admin#section-caregroups"); }
 
             _db.CareGroups.Add(new CareGroup { Name = careGroupName.Trim() });
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Care group '{careGroupName}' created.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-caregroups");
         }
 
         public async Task<IActionResult> OnPostEditCareGroupAsync(int id, string careGroupName)
         {
             if (string.IsNullOrWhiteSpace(careGroupName))
-            { TempData["Error"] = "Care group name is required."; return RedirectToPage(); }
+            { TempData["Error"] = "Care group name is required."; return Redirect("/Admin#section-caregroups"); }
 
             var cg = await _db.CareGroups.FindAsync(id);
             if (cg == null) return NotFound();
@@ -593,7 +667,7 @@ namespace HBCDirectory.Pages
             cg.Name = careGroupName.Trim();
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Care group renamed to '{cg.Name}'.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-caregroups");
         }
 
         public async Task<IActionResult> OnPostDeleteCareGroupAsync(int id)
@@ -603,7 +677,7 @@ namespace HBCDirectory.Pages
             _db.CareGroups.Remove(cg);
             await _db.SaveChangesAsync();
             TempData["Success"] = "Care group deleted.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-caregroups");
         }
 
         public async Task<IActionResult> OnPostAddCareGroupLeaderAsync(int memberId, int careGroupId)
@@ -616,7 +690,7 @@ namespace HBCDirectory.Pages
                 await _db.SaveChangesAsync();
             }
             TempData["Success"] = "Leader added to care group.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-caregroups");
         }
 
         public async Task<IActionResult> OnPostRemoveCareGroupLeaderAsync(int id)
@@ -626,22 +700,16 @@ namespace HBCDirectory.Pages
             _db.CareGroupLeaders.Remove(leader);
             await _db.SaveChangesAsync();
             TempData["Success"] = "Leader removed from care group.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-caregroups");
         }
 
         public async Task<IActionResult> OnPostAddMemberToCareGroupAsync(int memberId, int careGroupId)
         {
-            // Unlike Groups/Ministries, care-group membership is exclusive —
-            // one member, one care group at a time (enforced by a unique
-            // index on MemberId). Adding someone who's already in a
-            // different care group MOVES them rather than erroring, since
-            // "this person's pastoral care has been reassigned" is the
-            // normal case this would come up for, not a mistake to block.
             var existing = await _db.CareGroupMembers.FirstOrDefaultAsync(m => m.MemberId == memberId);
             if (existing != null)
             {
                 if (existing.CareGroupId == careGroupId)
-                { TempData["Error"] = "That member is already in this care group."; return RedirectToPage(); }
+                { TempData["Error"] = "That member is already in this care group."; return Redirect("/Admin#section-caregroups"); }
                 existing.CareGroupId = careGroupId;
             }
             else
@@ -650,7 +718,7 @@ namespace HBCDirectory.Pages
             }
             await _db.SaveChangesAsync();
             TempData["Success"] = "Member added to care group.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-caregroups");
         }
 
         public async Task<IActionResult> OnPostRemoveMemberFromCareGroupAsync(int id)
@@ -660,7 +728,7 @@ namespace HBCDirectory.Pages
             _db.CareGroupMembers.Remove(cgm);
             await _db.SaveChangesAsync();
             TempData["Success"] = "Member removed from care group.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-caregroups");
         }
 
         public async Task<IActionResult> OnPostApprovePendingAsync(int id)
@@ -708,7 +776,7 @@ namespace HBCDirectory.Pages
                 $"Profile update approved (was: {oldName})");
 
             TempData["Success"] = $"Update for '{member.DisplayName}' approved.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-pendingupdates");
         }
 
         public async Task<IActionResult> OnPostRejectPendingAsync(int id, string? reviewNote)
@@ -728,7 +796,7 @@ namespace HBCDirectory.Pages
             await _db.SaveChangesAsync();
 
             TempData["Success"] = $"Update for '{pending.Member.DisplayName}' rejected.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-pendingupdates");
         }
 
         public async Task<IActionResult> OnPostApprovePendingFamilyPhotoAsync(int id)
@@ -751,7 +819,7 @@ namespace HBCDirectory.Pages
             await LogChangeAsync("Family", family.Id, family.FamilyName, "Updated", "Family photo approved");
 
             TempData["Success"] = $"Family photo for '{family.FamilyName}' approved.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-pendingphotos");
         }
 
         public async Task<IActionResult> OnPostRejectPendingFamilyPhotoAsync(int id, string? reviewNote)
@@ -769,7 +837,7 @@ namespace HBCDirectory.Pages
             await _db.SaveChangesAsync();
 
             TempData["Success"] = $"Family photo submission for '{pending.Family.FamilyName}' rejected.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-pendingphotos");
         }
 
 
@@ -788,7 +856,7 @@ namespace HBCDirectory.Pages
             settings.RequireApprovalForDateJoined  = requireDateJoined;
             await _db.SaveChangesAsync();
             TempData["Success"] = "Approval settings saved.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-approval");
         }
 
         public async Task<IActionResult> OnPostGeneratePdfAsync()
@@ -797,7 +865,7 @@ namespace HBCDirectory.Pages
             if (!lease.IsAcquired)
             {
                 TempData["Error"] = "PDF generation is limited to 10 per hour. Please try again later.";
-                return RedirectToPage();
+                return Redirect("/Admin#section-pdf");
             }
 
             var settings = await _db.PdfSettings.FindAsync(1);
@@ -811,7 +879,7 @@ namespace HBCDirectory.Pages
             await _db.SaveChangesAsync();
 
             TempData["Success"] = $"PDF generated and stored. Ready to download.";
-            return RedirectToPage();
+            return Redirect("/Admin#section-pdf");
         }
 
         public async Task<IActionResult> OnPostSavePdfSettingsAsync(
@@ -826,11 +894,6 @@ namespace HBCDirectory.Pages
             else if (!string.IsNullOrWhiteSpace(password))
                 settings.Password = password.Trim();
 
-            // If a password was just removed and a PDF is already cached in R2,
-            // that cached file was encrypted at generation time — the setting
-            // alone can't strip it, so regenerate it now to match. This does
-            // the same R2 write + QuestPDF render as "Update PDF", so it draws
-            // from the same rate limit.
             if (removePassword && settings.R2Key != null)
             {
                 using var lease = await _pdfGenerateLimiter.AcquireAsync(1);
@@ -838,7 +901,7 @@ namespace HBCDirectory.Pages
                 {
                     TempData["Error"] = "PDF generation is limited to 10 per hour. The password field was saved, but the stored PDF could not be regenerated yet — try 'Update PDF' shortly.";
                     await _db.SaveChangesAsync();
-                    return RedirectToPage();
+                    return Redirect("/Admin#section-pdf");
                 }
 
                 await RegenerateAndCachePdfAsync(settings);
@@ -850,15 +913,11 @@ namespace HBCDirectory.Pages
             }
 
             await _db.SaveChangesAsync();
-            return RedirectToPage();
+            return Redirect("/Admin#section-pdf");
         }
 
         private async Task RegenerateAndCachePdfAsync(PdfSettings settings)
         {
-            // AsNoTracking — these Family/Member objects only exist to build
-            // this one PDF and are never saved back, so it's safe to mutate
-            // them below (filtering members out, sanitizing MemberStatus)
-            // without any risk of that accidentally persisting to the DB.
             var families = await _db.Families
                 .Include(f => f.Members)
                 .AsNoTracking()
@@ -871,16 +930,6 @@ namespace HBCDirectory.Pages
                 .OrderBy(m => m.Surname).ThenBy(m => m.Name)
                 .ToListAsync();
 
-            // The PDF is a document distributed to the whole congregation —
-            // same two rules as the public directory (see
-            // Member.IsVisibleToCongregation / Member.PublicStatus):
-            // Resigned/Excommunicated members don't appear in it at all, and
-            // anyone who does appear (including Pending Removal/Pending
-            // Discipline, who stay visible per the agreed design) never has
-            // their actual status printed — DirectoryPdfService prints
-            // whatever MemberStatus is right there on the card, so it's
-            // sanitized here before that ever happens, not inside the PDF
-            // service itself.
             foreach (var f in families)
                 f.Members = f.Members
                     .Where(Member.IsVisibleToCongregation)
@@ -899,17 +948,8 @@ namespace HBCDirectory.Pages
 
             if (settings.HasPassword)
                 bytes = PdfPasswordHelper.AddPassword(bytes, settings.Password!);
-            // A predictable, date-based key would let anyone who guesses the
-            // pattern download the directory PDF directly from R2 if the
-            // bucket were ever accidentally made public — use a random key
-            // instead so it's only reachable via the authenticated Download
-            // page, which looks it up from settings.R2Key in the database.
             var key = $"pdf/hbc-directory-{Guid.NewGuid():N}.pdf";
 
-            // Each generation used to write a brand-new key without removing
-            // the previous one, so old PDFs (containing member photos, phone
-            // numbers, addresses) accumulated in R2 forever. Keep track of the
-            // old key and remove it once the new upload has succeeded.
             var previousKey = settings.R2Key;
 
             await _pdfService.UploadToR2Async(bytes, key);
@@ -1004,12 +1044,6 @@ namespace HBCDirectory.Pages
                 using var output = new MemoryStream();
                 var reader = new PdfReader(input);
 
-                // The owner password grants full control over the PDF (removing
-                // the user password, changing permissions, etc). Deriving it from
-                // the user password ("<password>_o") meant anyone who knew the
-                // open password could trivially guess it. Use an independent
-                // random value each time instead — nobody needs to remember it,
-                // it only needs to exist so the encryption has an owner.
                 var ownerPassword = RandomNumberGenerator.GetBytes(32);
 
                 var writerProps = new WriterProperties()
