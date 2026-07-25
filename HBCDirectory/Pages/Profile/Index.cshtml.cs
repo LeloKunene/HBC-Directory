@@ -82,6 +82,8 @@ namespace HBCDirectory.Pages.Profile
         public async Task<IActionResult> OnPostAsync(
             string name, string surname, string? phoneNumber, string? address,
             bool showPhone, bool showAddress,
+            DateTime? birthdate, DateTime? anniversary, DateTime? dateJoined,
+            bool showBirthdate, bool showAnniversary,
             IFormFile? photo)
         {
             var memberId = GetMemberId();
@@ -113,9 +115,14 @@ namespace HBCDirectory.Pages.Profile
             }
             if (!settings.RequireApprovalForPrivacy)
             {
-                member.ShowPhone   = showPhone;
-                member.ShowAddress = showAddress;
+                member.ShowPhone      = showPhone;
+                member.ShowAddress    = showAddress;
+                member.ShowBirthdate   = showBirthdate;
+                member.ShowAnniversary = showAnniversary;
             }
+            if (!settings.RequireApprovalForBirthdate)   member.Birthdate   = birthdate;
+            if (!settings.RequireApprovalForAnniversary) member.Anniversary = anniversary;
+            if (!settings.RequireApprovalForDateJoined)  member.DateJoined  = dateJoined;
             await _db.SaveChangesAsync();
 
             // ── Build pending changes (fields that need approval) ─────────
@@ -132,9 +139,14 @@ namespace HBCDirectory.Pages.Profile
             }
             if (settings.RequireApprovalForPrivacy)
             {
-                pendingFields["showPhone"]   = showPhone;
-                pendingFields["showAddress"] = showAddress;
+                pendingFields["showPhone"]      = showPhone;
+                pendingFields["showAddress"]    = showAddress;
+                pendingFields["showBirthdate"]   = showBirthdate;
+                pendingFields["showAnniversary"] = showAnniversary;
             }
+            if (settings.RequireApprovalForBirthdate)   pendingFields["birthdate"]   = birthdate;
+            if (settings.RequireApprovalForAnniversary) pendingFields["anniversary"] = anniversary;
+            if (settings.RequireApprovalForDateJoined)  pendingFields["dateJoined"]  = dateJoined;
 
             bool hasPhoto = photo != null && photo.Length > 0;
             bool hasPendingChanges = pendingFields.Count > 0 || (hasPhoto && settings.RequireApprovalForPhoto);

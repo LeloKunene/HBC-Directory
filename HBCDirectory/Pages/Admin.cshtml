@@ -1157,6 +1157,72 @@ function togglePdfPasswordVisibility() {
                         </span>
                     </div>
                 </div>
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForBirthdate ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Birthdate</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requireBirthdate"
+                                       id="req-birthdate" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForBirthdate ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForBirthdate)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForAnniversary ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Anniversary</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requireAnniversary"
+                                       id="req-anniversary" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForAnniversary ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForAnniversary)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="approval-setting-card @(Model.ApprovalConfig.RequireApprovalForDateJoined ? "approval-setting-card--pending" : "approval-setting-card--instant")">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="approval-setting-label">Member Join Date</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="requireDateJoined"
+                                       id="req-datejoined" value="true"
+                                       @(Model.ApprovalConfig.RequireApprovalForDateJoined ? "checked" : "") />
+                            </div>
+                        </div>
+                        <span class="approval-setting-status">
+                            @if (Model.ApprovalConfig.RequireApprovalForDateJoined)
+                            {
+                                <i class="fa-solid fa-clock"></i> <text>Needs approval</text>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-bolt"></i> <text>Instant</text>
+                            }
+                        </span>
+                    </div>
+                </div>
             </div>
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary btn-sm">Save settings</button>
@@ -1194,6 +1260,9 @@ function togglePdfPasswordVisibility() {
                     bool?   propShowPhone = doc.TryGetProperty("showPhone",      out var jsp) ? jsp.GetBoolean()       : (bool?)null;
                     bool?   propShowBd    = doc.TryGetProperty("showBirthdate",  out var jsb) ? jsb.GetBoolean()       : (bool?)null;
                     bool?   propShowAnn   = doc.TryGetProperty("showAnniversary",out var jsa) ? jsa.GetBoolean()       : (bool?)null;
+                    DateTime? propBirthdate   = doc.TryGetProperty("birthdate",   out var jbd) && jbd.ValueKind != System.Text.Json.JsonValueKind.Null ? jbd.GetDateTime() : (DateTime?)null;
+                    DateTime? propAnniversary = doc.TryGetProperty("anniversary", out var jan) && jan.ValueKind != System.Text.Json.JsonValueKind.Null ? jan.GetDateTime() : (DateTime?)null;
+                    DateTime? propDateJoined  = doc.TryGetProperty("dateJoined",  out var jdj) && jdj.ValueKind != System.Text.Json.JsonValueKind.Null ? jdj.GetDateTime() : (DateTime?)null;
                     bool    hasPhoto      = !string.IsNullOrEmpty(p.PendingPhotoFileName);
 
                     bool nameChanged    = propName    != null && propName    != member.Name;
@@ -1203,6 +1272,9 @@ function togglePdfPasswordVisibility() {
                     bool spChanged      = propShowPhone.HasValue && propShowPhone.Value != member.ShowPhone;
                     bool sbChanged      = propShowBd.HasValue   && propShowBd.Value    != member.ShowBirthdate;
                     bool saChanged      = propShowAnn.HasValue  && propShowAnn.Value   != member.ShowAnniversary;
+                    bool bdChanged      = propBirthdate.HasValue   && propBirthdate   != member.Birthdate;
+                    bool anChanged      = propAnniversary.HasValue && propAnniversary != member.Anniversary;
+                    bool djChanged      = propDateJoined.HasValue  && propDateJoined  != member.DateJoined;
 
                 <div class="pending-update-card">
                     <!-- Header -->
@@ -1262,6 +1334,9 @@ function togglePdfPasswordVisibility() {
                                 <tr><td class="field-label">Show phone</td><td>@(member.ShowPhone ? "Yes" : "No")</td></tr>
                                 <tr><td class="field-label">Show birthday</td><td>@(member.ShowBirthdate ? "Yes" : "No")</td></tr>
                                 <tr><td class="field-label">Show anniversary</td><td>@(member.ShowAnniversary ? "Yes" : "No")</td></tr>
+                                <tr><td class="field-label">Birthdate</td><td>@(member.Birthdate?.ToString("d MMM yyyy") ?? "—")</td></tr>
+                                <tr><td class="field-label">Anniversary</td><td>@(member.Anniversary?.ToString("d MMM yyyy") ?? "—")</td></tr>
+                                <tr><td class="field-label">Date joined</td><td>@(member.DateJoined?.ToString("d MMM yyyy") ?? "—")</td></tr>
                             </table>
                         </div>
 
@@ -1331,6 +1406,27 @@ function togglePdfPasswordVisibility() {
                                     <td>
                                         @(propShowAnn.HasValue ? (propShowAnn.Value ? "Yes" : "No") : (member.ShowAnniversary ? "Yes" : "No"))
                                         @if (saChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(bdChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Birthdate</td>
+                                    <td>
+                                        @((propBirthdate ?? member.Birthdate)?.ToString("d MMM yyyy") ?? "—")
+                                        @if (bdChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(anChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Anniversary</td>
+                                    <td>
+                                        @((propAnniversary ?? member.Anniversary)?.ToString("d MMM yyyy") ?? "—")
+                                        @if (anChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
+                                    </td>
+                                </tr>
+                                <tr class="@(djChanged ? "field-changed" : "field-unchanged")">
+                                    <td class="field-label">Date joined</td>
+                                    <td>
+                                        @((propDateJoined ?? member.DateJoined)?.ToString("d MMM yyyy") ?? "—")
+                                        @if (djChanged) { <span class="changed-tag"><i class="fa-solid fa-arrow-right"></i></span> }
                                     </td>
                                 </tr>
                             </table>

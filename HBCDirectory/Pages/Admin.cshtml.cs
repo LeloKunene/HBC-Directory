@@ -679,9 +679,16 @@ namespace HBCDirectory.Pages
                 if (changes.TryGetProperty("name",          out var n)) member.Name          = n.GetString()!;
                 if (changes.TryGetProperty("surname",        out var s)) member.Surname       = s.GetString()!;
                 if (changes.TryGetProperty("phoneNumber",    out var p)) member.PhoneNumber   = p.GetString();
+                if (changes.TryGetProperty("address",        out var addr)) member.Address    = addr.GetString();
                 if (changes.TryGetProperty("showPhone",      out var sp)) member.ShowPhone     = sp.GetBoolean();
                 if (changes.TryGetProperty("showBirthdate",  out var sb)) member.ShowBirthdate = sb.GetBoolean();
                 if (changes.TryGetProperty("showAnniversary",out var sa)) member.ShowAnniversary = sa.GetBoolean();
+                if (changes.TryGetProperty("birthdate",   out var bd))
+                    member.Birthdate   = bd.ValueKind == System.Text.Json.JsonValueKind.Null ? null : bd.GetDateTime();
+                if (changes.TryGetProperty("anniversary", out var av))
+                    member.Anniversary = av.ValueKind == System.Text.Json.JsonValueKind.Null ? null : av.GetDateTime();
+                if (changes.TryGetProperty("dateJoined",  out var dj))
+                    member.DateJoined  = dj.ValueKind == System.Text.Json.JsonValueKind.Null ? null : dj.GetDateTime();
             }
             catch (Exception ex) { Console.WriteLine($"PendingUpdate parse error: {ex.Message}"); }
 
@@ -767,7 +774,8 @@ namespace HBCDirectory.Pages
 
 
         public async Task<IActionResult> OnPostSaveApprovalSettingsAsync(
-            bool requireName, bool requirePhone, bool requirePrivacy, bool requirePhoto)
+            bool requireName, bool requirePhone, bool requirePrivacy, bool requirePhoto,
+            bool requireBirthdate, bool requireAnniversary, bool requireDateJoined)
         {
             var settings = await _db.ApprovalSettings.FindAsync(1);
             if (settings == null) { settings = new ApprovalSettings { Id = 1 }; _db.ApprovalSettings.Add(settings); }
@@ -775,6 +783,9 @@ namespace HBCDirectory.Pages
             settings.RequireApprovalForPhone   = requirePhone;
             settings.RequireApprovalForPrivacy = requirePrivacy;
             settings.RequireApprovalForPhoto   = requirePhoto;
+            settings.RequireApprovalForBirthdate   = requireBirthdate;
+            settings.RequireApprovalForAnniversary = requireAnniversary;
+            settings.RequireApprovalForDateJoined  = requireDateJoined;
             await _db.SaveChangesAsync();
             TempData["Success"] = "Approval settings saved.";
             return RedirectToPage();
