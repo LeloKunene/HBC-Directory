@@ -32,9 +32,9 @@
 <!-- ══════════════════════════════════════════════════════
      MEMBERS SECTION
 ════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5">
+<div class="admin-section mb-5" id="section-members">
     <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">Members</h4>
+        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-members')"></i>Members</h4>
         <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addMemberForm">
             + Add Member
         </button>
@@ -228,9 +228,9 @@
 <!-- ══════════════════════════════════════════════════════
      FAMILIES SECTION
 ════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5">
+<div class="admin-section mb-5" id="section-families">
     <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">Families</h4>
+        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-families')"></i>Families</h4>
         <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addFamilyForm">
             + Add Family
         </button>
@@ -374,9 +374,9 @@
 <!-- ══════════════════════════════════════════════════════
      STAFF SECTION
 ════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5">
+<div class="admin-section mb-5" id="section-staff">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0">Staff</h4>
+    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-staff')"></i>Staff</h4>
 </div>
 
     <div class="row g-4">
@@ -482,9 +482,9 @@
 <!-- ══════════════════════════════════════════════════════
      GROUPS / MINISTRY MEMBERSHIPS
 ════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5">
+<div class="admin-section mb-5" id="section-groups">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0">Groups & Ministries</h4>
+    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-groups')"></i>Groups & Ministries</h4>
 </div>
     <div class="row g-4">
 
@@ -599,9 +599,9 @@
      Admin + Leadership both manage this (Admin does the data entry, per
      elder instruction), this is never shown on the public directory.
 ════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5">
+<div class="admin-section mb-5" id="section-caregroups">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0">Care Groups</h4>
+    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-caregroups')"></i>Care Groups</h4>
     <p class="text-muted small mb-0">Pastoral care assignments: who's shepherding whom. Separate from Groups &amp; Ministries above; shown on each member's public directory card.</p>
 </div>
     <div class="row g-4">
@@ -766,9 +766,10 @@
 <!-- ══════════════════════════════════════════════════════
      PDF MANAGEMENT SECTION
 ════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5">
+<div class="admin-section mb-5" id="section-pdf">
     <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
         <h4 class="mb-0">
+            <i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-pdf')"></i>
             <i class="fa-solid fa-file-pdf me-2" style="color:var(--dir-mustard);"></i>PDF Directory
         </h4>
         <form method="post" asp-page-handler="GeneratePdf">
@@ -1061,9 +1062,9 @@ function togglePdfPasswordVisibility() {
 <!-- ══════════════════════════════════════════════════════
      APPROVAL SETTINGS
 ════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5">
+<div class="admin-section mb-5" id="section-approval">
     <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">Approval Settings</h4>
+        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-approval')"></i>Approval Settings</h4>
     </div>
     <div class="form-card">
         <p class="text-muted small mb-3">Choose which profile fields require admin approval before going live. Fields set to instant are applied immediately when a member saves their profile.</p>
@@ -1234,9 +1235,9 @@ function togglePdfPasswordVisibility() {
 <!-- ══════════════════════════════════════════════════════
      PENDING MEMBER UPDATES — DETAILED
 ════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5">
+<div class="admin-section mb-5" id="section-pendingupdates">
     <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"> Pending Member Updates </h4>
+        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-pendingupdates')"></i> Pending Member Updates </h4>
         @if (Model.PendingUpdates.Any())
         {
             <span class="badge bg-warning text-dark ms-2">@Model.PendingUpdates.Count</span>
@@ -1272,6 +1273,13 @@ function togglePdfPasswordVisibility() {
                     bool spChanged      = propShowPhone.HasValue && propShowPhone.Value != member.ShowPhone;
                     bool sbChanged      = propShowBd.HasValue   && propShowBd.Value    != member.ShowBirthdate;
                     bool saChanged      = propShowAnn.HasValue  && propShowAnn.Value   != member.ShowAnniversary;
+                    // These three fields were part of the submission whenever
+                    // their approval setting was on, whether or not the value
+                    // actually changed (same "resubmit everything" pattern the
+                    // fields above already use) — doc.TryGetProperty alone
+                    // can't tell "submitted, unchanged" from "not submitted",
+                    // so the changed-flag here is date-equality only, same
+                    // limitation the existing string fields above already have.
                     bool bdChanged      = propBirthdate.HasValue   && propBirthdate   != member.Birthdate;
                     bool anChanged      = propAnniversary.HasValue && propAnniversary != member.Anniversary;
                     bool djChanged      = propDateJoined.HasValue  && propDateJoined  != member.DateJoined;
@@ -1443,9 +1451,9 @@ function togglePdfPasswordVisibility() {
      PENDING FAMILY PHOTOS — submitted by a family's designated head via
      their own Profile page; always require approval, no setting to skip.
 ════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5">
+<div class="admin-section mb-5" id="section-pendingphotos">
     <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">Pending Family Photos</h4>
+        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-pendingphotos')"></i>Pending Family Photos</h4>
         @if (Model.PendingFamilyPhotos.Any())
         {
             <span class="badge bg-warning text-dark ms-2">@Model.PendingFamilyPhotos.Count</span>
@@ -1522,9 +1530,9 @@ function togglePdfPasswordVisibility() {
 <!-- ══════════════════════════════════════════════════════
      CHANGE HISTORY (Audit Log)
 ════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5">
+<div class="admin-section mb-5" id="section-recentchanges">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0">Recent Changes</h4>
+    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-recentchanges')"></i>Recent Changes</h4>
 </div>
     @if (!Model.RecentChanges.Any())
     {
@@ -1876,6 +1884,24 @@ document.getElementById('editCareGroupModal').addEventListener('show.bs.modal', 
     const btn = e.relatedTarget;
     document.getElementById('editCareGroup-id').value   = btn.getAttribute('data-caregroupid');
     document.getElementById('editCareGroup-name').value = btn.getAttribute('data-caregroupname');
+});
+
+function toggleAdminSection(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const collapsed = el.classList.toggle('admin-section--collapsed');
+    try { localStorage.setItem('admin-section-collapsed:' + id, collapsed ? '1' : '0'); }
+    catch (e) { /* localStorage unavailable — collapse state just won't persist */ }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.admin-section[id]').forEach(function (el) {
+        try {
+            if (localStorage.getItem('admin-section-collapsed:' + el.id) === '1') {
+                el.classList.add('admin-section--collapsed');
+            }
+        } catch (e) { /* localStorage unavailable — sections just stay expanded */ }
+    });
 });
 
 function updateAddForm() {

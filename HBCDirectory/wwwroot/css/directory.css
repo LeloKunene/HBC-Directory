@@ -191,6 +191,25 @@
 .admin-section-header h4 { font-family: 'Montserrat', sans-serif; font-size: 15px; font-weight: 700; color: var(--dir-dark); }
 .admin-section { border-bottom: 1px solid var(--dir-light2); padding-bottom: 32px; }
 
+/* Collapsible admin sections */
+.admin-section-chevron {
+  cursor: pointer;
+  margin-right: 10px;
+  font-size: 13px;
+  color: var(--dir-grey);
+  transition: transform 0.2s;
+  display: inline-block;
+}
+.admin-section--collapsed .admin-section-chevron {
+  transform: rotate(-90deg);
+}
+.admin-section--collapsed > *:not(.admin-section-header) {
+  display: none !important;
+}
+.admin-section--collapsed {
+  padding-bottom: 12px;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .dir-grid { grid-template-columns: repeat(2, 1fr); }
