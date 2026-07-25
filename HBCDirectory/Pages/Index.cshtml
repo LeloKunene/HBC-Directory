@@ -265,6 +265,7 @@
                         adults = adults.Select(a => new
                         {
                             name = a.Name,
+                            status = Model.PublicStatusFor(a),
                             office = a.ChurchOffice,
                             staffRoles = Model.StaffRolesFor(a.Id),
                             groups = Model.GroupsFor(a.Id),
@@ -668,7 +669,7 @@ document.getElementById('familyModal').addEventListener('show.bs.modal', e => {
         hh += `<div class="dir-modal-person">
                    ${avatar}
                    <div class="dir-modal-person-body">
-                       <p class="dir-modal-person-name">${a.name}${a.office ? ` <span class="dir-badge dir-badge--office">${a.office}</span>` : ''}${(a.staffRoles || []).map(r => ` <span class="dir-badge dir-badge--staff">${r}</span>`).join('')}</p>
+                       <p class="dir-modal-person-name">${a.name}${a.status ? ` <span class="dir-badge dir-badge--${a.status.toLowerCase()}">${a.status}</span>` : ''}${a.office ? ` <span class="dir-badge dir-badge--office">${a.office}</span>` : ''}${(a.staffRoles || []).map(r => ` <span class="dir-badge dir-badge--staff">${r}</span>`).join('')}</p>
                        <div class="dir-modal-person-contact">
                            ${contact}
                            ${a.birthdate ? `<span><i class="fa-solid fa-cake-candles dir-icon"></i> ${a.birthdate}</span>` : ''}
