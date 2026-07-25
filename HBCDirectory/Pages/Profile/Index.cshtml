@@ -90,6 +90,36 @@
                             <input name="address" class="form-control" placeholder="Street, suburb" value="@Model.CurrentMember.Address" />
                         </div>
 
+                        <div class="form-field">
+                            <label class="form-label">
+                                Birthdate
+                                @if (cfg.RequireApprovalForBirthdate) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
+                                else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
+                            </label>
+                            <input type="date" name="birthdate" class="form-control"
+                                   value="@(Model.CurrentMember.Birthdate?.ToString("yyyy-MM-dd"))" />
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">
+                                Anniversary
+                                @if (cfg.RequireApprovalForAnniversary) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
+                                else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
+                            </label>
+                            <input type="date" name="anniversary" class="form-control"
+                                   value="@(Model.CurrentMember.Anniversary?.ToString("yyyy-MM-dd"))" />
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">
+                                Member Join Date
+                                @if (cfg.RequireApprovalForDateJoined) { <span class="approval-badge"><i class="fa-solid fa-clock"></i> Review</span> }
+                                else { <span class="instant-badge"><i class="fa-solid fa-bolt"></i> Instant</span> }
+                            </label>
+                            <input type="date" name="dateJoined" class="form-control"
+                                   value="@(Model.CurrentMember.DateJoined?.ToString("yyyy-MM-dd"))" />
+                        </div>
+
                         <div class="form-field form-field--full">
                             <label class="form-label">
                                 Update Photo
@@ -100,7 +130,7 @@
                                    accept="image/jpeg,image/png" onchange="previewProfilePhoto(this)" />
                         </div>
 
-                        <!-- Privacy: only phone and address -->
+                        <!-- Privacy: phone, address, birthdate, anniversary -->
                         <div class="form-field form-field--full">
                             <label class="form-label">
                                 Privacy
@@ -117,6 +147,16 @@
                                     <input class="form-check-input" type="checkbox" name="showAddress"
                                            id="showAddress" value="true" @(Model.CurrentMember.ShowAddress ? "checked" : "") />
                                     <label class="form-check-label" for="showAddress">Show address</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="showBirthdate"
+                                           id="showBirthdate" value="true" @(Model.CurrentMember.ShowBirthdate ? "checked" : "") />
+                                    <label class="form-check-label" for="showBirthdate">Show birthdate</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="showAnniversary"
+                                           id="showAnniversary" value="true" @(Model.CurrentMember.ShowAnniversary ? "checked" : "") />
+                                    <label class="form-check-label" for="showAnniversary">Show anniversary</label>
                                 </div>
                             </div>
                         </div>
@@ -174,9 +214,7 @@
                     <div class="card-header"><i class="fa-solid fa-image me-2"></i>Family Photo</div>
                     <div class="card-body">
                         <p class="text-muted small mb-3">
-                            You're the head of the @Model.MyFamily.FamilyName family, you can update the
-                            family photo shown on the directory. Changes need admin approval before they
-                            go live for everyone.
+                            You can update the family photo shown on the directory. Changes need admin approval before they go live for everyone.
                         </p>
                         @if (Model.HasPendingFamilyPhoto)
                         {
