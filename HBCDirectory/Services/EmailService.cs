@@ -68,5 +68,21 @@ namespace HBCDirectory.Services
             await SendAsync(toEmail, memberName,
                 "Reset Your HBC Directory Password", html);
         }
+
+        //  Admin-composed message
+
+        public async Task SendAdminMessageAsync(
+            string toEmail,
+            string memberName,
+            string subject,
+            string messageBody)
+        {
+            var html = AdminMessageTemplate.Html
+                .Replace("{subject}",     subject)
+                .Replace("{memberName}",  memberName)
+                .Replace("{messageBody}", messageBody);
+
+            await SendAsync(toEmail, memberName, subject, html);
+        }
     }
 }

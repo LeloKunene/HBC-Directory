@@ -104,13 +104,14 @@ namespace HBCDirectory.Pages
             PdfConfig           = await pdfConfigTask;
             ApprovalConfig      = await approvalConfigTask;
 
-            var adults   = Members.Count(m => m.MemberType == "Adult");
-            var children = Members.Count(m => m.MemberType == "Child");
-            var leaders  = Members.Count(m => m.ChurchOffice is "Elder" or "Deacon");
+            var adults      = Members.Count(m => m.MemberType == "Adult");
+            var children    = Members.Count(m => m.MemberType == "Child");
+            var leaders     = Members.Count(m => m.ChurchOffice is "Elder" or "Deacon");
+            var realMembers = Members.Count(m => AdminDisplayStatus(m) == "Member");
 
             Stats = new List<(string, int)>
             {
-                ("Members",   Members.Count),
+                ("Members",   realMembers),
                 ("Families",  Families.Count),
                 ("Adults",    adults),
                 ("Children",  children),
@@ -386,6 +387,39 @@ namespace HBCDirectory.Pages
             await LogChangeAsync("Member", id, memberName, "Deleted");
             TempData["Success"] = "Member deleted.";
             return Redirect("/Admin#section-members");
+        }
+
+        public async Task<IActionResult> OnPostSendEmailAsync(
+            List<int> memberIds, string subject, string messageBody)
+        {
+            if (memberIds == null || memberIds.Count == 0)
+            { TempData["Error"] = "Choose at least one recipient."; return Redirect("/Admin#section-email"); }
+            if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(messageBody))
+            { TempData["Error"] = "Subject and message are required."; return Redirect("/Admin#section-email"); }
+
+            var recipients = await _db.Members
+                .Where(m => memberIds.Contains(m.Id) && m.MemberStatus == "Member" && m.Email != null)
+                .ToListAsync();
+
+            var htmlBody = System.Net.WebUtility.HtmlEncode(messageBody.Trim()).Replace("\n", "<br>");
+            int sent = 0;
+            foreach (var m in recipients)
+            {
+                try
+                {
+                    await _email.SendAdminMessageAsync(m.Email!, m.DisplayName, subject.Trim(), htmlBody);
+                    sent++;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Admin email to {m.Email} failed: {ex.Message}");
+                }
+            }
+
+            TempData["Success"] = sent == recipients.Count
+                ? $"Email sent to {sent} member{(sent == 1 ? "" : "s")}."
+                : $"Sent to {sent} of {recipients.Count} — check the server log for the rest.";
+            return Redirect("/Admin#section-email");
         }
 
         //  Add Family 

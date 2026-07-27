@@ -163,6 +163,51 @@
 .member-thumb { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
 .member-thumb-placeholder { width: 36px; height: 36px; border-radius: 50%; background: var(--dir-light); color: var(--dir-gold); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 
+@media (max-width: 767px) {
+  .table-stack thead { display: none; }
+  .table-stack, .table-stack tbody, .table-stack tr, .table-stack td {
+    display: block;
+    width: 100%;
+  }
+  .table-stack tr {
+    margin-bottom: 14px;
+    border: 1px solid var(--dir-light2);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .table-stack td {
+    border: none;
+    padding: 6px 0;
+    text-align: right;
+  }
+  .table-stack td:not(:last-child) {
+    border-bottom: 1px solid var(--dir-light);
+  }
+  .table-stack td::before {
+    content: attr(data-label);
+    float: left;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--dir-grey);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .table-stack td[data-label=""]::before,
+  .table-stack td:not([data-label])::before {
+    display: none;
+  }
+  .table-stack td.table-stack-cell--photo {
+    text-align: center;
+    padding-top: 10px;
+  }
+  .table-stack td.table-stack-cell--actions {
+    text-align: left;
+    display: flex;
+    gap: 8px;
+    padding-top: 10px;
+  }
+}
+
 /* Admin badges */
 .badge-type, .badge-status, .badge-office { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
 .badge-adult { background: var(--dir-light2); color: var(--dir-dark); }
