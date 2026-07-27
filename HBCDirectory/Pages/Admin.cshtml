@@ -33,12 +33,26 @@
      MEMBERS SECTION
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-members">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-members')"></i>Members</h4>
-        <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addMemberForm">
-            + Add Member
-        </button>
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar admin-bar--mustard" onclick="toggleAdminSection('section-members')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-users"></i>
+                <span class="admin-bar-label">Members</span>
+            </div>
+            <div class="admin-bar-right">
+                <span class="admin-bar-count">@Model.Members.Count</span>
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
+        <div class="admin-bar-subrow">
+            <span></span>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addMemberForm"
+                    onclick="expandAdminSection('section-members')">
+                + Add Member
+            </button>
+        </div>
     </div>
+
 
     <!-- Add Member Form -->
     <div class="collapse" id="addMemberForm">
@@ -141,7 +155,7 @@
                placeholder="Search members by name, email, or family…" onkeyup="filterTableRows('members-search', 'members-table')" />
     </div>
     <div class="table-responsive">
-        <table class="table table-hover" id="members-table">
+        <table class="table table-hover table-stack" id="members-table">
             <thead>
                 <tr>
                     <th>Photo</th>
@@ -158,7 +172,7 @@
                 @foreach (var m in Model.Members)
                 {
                     <tr data-search="@($"{m.Name} {m.Surname} {m.Email} {m.Family?.FamilyName}".ToLowerInvariant())">
-                        <td>
+                        <td class="table-stack-cell--photo" data-label="">
                             @if (!string.IsNullOrEmpty(m.PhotoFileName))
                             {
                                 <img src="@Model.PhotoUrl(m.PhotoFileName)" class="member-thumb" alt="@m.DisplayName" />
@@ -168,14 +182,14 @@
                                 <div class="member-thumb-placeholder">@m.Name[0]@m.Surname[0]</div>
                             }
                         </td>
-                        <td><strong>@m.Surname, @m.Name</strong></td>
-                        <td>
+                        <td class="table-stack-cell--name" data-label="Name"><strong>@m.Surname, @m.Name</strong></td>
+                        <td data-label="Type">
                             <span class="badge-type @(m.IsChild ? "badge-child" : "badge-adult")">
                                 @m.MemberType
                             </span>
                         </td>
 
-                        <td>
+                        <td data-label="Status">
                             @{ var displayStatus = Model.AdminDisplayStatus(m); }
                             @if (!string.IsNullOrEmpty(displayStatus))
                             {
@@ -186,10 +200,10 @@
                                 <span class="badge-office badge-office--@m.ChurchOffice.ToLower()">@m.ChurchOffice</span>
                             }
                         </td>
-                        <td>@(m.Family?.FamilyName ?? "—")</td>
-                        <td>@(m.PhoneNumber ?? "—")</td>
-                        <td class="text-muted small">@(m.DateJoined?.ToString("MMM yyyy") ?? "—")</td>
-                        <td>
+                        <td data-label="Family">@(m.Family?.FamilyName ?? "—")</td>
+                        <td data-label="Phone">@(m.PhoneNumber ?? "—")</td>
+                        <td class="text-muted small" data-label="Joined">@(m.DateJoined?.ToString("MMM yyyy") ?? "—")</td>
+                        <td class="table-stack-cell--actions" data-label="">
                             <button class="btn btn-xs btn-outline-primary"
                                     data-bs-toggle="modal"
                                     data-bs-target="#editMemberModal"
@@ -229,11 +243,24 @@
      FAMILIES SECTION
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-families">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-families')"></i>Families</h4>
-        <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addFamilyForm">
-            + Add Family
-        </button>
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar admin-bar--beige" onclick="toggleAdminSection('section-families')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-house"></i>
+                <span class="admin-bar-label">Families</span>
+            </div>
+            <div class="admin-bar-right">
+                <span class="admin-bar-count">@Model.Families.Count</span>
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
+        <div class="admin-bar-subrow">
+            <span></span>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addFamilyForm"
+                    onclick="expandAdminSection('section-families')">
+                + Add Family
+            </button>
+        </div>
     </div>
 
     <div class="collapse" id="addFamilyForm">
@@ -279,7 +306,7 @@
                placeholder="Search families by name or member…" onkeyup="filterTableRows('families-search', 'families-table')" />
     </div>
     <div class="table-responsive">
-        <table class="table table-hover" id="families-table">
+        <table class="table table-hover table-stack" id="families-table">
             <thead>
                 <tr>
                     <th>Photo</th>
@@ -294,7 +321,7 @@
                 @foreach (var f in Model.Families)
                 {
                     <tr data-search="@($"{f.FamilyName} {string.Join(" ", f.Members.Select(m => m.Name + " " + m.Surname))}".ToLowerInvariant())">
-                        <td>
+                        <td class="table-stack-cell--photo" data-label="">
                             @if (!string.IsNullOrEmpty(f.PhotoFileName))
                             {
                                 <img src="@Model.PhotoUrl(f.PhotoFileName)" class="member-thumb" alt="@f.FamilyName" />
@@ -306,7 +333,7 @@
                                 </div>
                             }
                         </td>
-                        <td>
+                        <td class="table-stack-cell--name" data-label="Family">
                             <strong>@f.FamilyName</strong>
                             @{ var sameNameCount = Model.Families.Count(x => x.FamilyName == f.FamilyName); }
                             @if (sameNameCount > 1)
@@ -324,9 +351,9 @@
                                 }
                             }
                         </td>
-                        <td class="text-muted small">@(f.Address ?? "—")</td>
-                        <td class="text-muted small">@(f.FamilyPhone ?? "—")</td>
-                        <td>
+                        <td class="text-muted small" data-label="Address">@(f.Address ?? "—")</td>
+                        <td class="text-muted small" data-label="Phone">@(f.FamilyPhone ?? "—")</td>
+                        <td data-label="Members">
                             <span class="text-muted small">
                                 @(string.Join(", ", Model.VisibleAdultsFor(f).Select(m => m.Name)))
                                 @if (f.Children.Any())
@@ -335,7 +362,7 @@
                                 }
                             </span>
                         </td>
-                        <td>
+                        <td class="table-stack-cell--actions" data-label="">
                             <button class="btn btn-xs btn-outline-primary"
                                     data-bs-toggle="modal"
                                     data-bs-target="#editFamilyModal"
@@ -376,7 +403,16 @@
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-staff">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-staff')"></i>Staff</h4>
+    <div class="admin-bar admin-bar--neutral" onclick="toggleAdminSection('section-staff')">
+        <div class="admin-bar-left">
+            <i class="fa-solid fa-user-tie"></i>
+            <span class="admin-bar-label">Staff</span>
+        </div>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@Model.StaffAssignments.Select(sa => sa.MemberId).Distinct().Count()</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+        </div>
+    </div>
 </div>
 
     <div class="row g-4">
@@ -489,7 +525,16 @@
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-groups">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-groups')"></i>Groups & Ministries</h4>
+    <div class="admin-bar admin-bar--mustard" onclick="toggleAdminSection('section-groups')">
+        <div class="admin-bar-left">
+            <i class="fa-solid fa-people-group"></i>
+            <span class="admin-bar-label">Groups &amp; Ministries</span>
+        </div>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@Model.Groups.Count</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+        </div>
+    </div>
 </div>
     <div class="row g-4">
 
@@ -663,8 +708,16 @@
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-caregroups">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-caregroups')"></i>Care Groups</h4>
-    <p class="text-muted small mb-0">Pastoral care assignments: who's shepherding whom. Separate from Groups &amp; Ministries above; shown on each member's public directory card.</p>
+    <div class="admin-bar admin-bar--beige" onclick="toggleAdminSection('section-caregroups')">
+        <div class="admin-bar-left">
+            <i class="fa-solid fa-hand-holding-heart"></i>
+            <span class="admin-bar-label">Care Groups</span>
+        </div>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@Model.CareGroups.Count</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+        </div>
+    </div>
 </div>
     <div class="row g-4">
 
@@ -832,16 +885,24 @@
      PDF MANAGEMENT SECTION
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-pdf">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">
-            <i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-pdf')"></i>
-            <i class="fa-solid fa-file-pdf me-2" style="color:var(--dir-mustard);"></i>PDF Directory
-        </h4>
-        <form method="post" asp-page-handler="GeneratePdf">
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-arrows-rotate me-1"></i>Update PDF
-            </button>
-        </form>
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar admin-bar--slate" onclick="toggleAdminSection('section-pdf')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-file-pdf"></i>
+                <span class="admin-bar-label">PDF Directory</span>
+            </div>
+            <div class="admin-bar-right">
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
+        <div class="admin-bar-subrow">
+            <span></span>
+            <form method="post" asp-page-handler="GeneratePdf">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-arrows-rotate me-1"></i>Update PDF
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Status banner -->
@@ -1128,8 +1189,16 @@ function togglePdfPasswordVisibility() {
      APPROVAL SETTINGS
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-approval">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-approval')"></i>Approval Settings</h4>
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar admin-bar--neutral" onclick="toggleAdminSection('section-approval')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span class="admin-bar-label">Approval Settings</span>
+            </div>
+            <div class="admin-bar-right">
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
     </div>
     <div class="form-card">
         <p class="text-muted small mb-3">Choose which profile fields require admin approval before going live. Fields set to instant are applied immediately when a member saves their profile.</p>
@@ -1298,15 +1367,77 @@ function togglePdfPasswordVisibility() {
 </div>
 
 <!-- ══════════════════════════════════════════════════════
+     SEND EMAIL — only ever reaches actual Members (not Attendants,
+     not children), enforced server-side regardless of what's picked.
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5" id="section-email">
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar admin-bar--slate" onclick="toggleAdminSection('section-email')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-envelope"></i>
+                <span class="admin-bar-label">Send Email</span>
+            </div>
+            <div class="admin-bar-right">
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
+    </div>
+    <div class="form-card">
+        <form method="post" asp-page-handler="SendEmail" id="sendEmailForm">
+            <div class="row g-4">
+                <div class="col-md-5">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label mb-0">Recipients</label>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="selectAllMembers()">Select all</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="deselectAllMembers()">Unselect all</button>
+                        </div>
+                    </div>
+                    <div class="member-picker member-picker--multi" data-field="memberIds" id="emailMemberPicker">
+                        <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
+                        <div class="member-picker-menu d-none">
+                            @foreach (var m in Model.Members.Where(m => m.MemberStatus == "Member" && m.Email != null))
+                            {
+                                <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
+                            }
+                        </div>
+                        <div class="member-picker-chips"></div>
+                    </div>
+                    <p class="small mt-2 mb-0" id="emailRecipientCount" style="color:var(--dir-mustard);font-weight:600;">No recipients selected yet.</p>
+                </div>
+                <div class="col-md-7">
+                    <div class="mb-2">
+                        <label class="form-label">Subject</label>
+                        <input name="subject" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <textarea name="messageBody" class="form-control" rows="7" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-paper-plane me-2"></i>Send Email
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
      PENDING MEMBER UPDATES — DETAILED
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-pendingupdates">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-pendingupdates')"></i> Pending Member Updates </h4>
-        @if (Model.PendingUpdates.Any())
-        {
-            <span class="badge bg-warning text-dark ms-2">@Model.PendingUpdates.Count</span>
-        }
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar @(Model.PendingUpdates.Any() ? "admin-bar--gold" : "admin-bar--neutral")" onclick="toggleAdminSection('section-pendingupdates')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-user-clock"></i>
+                <span class="admin-bar-label">Pending Member Updates</span>
+            </div>
+            <div class="admin-bar-right">
+                <span class="admin-bar-count">@Model.PendingUpdates.Count</span>
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
     </div>
     @if (!Model.PendingUpdates.Any())
     {
@@ -1338,13 +1469,6 @@ function togglePdfPasswordVisibility() {
                     bool spChanged      = propShowPhone.HasValue && propShowPhone.Value != member.ShowPhone;
                     bool sbChanged      = propShowBd.HasValue   && propShowBd.Value    != member.ShowBirthdate;
                     bool saChanged      = propShowAnn.HasValue  && propShowAnn.Value   != member.ShowAnniversary;
-                    // These three fields were part of the submission whenever
-                    // their approval setting was on, whether or not the value
-                    // actually changed (same "resubmit everything" pattern the
-                    // fields above already use) — doc.TryGetProperty alone
-                    // can't tell "submitted, unchanged" from "not submitted",
-                    // so the changed-flag here is date-equality only, same
-                    // limitation the existing string fields above already have.
                     bool bdChanged      = propBirthdate.HasValue   && propBirthdate   != member.Birthdate;
                     bool anChanged      = propAnniversary.HasValue && propAnniversary != member.Anniversary;
                     bool djChanged      = propDateJoined.HasValue  && propDateJoined  != member.DateJoined;
@@ -1517,12 +1641,17 @@ function togglePdfPasswordVisibility() {
      their own Profile page; always require approval, no setting to skip.
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-pendingphotos">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-pendingphotos')"></i>Pending Family Photos</h4>
-        @if (Model.PendingFamilyPhotos.Any())
-        {
-            <span class="badge bg-warning text-dark ms-2">@Model.PendingFamilyPhotos.Count</span>
-        }
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar @(Model.PendingFamilyPhotos.Any() ? "admin-bar--gold" : "admin-bar--neutral")" onclick="toggleAdminSection('section-pendingphotos')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-image"></i>
+                <span class="admin-bar-label">Pending Family Photos</span>
+            </div>
+            <div class="admin-bar-right">
+                <span class="admin-bar-count">@Model.PendingFamilyPhotos.Count</span>
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
     </div>
     @if (!Model.PendingFamilyPhotos.Any())
     {
@@ -1593,11 +1722,118 @@ function togglePdfPasswordVisibility() {
 </div>
 
 <!-- ══════════════════════════════════════════════════════
+     ISSUES — reports submitted via the nav bar's "Report an issue"
+     icon (see _Layout.cshtml), from any page, by anyone.
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5" id="section-issues">
+    <div class="admin-section-header mb-3">
+        @{ var openIssuesCount = Model.IssueReports.Count(r => !r.IsResolved); }
+        <div class="admin-bar @(openIssuesCount > 0 ? "admin-bar--urgent" : "admin-bar--neutral")" onclick="toggleAdminSection('section-issues')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span class="admin-bar-label">Issues</span>
+            </div>
+            <div class="admin-bar-right">
+                <span class="admin-bar-count">@openIssuesCount</span>
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
+    </div>
+    @{
+        var openIssues     = Model.IssueReports.Where(r => !r.IsResolved).ToList();
+        var resolvedIssues = Model.IssueReports.Where(r => r.IsResolved).ToList();
+    }
+
+    <div class="admin-bar admin-bar--sub @(openIssues.Any() ? "admin-bar--urgent" : "admin-bar--neutral")" data-bar-key="open" onclick="toggleIssueBar('open')">
+        <div class="admin-bar-left">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span class="admin-bar-label">Open</span>
+        </div>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@openIssues.Count</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+        </div>
+    </div>
+    <div class="admin-bar-content" id="issueBarContent-open">
+        @if (!openIssues.Any())
+        {
+            <p class="text-muted small">Nothing open right now.</p>
+        }
+        @foreach (var issue in openIssues)
+        {
+            <div class="issue-card">
+                <div class="issue-card-top">
+                    <div>
+                        <span class="issue-card-category">@issue.Category</span>
+                        <p class="mb-1">@issue.Description</p>
+                    </div>
+                    <form method="post" asp-page-handler="ResolveIssue">
+                        <input type="hidden" name="id" value="@issue.Id" />
+                        <button type="submit" class="btn btn-xs btn-outline-secondary">Mark resolved</button>
+                    </form>
+                </div>
+                <p class="issue-card-meta mb-0">
+                    @issue.SubmittedAt.ToString("d MMM yyyy, HH:mm")
+                    @if (issue.ReportedByMember != null) { <text> · @issue.ReportedByMember.DisplayName</text> }
+                    @if (!string.IsNullOrEmpty(issue.PageUrl)) { <text> · @issue.PageUrl</text> }
+                </p>
+            </div>
+        }
+    </div>
+
+    <div class="admin-bar admin-bar--sub admin-bar--resolved admin-bar--collapsed" data-bar-key="resolved" onclick="toggleIssueBar('resolved')">
+        <div class="admin-bar-left">
+            <i class="fa-solid fa-layer-group"></i>
+            <span class="admin-bar-label">Resolved</span>
+        </div>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@resolvedIssues.Count</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+        </div>
+    </div>
+    <div class="admin-bar-content d-none" id="issueBarContent-resolved">
+        @if (!resolvedIssues.Any())
+        {
+            <p class="text-muted small">No resolved issues yet.</p>
+        }
+        @foreach (var issue in resolvedIssues)
+        {
+            <div class="issue-card">
+                <div class="issue-card-top">
+                    <div>
+                        <span class="issue-card-category">@issue.Category</span>
+                        <p class="mb-1">@issue.Description</p>
+                    </div>
+                    <form method="post" asp-page-handler="ReopenIssue">
+                        <input type="hidden" name="id" value="@issue.Id" />
+                        <button type="submit" class="btn btn-xs btn-outline-secondary">Reopen</button>
+                    </form>
+                </div>
+                <p class="issue-card-meta mb-0">
+                    Reported @issue.SubmittedAt.ToString("d MMM yyyy")
+                    @if (issue.ReportedByMember != null) { <text> · @issue.ReportedByMember.DisplayName</text> }
+                    · Resolved @issue.ResolvedAt?.ToString("d MMM yyyy")
+                </p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
      CHANGE HISTORY (Audit Log)
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-recentchanges">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-recentchanges')"></i>Recent Changes</h4>
+    <div class="admin-bar admin-bar--mustard" onclick="toggleAdminSection('section-recentchanges')">
+        <div class="admin-bar-left">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span class="admin-bar-label">Recent Changes</span>
+        </div>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@Model.RecentChanges.Count</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+        </div>
+    </div>
 </div>
     @if (!Model.RecentChanges.Any())
     {
@@ -1951,11 +2187,63 @@ document.getElementById('editCareGroupModal').addEventListener('show.bs.modal', 
     document.getElementById('editCareGroup-name').value = btn.getAttribute('data-caregroupname');
 });
 
+function selectAllMembers() {
+    const picker = document.getElementById('emailMemberPicker');
+    if (!picker) return;
+    picker.querySelectorAll('.member-picker-option:not(.member-picker-option--active)').forEach(function (opt) {
+        opt.click();
+    });
+}
+
+function deselectAllMembers() {
+    const picker = document.getElementById('emailMemberPicker');
+    if (!picker) return;
+    picker.querySelectorAll('.member-picker-chip i').forEach(function (x) {
+        x.click();
+    });
+}
+
+(function () {
+    const chips = document.querySelector('#emailMemberPicker .member-picker-chips');
+    const counter = document.getElementById('emailRecipientCount');
+    if (!chips || !counter) return;
+    function updateCount() {
+        const n = chips.children.length;
+        counter.textContent = n === 0
+            ? 'No recipients selected yet.'
+            : n + ' recipient' + (n === 1 ? '' : 's') + ' selected.';
+    }
+    new MutationObserver(updateCount).observe(chips, { childList: true });
+})();
+
+function toggleIssueBar(key) {
+    const bar = document.querySelector('[data-bar-key="' + key + '"]');
+    const content = document.getElementById('issueBarContent-' + key);
+    if (!bar || !content) return;
+    bar.classList.toggle('admin-bar--collapsed');
+    content.classList.toggle('d-none');
+}
+
+function syncBarChevron(sectionEl, collapsed) {
+    const bar = sectionEl.querySelector('.admin-bar');
+    if (bar) bar.classList.toggle('admin-bar--collapsed', collapsed);
+}
+
 function toggleAdminSection(id) {
     const el = document.getElementById(id);
     if (!el) return;
     const collapsed = el.classList.toggle('admin-section--collapsed');
+    syncBarChevron(el, collapsed);
     try { localStorage.setItem('admin-section-collapsed:' + id, collapsed ? '1' : '0'); }
+    catch (e) { /* localStorage unavailable — collapse state just won't persist */ }
+}
+
+function expandAdminSection(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('admin-section--collapsed');
+    syncBarChevron(el, false);
+    try { localStorage.setItem('admin-section-collapsed:' + id, '0'); }
     catch (e) { /* localStorage unavailable — collapse state just won't persist */ }
 }
 
@@ -1964,6 +2252,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             if (localStorage.getItem('admin-section-collapsed:' + el.id) === '1') {
                 el.classList.add('admin-section--collapsed');
+                syncBarChevron(el, true);
             }
         } catch (e) { /* localStorage unavailable — sections just stay expanded */ }
     });

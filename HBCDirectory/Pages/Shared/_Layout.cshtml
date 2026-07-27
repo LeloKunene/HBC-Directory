@@ -72,6 +72,12 @@
                             }
 
                             <li>
+                                <button type="button" class="nav-report-issue-btn" data-bs-toggle="modal" data-bs-target="#reportIssueModal"
+                                        title="Report an issue" aria-label="Report an issue">
+                                    Report an issue
+                                </button>
+                            </li>
+                            <li>
                                 <a asp-page="/Logout" class="btn btn-logout">Logout</a>
                             </li>
                         </ul>
@@ -129,6 +135,70 @@
                 .catch(err => console.log('SW error:', err));
             });
         }
+        </script>
+
+        <!-- Report an Issue — reachable from every page via the nav icon.
+             Posts to the standalone /ReportIssue page rather than a
+             per-page handler, since this modal lives here in the shared
+             layout, not on any one page. -->
+        <div class="modal fade" id="reportIssueModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Report an issue</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form method="post" asp-page="/ReportIssue" id="reportIssueForm">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">What kind of issue?</label>
+                                <div class="report-issue-category-group" id="reportIssueCategoryGroup">
+                                    <input type="hidden" name="category" id="reportIssueCategory" value="Bug" />
+                                    <button type="button" class="report-issue-category-btn active" data-value="Bug">Bug</button>
+                                    <button type="button" class="report-issue-category-btn" data-value="Suggestion">Suggestion</button>
+                                    <button type="button" class="report-issue-category-btn" data-value="Other">Other</button>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">What happened?</label>
+                                <textarea name="description" class="form-control" rows="4" required
+                                          placeholder="Describe what you were doing and what went wrong..."></textarea>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                <i class="fa-solid fa-circle-info me-1"></i>
+                                We'll automatically include the page you're on and your account, so you don't have to explain where you were.
+                            </p>
+                            <input type="hidden" name="pageUrl" id="reportIssuePageUrl" />
+                            <input type="hidden" name="userAgent" id="reportIssueUserAgent" />
+                            <input type="hidden" name="returnUrl" id="reportIssueReturnUrl" />
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-paper-plane me-2"></i>Send Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function () {
+            var form = document.getElementById('reportIssueForm');
+            if (!form) return;
+            form.addEventListener('submit', function () {
+                document.getElementById('reportIssuePageUrl').value   = window.location.href;
+                document.getElementById('reportIssueUserAgent').value = navigator.userAgent;
+                document.getElementById('reportIssueReturnUrl').value = window.location.pathname + window.location.search;
+            });
+            document.querySelectorAll('.report-issue-category-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.report-issue-category-btn').forEach(function (b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    document.getElementById('reportIssueCategory').value = btn.dataset.value;
+                });
+            });
+        })();
         </script>
 
         @await RenderSectionAsync("Scripts", required: false)

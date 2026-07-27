@@ -46,6 +46,7 @@ namespace HBCDirectory.Pages
         public List<PendingUpdate> PendingUpdates { get; set; } = new();
         public List<PendingFamilyPhoto> PendingFamilyPhotos { get; set; } = new();
         public List<ChangeLog>     RecentChanges  { get; set; } = new();
+        public List<IssueReport>   IssueReports   { get; set; } = new();
         public List<(string Label, int Value)> Stats { get; set; } = new();
         public ApprovalSettings ApprovalConfig { get; set; } = new();
         public PdfSettings PdfConfig { get; set; } = new();
@@ -85,11 +86,13 @@ namespace HBCDirectory.Pages
             var recentChangesTask      = LoadRecentChangesAsync();
             var pdfConfigTask          = LoadPdfConfigAsync();
             var approvalConfigTask     = LoadApprovalConfigAsync();
+            var issueReportsTask       = LoadIssueReportsAsync();
 
             await Task.WhenAll(
                 membersTask, familiesTask, staffRolesTask, staffAssignmentsTask,
                 groupsTask, memberGroupsTask, careGroupsTask, pendingUpdatesTask,
-                pendingFamilyPhotosTask, recentChangesTask, pdfConfigTask, approvalConfigTask);
+                pendingFamilyPhotosTask, recentChangesTask, pdfConfigTask, approvalConfigTask,
+                issueReportsTask);
 
             Members             = await membersTask;
             Families            = await familiesTask;
@@ -103,14 +106,16 @@ namespace HBCDirectory.Pages
             RecentChanges       = await recentChangesTask;
             PdfConfig           = await pdfConfigTask;
             ApprovalConfig      = await approvalConfigTask;
+            IssueReports        = await issueReportsTask;
 
-            var adults   = Members.Count(m => m.MemberType == "Adult");
-            var children = Members.Count(m => m.MemberType == "Child");
-            var leaders  = Members.Count(m => m.ChurchOffice is "Elder" or "Deacon");
+            var adults      = Members.Count(m => m.MemberType == "Adult");
+            var children    = Members.Count(m => m.MemberType == "Child");
+            var leaders     = Members.Count(m => m.ChurchOffice is "Elder" or "Deacon");
+            var realMembers = Members.Count(m => AdminDisplayStatus(m) == "Member");
 
             Stats = new List<(string, int)>
             {
-                ("Members",   Members.Count),
+                ("Members",   realMembers),
                 ("Families",  Families.Count),
                 ("Adults",    adults),
                 ("Children",  children),
@@ -205,6 +210,13 @@ namespace HBCDirectory.Pages
         {
             await using var db = await _dbFactory.CreateDbContextAsync();
             return await db.ApprovalSettings.FindAsync(1) ?? new ApprovalSettings();
+        }
+
+        private async Task<List<IssueReport>> LoadIssueReportsAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.IssueReports.Include(r => r.ReportedByMember)
+                .OrderByDescending(r => r.SubmittedAt).ToListAsync();
         }
 
         //  Add Member 
@@ -386,6 +398,61 @@ namespace HBCDirectory.Pages
             await LogChangeAsync("Member", id, memberName, "Deleted");
             TempData["Success"] = "Member deleted.";
             return Redirect("/Admin#section-members");
+        }
+
+        public async Task<IActionResult> OnPostSendEmailAsync(
+            List<int> memberIds, string subject, string messageBody)
+        {
+            if (memberIds == null || memberIds.Count == 0)
+            { TempData["Error"] = "Choose at least one recipient."; return Redirect("/Admin#section-email"); }
+            if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(messageBody))
+            { TempData["Error"] = "Subject and message are required."; return Redirect("/Admin#section-email"); }
+
+            var recipients = await _db.Members
+                .Where(m => memberIds.Contains(m.Id) && m.MemberStatus == "Member" && m.Email != null)
+                .ToListAsync();
+
+            var htmlBody = System.Net.WebUtility.HtmlEncode(messageBody.Trim()).Replace("\n", "<br>");
+            int sent = 0;
+            foreach (var m in recipients)
+            {
+                try
+                {
+                    await _email.SendAdminMessageAsync(m.Email!, m.DisplayName, subject.Trim(), htmlBody);
+                    sent++;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Admin email to {m.Email} failed: {ex.Message}");
+                }
+            }
+
+            TempData["Success"] = sent == recipients.Count
+                ? $"Email sent to {sent} member{(sent == 1 ? "" : "s")}."
+                : $"Sent to {sent} of {recipients.Count} — check the server log for the rest.";
+            return Redirect("/Admin#section-email");
+        }
+
+        public async Task<IActionResult> OnPostResolveIssueAsync(int id)
+        {
+            var issue = await _db.IssueReports.FindAsync(id);
+            if (issue == null) return NotFound();
+            issue.IsResolved = true;
+            issue.ResolvedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Marked resolved.";
+            return Redirect("/Admin#section-issues");
+        }
+
+        public async Task<IActionResult> OnPostReopenIssueAsync(int id)
+        {
+            var issue = await _db.IssueReports.FindAsync(id);
+            if (issue == null) return NotFound();
+            issue.IsResolved = false;
+            issue.ResolvedAt = null;
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Reopened.";
+            return Redirect("/Admin#section-issues");
         }
 
         //  Add Family 
