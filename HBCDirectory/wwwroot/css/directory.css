@@ -117,10 +117,42 @@
 .member-picker-option--active {
   background: var(--dir-light);
 }
+.member-picker-option--active {
+  font-weight: 600;
+}
+.member-picker-option--active::after {
+  content: "\2713";
+  float: right;
+  color: var(--dir-mustard);
+}
 .member-picker-empty {
   padding: 7px 12px;
   font-size: 13px;
   color: var(--dir-grey);
+}
+.member-picker-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.member-picker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--dir-light);
+  border: 0.5px solid var(--dir-light2);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12.5px;
+}
+.member-picker-chip i {
+  cursor: pointer;
+  color: var(--dir-grey);
+  font-size: 10px;
+}
+.member-picker-chip i:hover {
+  color: #b23b3b;
 }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-field { display: flex; flex-direction: column; gap: 4px; }

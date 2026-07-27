@@ -151,7 +151,9 @@ namespace HBCDirectory.Pages
         private async Task<List<Group>> LoadGroupsAsync()
         {
             await using var db = await _dbFactory.CreateDbContextAsync();
-            return await db.Groups.OrderBy(g => g.DisplayOrder).ToListAsync();
+            return await db.Groups
+                .Include(g => g.Leaders).ThenInclude(l => l.Member)
+                .OrderBy(g => g.DisplayOrder).ToListAsync();
         }
 
         private async Task<List<MemberGroup>> LoadMemberGroupsAsync()
@@ -627,16 +629,55 @@ namespace HBCDirectory.Pages
             return Redirect("/Admin#section-groups");
         }
 
-        public async Task<IActionResult> OnPostAddMemberToGroupAsync(int memberId, int groupId)
+        public async Task<IActionResult> OnPostAddMemberToGroupAsync(List<int> memberIds, int groupId)
         {
-            var exists = await _db.MemberGroups
-                .AnyAsync(mg => mg.MemberId == memberId && mg.GroupId == groupId);
-            if (!exists)
+            if (memberIds == null || memberIds.Count == 0)
+            { TempData["Error"] = "Choose at least one member."; return Redirect("/Admin#section-groups"); }
+
+            int added = 0;
+            foreach (var memberId in memberIds)
             {
-                _db.MemberGroups.Add(new MemberGroup { MemberId = memberId, GroupId = groupId });
-                await _db.SaveChangesAsync();
+                var exists = await _db.MemberGroups
+                    .AnyAsync(mg => mg.MemberId == memberId && mg.GroupId == groupId);
+                if (!exists)
+                {
+                    _db.MemberGroups.Add(new MemberGroup { MemberId = memberId, GroupId = groupId });
+                    added++;
+                }
             }
-            TempData["Success"] = "Member added to group.";
+            await _db.SaveChangesAsync();
+            TempData["Success"] = added == 1 ? "Member added to group." : $"{added} members added to group.";
+            return Redirect("/Admin#section-groups");
+        }
+
+        public async Task<IActionResult> OnPostAddGroupLeaderAsync(List<int> memberIds, int groupId)
+        {
+            if (memberIds == null || memberIds.Count == 0)
+            { TempData["Error"] = "Choose at least one member."; return Redirect("/Admin#section-groups"); }
+
+            int added = 0;
+            foreach (var memberId in memberIds)
+            {
+                var exists = await _db.GroupLeaders
+                    .AnyAsync(l => l.MemberId == memberId && l.GroupId == groupId);
+                if (!exists)
+                {
+                    _db.GroupLeaders.Add(new GroupLeader { MemberId = memberId, GroupId = groupId });
+                    added++;
+                }
+            }
+            await _db.SaveChangesAsync();
+            TempData["Success"] = added == 1 ? "Leader added to group." : $"{added} leaders added to group.";
+            return Redirect("/Admin#section-groups");
+        }
+
+        public async Task<IActionResult> OnPostRemoveGroupLeaderAsync(int id)
+        {
+            var leader = await _db.GroupLeaders.FindAsync(id);
+            if (leader == null) return NotFound();
+            _db.GroupLeaders.Remove(leader);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Leader removed from group.";
             return Redirect("/Admin#section-groups");
         }
 
@@ -686,16 +727,24 @@ namespace HBCDirectory.Pages
             return Redirect("/Admin#section-caregroups");
         }
 
-        public async Task<IActionResult> OnPostAddCareGroupLeaderAsync(int memberId, int careGroupId)
+        public async Task<IActionResult> OnPostAddCareGroupLeaderAsync(List<int> memberIds, int careGroupId)
         {
-            var exists = await _db.CareGroupLeaders
-                .AnyAsync(l => l.MemberId == memberId && l.CareGroupId == careGroupId);
-            if (!exists)
+            if (memberIds == null || memberIds.Count == 0)
+            { TempData["Error"] = "Choose at least one member."; return Redirect("/Admin#section-caregroups"); }
+
+            int added = 0;
+            foreach (var memberId in memberIds)
             {
-                _db.CareGroupLeaders.Add(new CareGroupLeader { MemberId = memberId, CareGroupId = careGroupId });
-                await _db.SaveChangesAsync();
+                var exists = await _db.CareGroupLeaders
+                    .AnyAsync(l => l.MemberId == memberId && l.CareGroupId == careGroupId);
+                if (!exists)
+                {
+                    _db.CareGroupLeaders.Add(new CareGroupLeader { MemberId = memberId, CareGroupId = careGroupId });
+                    added++;
+                }
             }
-            TempData["Success"] = "Leader added to care group.";
+            await _db.SaveChangesAsync();
+            TempData["Success"] = added == 1 ? "Leader added to care group." : $"{added} leaders added to care group.";
             return Redirect("/Admin#section-caregroups");
         }
 
@@ -709,21 +758,34 @@ namespace HBCDirectory.Pages
             return Redirect("/Admin#section-caregroups");
         }
 
-        public async Task<IActionResult> OnPostAddMemberToCareGroupAsync(int memberId, int careGroupId)
+        public async Task<IActionResult> OnPostAddMemberToCareGroupAsync(List<int> memberIds, int careGroupId)
         {
-            var existing = await _db.CareGroupMembers.FirstOrDefaultAsync(m => m.MemberId == memberId);
-            if (existing != null)
+            if (memberIds == null || memberIds.Count == 0)
+            { TempData["Error"] = "Choose at least one member."; return Redirect("/Admin#section-caregroups"); }
+
+            int added = 0, moved = 0, alreadyThere = 0;
+            foreach (var memberId in memberIds)
             {
-                if (existing.CareGroupId == careGroupId)
-                { TempData["Error"] = "That member is already in this care group."; return Redirect("/Admin#section-caregroups"); }
-                existing.CareGroupId = careGroupId;
-            }
-            else
-            {
-                _db.CareGroupMembers.Add(new CareGroupMember { MemberId = memberId, CareGroupId = careGroupId });
+                var existing = await _db.CareGroupMembers.FirstOrDefaultAsync(m => m.MemberId == memberId);
+                if (existing != null)
+                {
+                    if (existing.CareGroupId == careGroupId) { alreadyThere++; continue; }
+                    existing.CareGroupId = careGroupId;
+                    moved++;
+                }
+                else
+                {
+                    _db.CareGroupMembers.Add(new CareGroupMember { MemberId = memberId, CareGroupId = careGroupId });
+                    added++;
+                }
             }
             await _db.SaveChangesAsync();
-            TempData["Success"] = "Member added to care group.";
+
+            var parts = new List<string>();
+            if (added > 0) parts.Add($"{added} added");
+            if (moved > 0) parts.Add($"{moved} moved from another care group");
+            if (alreadyThere > 0) parts.Add($"{alreadyThere} already in this care group");
+            TempData["Success"] = parts.Count > 0 ? string.Join(", ", parts) + "." : "No changes made.";
             return Redirect("/Admin#section-caregroups");
         }
 

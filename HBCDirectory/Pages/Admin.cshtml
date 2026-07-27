@@ -515,6 +515,10 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                             <span>@g.Name</span>
                             <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-xs btn-outline-secondary" title="View roster"
+                                        data-bs-toggle="modal" data-bs-target="#groupRoster-@g.Id">
+                                    <i class="fa-solid fa-users"></i>
+                                </button>
                                 <button type="button" class="btn btn-xs btn-outline-secondary" title="Rename"
                                         data-bs-toggle="modal" data-bs-target="#editGroupModal"
                                         data-groupid="@g.Id" data-groupname="@g.Name">
@@ -536,22 +540,55 @@
             </div>
         </div>
 
-        <!-- Add member to group -->
+        <!-- Assign leader -->
         <div class="col-md-4">
             <div class="form-card h-100">
-                <h6 class="form-card-title">Add Member to Group</h6>
-                <form method="post" asp-page-handler="AddMemberToGroup">
+                <h6 class="form-card-title">Assign Leader</h6>
+                <p class="text-muted small">A group can have more than one leader, pick as many as apply.</p>
+                <form method="post" asp-page-handler="AddGroupLeader">
                     <div class="mb-2">
-                        <label class="form-label">Member</label>
-                        <div class="member-picker">
+                        <label class="form-label">Members</label>
+                        <div class="member-picker member-picker--multi" data-field="memberIds">
                             <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
-                            <input type="hidden" name="memberId" class="member-picker-value" />
                             <div class="member-picker-menu d-none">
                                 @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
                                 {
                                     <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
                                 }
                             </div>
+                            <div class="member-picker-chips"></div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Group</label>
+                        <select name="groupId" class="form-select">
+                            @foreach (var g in Model.Groups)
+                            {
+                                <option value="@g.Id">@g.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Assign as Leader</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add member to group -->
+        <div class="col-md-4">
+            <div class="form-card h-100">
+                <h6 class="form-card-title">Add Member to Group</h6>
+                <form method="post" asp-page-handler="AddMemberToGroup">
+                    <div class="mb-2">
+                        <label class="form-label">Members</label>
+                        <div class="member-picker member-picker--multi" data-field="memberIds">
+                            <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
+                            <div class="member-picker-menu d-none">
+                                @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
+                                {
+                                    <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
+                                }
+                            </div>
+                            <div class="member-picker-chips"></div>
                         </div>
                     </div>
                     <div class="mb-2">
@@ -568,40 +605,56 @@
             </div>
         </div>
 
-        <!-- Current group memberships -->
-        <div class="col-md-4">
-            <div class="form-card h-100">
-                <h6 class="form-card-title">Group Memberships</h6>
-                @if (!Model.MemberGroups.Any())
-                {
-                    <p class="text-muted small">No assignments yet.</p>
-                }
-                else
-                {
-                    @foreach (var g in Model.Groups)
-                    {
-                        var groupMembers = Model.MemberGroups.Where(mg => mg.GroupId == g.Id).ToList();
-                        if (!groupMembers.Any()) continue;
-                        <p class="small fw-bold text-uppercase" style="color:var(--dir-gold);letter-spacing:.06em;margin-bottom:4px;">@g.Name</p>
-                        @foreach (var mg in groupMembers)
-                        {
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="small">@mg.Member.Surname, @mg.Member.Name</span>
-                                <form method="post" asp-page-handler="RemoveMemberFromGroup">
-                                    <input type="hidden" name="id" value="@mg.Id" />
-                                    <button type="submit" class="btn btn-xs btn-outline-danger"
-                                            style="font-size:10px;padding:1px 6px;">✕</button>
-                                </form>
-                            </div>
-                        }
-                        <hr style="border-color:#ede8df;margin:8px 0;" />
-                    }
-                }
-            </div>
-        </div>
-
     </div>
 </div>
+
+@foreach (var g in Model.Groups)
+{
+    <div class="modal fade" id="groupRoster-@g.Id" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@g.Name</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-1">Leader@(g.Leaders.Count == 1 ? "" : "s"):</p>
+                    @if (!g.Leaders.Any())
+                    {
+                        <p class="small text-muted fst-italic">None assigned</p>
+                    }
+                    @foreach (var l in g.Leaders)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small">@l.Member.Surname, @l.Member.Name</span>
+                            <form method="post" asp-page-handler="RemoveGroupLeader">
+                                <input type="hidden" name="id" value="@l.Id" />
+                                <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                            </form>
+                        </div>
+                    }
+
+                    <p class="small text-muted mb-1 mt-3">Members:</p>
+                    @{ var groupMembers = Model.MemberGroups.Where(mg => mg.GroupId == g.Id).ToList(); }
+                    @if (!groupMembers.Any())
+                    {
+                        <p class="small text-muted fst-italic">None assigned</p>
+                    }
+                    @foreach (var mg in groupMembers)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small">@mg.Member.Surname, @mg.Member.Name</span>
+                            <form method="post" asp-page-handler="RemoveMemberFromGroup">
+                                <input type="hidden" name="id" value="@mg.Id" />
+                                <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <!-- ══════════════════════════════════════════════════════
      CARE GROUPS: pastoral care, standalone from Groups & Ministries above.
@@ -633,6 +686,10 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                             <span>@cg.Name</span>
                             <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-xs btn-outline-secondary" title="View roster"
+                                        data-bs-toggle="modal" data-bs-target="#careGroupRoster-@cg.Id">
+                                    <i class="fa-solid fa-users"></i>
+                                </button>
                                 <button type="button" class="btn btn-xs btn-outline-secondary" title="Rename"
                                         data-bs-toggle="modal" data-bs-target="#editCareGroupModal"
                                         data-caregroupid="@cg.Id" data-caregroupname="@cg.Name">
@@ -659,18 +716,19 @@
         <div class="col-md-4">
             <div class="form-card h-100">
                 <h6 class="form-card-title">Assign Overseer</h6>
+                <p class="text-muted small">A care group can have more than one overseer, pick as many as apply.</p>
                 <form method="post" asp-page-handler="AddCareGroupLeader">
                     <div class="mb-2">
-                        <label class="form-label">Member</label>
-                        <div class="member-picker">
+                        <label class="form-label">Members</label>
+                        <div class="member-picker member-picker--multi" data-field="memberIds">
                             <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
-                            <input type="hidden" name="memberId" class="member-picker-value" />
                             <div class="member-picker-menu d-none">
                                 @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
                                 {
                                     <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
                                 }
                             </div>
+                            <div class="member-picker-chips"></div>
                         </div>
                     </div>
                     <div class="mb-2">
@@ -694,16 +752,16 @@
                 <p class="text-muted small">A member can only be under one care group at a time, assigning them to a new one moves them.</p>
                 <form method="post" asp-page-handler="AddMemberToCareGroup">
                     <div class="mb-2">
-                        <label class="form-label">Member</label>
-                        <div class="member-picker">
+                        <label class="form-label">Members</label>
+                        <div class="member-picker member-picker--multi" data-field="memberIds">
                             <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
-                            <input type="hidden" name="memberId" class="member-picker-value" />
                             <div class="member-picker-menu d-none">
                                 @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
                                 {
                                     <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
                                 }
                             </div>
+                            <div class="member-picker-chips"></div>
                         </div>
                     </div>
                     <div class="mb-2">
@@ -715,70 +773,60 @@
                             }
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Assign Member</button>
+                    <button type="submit" class="btn btn-primary w-100">Assign Members</button>
                 </form>
-            </div>
-        </div>
-
-        <!-- Overview -->
-        <div class="col-12">
-            <div class="form-card">
-                <h6 class="form-card-title">Care Groups Overview</h6>
-                @if (!Model.CareGroups.Any())
-                {
-                    <p class="text-muted small">No care groups yet.</p>
-                }
-                else
-                {
-                    <div class="row g-3">
-                        @foreach (var cg in Model.CareGroups)
-                        {
-                            <div class="col-md-4">
-                                <p class="small fw-bold text-uppercase" style="color:var(--dir-gold);letter-spacing:.06em;margin-bottom:4px;">@cg.Name</p>
-
-                                <p class="small text-muted mb-1">Overseer@(cg.Leaders.Count == 1 ? "" : "s"):</p>
-                                @if (!cg.Leaders.Any())
-                                {
-                                    <p class="small text-muted fst-italic">None assigned</p>
-                                }
-                                @foreach (var l in cg.Leaders)
-                                {
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="small">@l.Member.Surname, @l.Member.Name</span>
-                                        <form method="post" asp-page-handler="RemoveCareGroupLeader">
-                                            <input type="hidden" name="id" value="@l.Id" />
-                                            <button type="submit" class="btn btn-xs btn-outline-danger"
-                                                    style="font-size:10px;padding:1px 6px;">✕</button>
-                                        </form>
-                                    </div>
-                                }
-
-                                <p class="small text-muted mb-1 mt-2">Members:</p>
-                                @if (!cg.Members.Any())
-                                {
-                                    <p class="small text-muted fst-italic">None assigned</p>
-                                }
-                                @foreach (var cgm in cg.Members)
-                                {
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="small">@cgm.Member.Surname, @cgm.Member.Name</span>
-                                        <form method="post" asp-page-handler="RemoveMemberFromCareGroup">
-                                            <input type="hidden" name="id" value="@cgm.Id" />
-                                            <button type="submit" class="btn btn-xs btn-outline-danger"
-                                                    style="font-size:10px;padding:1px 6px;">✕</button>
-                                        </form>
-                                    </div>
-                                }
-                                <hr style="border-color:#ede8df;margin:8px 0;" />
-                            </div>
-                        }
-                    </div>
-                }
             </div>
         </div>
 
     </div>
 </div>
+
+@foreach (var cg in Model.CareGroups)
+{
+    <div class="modal fade" id="careGroupRoster-@cg.Id" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@cg.Name</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-1">Overseer@(cg.Leaders.Count == 1 ? "" : "s"):</p>
+                    @if (!cg.Leaders.Any())
+                    {
+                        <p class="small text-muted fst-italic">None assigned</p>
+                    }
+                    @foreach (var l in cg.Leaders)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small">@l.Member.Surname, @l.Member.Name</span>
+                            <form method="post" asp-page-handler="RemoveCareGroupLeader">
+                                <input type="hidden" name="id" value="@l.Id" />
+                                <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                            </form>
+                        </div>
+                    }
+
+                    <p class="small text-muted mb-1 mt-3">Members:</p>
+                    @if (!cg.Members.Any())
+                    {
+                        <p class="small text-muted fst-italic">None assigned</p>
+                    }
+                    @foreach (var cgm in cg.Members)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small">@cgm.Member.Surname, @cgm.Member.Name</span>
+                            <form method="post" asp-page-handler="RemoveMemberFromCareGroup">
+                                <input type="hidden" name="id" value="@cgm.Id" />
+                                <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <!-- ══════════════════════════════════════════════════════
      PDF MANAGEMENT SECTION

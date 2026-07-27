@@ -246,10 +246,14 @@ window.filterTableRows = function (inputId, tableId) {
 
 (function () {
   function initMemberPicker(picker) {
+    const isMulti = picker.classList.contains("member-picker--multi");
     const input   = picker.querySelector(".member-picker-input");
     const hidden  = picker.querySelector(".member-picker-value");
     const menu    = picker.querySelector(".member-picker-menu");
+    const chips   = picker.querySelector(".member-picker-chips");
+    const field   = picker.dataset.field || "memberIds";
     const options = Array.from(menu.querySelectorAll(".member-picker-option"));
+    const selected = new Map(); // id -> name, multi-select only
 
     function showMatches() {
       const q = input.value.trim().toLowerCase();
@@ -274,14 +278,44 @@ window.filterTableRows = function (inputId, tableId) {
     }
 
     function choose(opt) {
-      input.value = opt.dataset.name;
-      hidden.value = opt.dataset.id;
-      menu.classList.add("d-none");
+      if (isMulti) {
+        toggleChip(opt.dataset.id, opt.dataset.name);
+        opt.classList.toggle("member-picker-option--active", selected.has(opt.dataset.id));
+        input.value = "";
+        showMatches();
+        input.focus();
+      } else {
+        input.value = opt.dataset.name;
+        hidden.value = opt.dataset.id;
+        menu.classList.add("d-none");
+      }
+    }
+
+    function toggleChip(id, name) {
+      if (selected.has(id)) {
+        selected.delete(id);
+        const existing = chips.querySelector('[data-chip-id="' + id + '"]');
+        if (existing) existing.remove();
+        return;
+      }
+      selected.set(id, name);
+      const chip = document.createElement("span");
+      chip.className = "member-picker-chip";
+      chip.dataset.chipId = id;
+      chip.innerHTML = name.replace(/</g, "&lt;") + ' <i class="fa-solid fa-xmark"></i>' +
+        '<input type="hidden" name="' + field + '" value="' + id + '">';
+      chip.querySelector("i").addEventListener("click", function () {
+        selected.delete(id);
+        chip.remove();
+        const opt = options.find(function (o) { return o.dataset.id === id; });
+        if (opt) opt.classList.remove("member-picker-option--active");
+      });
+      chips.appendChild(chip);
     }
 
     input.addEventListener("focus", showMatches);
     input.addEventListener("input", function () {
-      hidden.value = ""; // typing invalidates whatever was picked before
+      if (!isMulti) hidden.value = ""; // typing invalidates whatever was picked before
       showMatches();
     });
     input.addEventListener("keydown", function (e) {
@@ -290,7 +324,7 @@ window.filterTableRows = function (inputId, tableId) {
       if (visible.length === 1) {
         e.preventDefault();
         choose(visible[0]);
-      } else if (!hidden.value) {
+      } else if (!isMulti && !hidden.value) {
         e.preventDefault(); // don't let an incomplete pick submit the form
       }
     });

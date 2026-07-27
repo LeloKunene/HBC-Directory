@@ -6,6 +6,7 @@ namespace HBCDirectory.Models
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public int DisplayOrder { get; set; }
+        public ICollection<GroupLeader> Leaders { get; set; } = new List<GroupLeader>();
         public ICollection<MemberGroup> MemberGroups { get; set; } = new List<MemberGroup>();
     }
 }

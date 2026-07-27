@@ -14,6 +14,7 @@ namespace HBCDirectory.Data
         public DbSet<StaffRole>         StaffRoles         => Set<StaffRole>();
         public DbSet<StaffAssignment>   StaffAssignments   => Set<StaffAssignment>();
         public DbSet<Group>             Groups             => Set<Group>();
+        public DbSet<GroupLeader>       GroupLeaders       => Set<GroupLeader>();
         public DbSet<MemberGroup>       MemberGroups       => Set<MemberGroup>();
         public DbSet<PendingUpdate>     PendingUpdates     => Set<PendingUpdate>();
         public DbSet<PendingFamilyPhoto> PendingFamilyPhotos => Set<PendingFamilyPhoto>();
@@ -64,6 +65,15 @@ namespace HBCDirectory.Data
                 .HasForeignKey(mg => mg.GroupId).OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<MemberGroup>()
                 .HasIndex(mg => new { mg.MemberId, mg.GroupId }).IsUnique();
+
+            modelBuilder.Entity<GroupLeader>()
+                .HasOne(gl => gl.Group).WithMany(g => g.Leaders)
+                .HasForeignKey(gl => gl.GroupId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<GroupLeader>()
+                .HasOne(gl => gl.Member).WithMany()
+                .HasForeignKey(gl => gl.MemberId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<GroupLeader>()
+                .HasIndex(gl => new { gl.GroupId, gl.MemberId }).IsUnique();
 
             modelBuilder.Entity<PendingUpdate>()
                 .HasOne(p => p.Member).WithMany()
