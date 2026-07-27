@@ -131,7 +131,7 @@
   color: var(--dir-grey);
 }
 
-.issue-bar {
+.admin-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -142,28 +142,41 @@
   color: white;
   user-select: none;
 }
-.issue-bar--open      { background: #a3392f; }
-.issue-bar--resolved  { background: #5f5e5a; }
-.issue-bar-left { display: flex; align-items: center; gap: 10px; }
-.issue-bar-label {
+.admin-bar--neutral  { background: #202222; } /* Heritage Dark Grey */
+.admin-bar--gold     { background: #9a865f; } /* Heritage Gold */
+.admin-bar--urgent   { background: #847153; } /* Heritage Dark Gold — deepest, most serious tone in the palette; used in place of an invented red, since Heritage's official palette has no red at all */
+.admin-bar--resolved { background: #808e6b; } /* Heritage Olive Green — reads as "done/good", more meaningful here than reusing the same neutral tone every other ordinary section uses */
+.admin-bar--mustard  { background: #c69760; } /* Heritage Mustard — the app's own primary accent color */
+.admin-bar--slate    { background: #899cad; } /* Heritage Slate Blue */
+.admin-bar--beige    { background: #c6b08d; color: #202222; } /* Heritage Beige — light, so it needs dark text unlike every other variant here */
+.admin-bar--beige .admin-bar-count { background: rgba(32,34,34,0.15); color: #202222; }
+.admin-bar-left { display: flex; align-items: center; gap: 10px; }
+.admin-bar-label {
   font-family: 'Montserrat', sans-serif;
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-.issue-bar-right { display: flex; align-items: center; gap: 14px; }
-.issue-bar-count {
+.admin-bar-right { display: flex; align-items: center; gap: 14px; }
+.admin-bar-count {
   background: rgba(255,255,255,0.25);
   border-radius: 20px;
   padding: 3px 12px;
   font-size: 12px;
   font-weight: 700;
 }
-.issue-bar-chevron { transition: transform 0.2s; }
-.issue-bar--collapsed .issue-bar-chevron { transform: rotate(-90deg); }
-.issue-bar-content { margin-bottom: 20px; }
-.issue-bar-content.d-none { display: none; }
+.admin-bar-chevron { transition: transform 0.2s; }
+.admin-bar--collapsed .admin-bar-chevron { transform: rotate(-90deg); }
+.admin-bar-content { margin-bottom: 20px; }
+.admin-bar-content.d-none { display: none; }
+.admin-bar-subrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -6px 0 16px;
+  padding: 0 4px;
+}
 
 .issue-card {
   background: white;

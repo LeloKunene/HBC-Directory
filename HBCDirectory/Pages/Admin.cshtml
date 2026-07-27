@@ -33,13 +33,26 @@
      MEMBERS SECTION
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-members">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-members')"></i>Members</h4>
-        <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addMemberForm"
-                onclick="expandAdminSection('section-members')">
-            + Add Member
-        </button>
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar admin-bar--mustard" onclick="toggleAdminSection('section-members')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-users"></i>
+                <span class="admin-bar-label">Members</span>
+            </div>
+            <div class="admin-bar-right">
+                <span class="admin-bar-count">@Model.Members.Count</span>
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
+        <div class="admin-bar-subrow">
+            <span></span>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addMemberForm"
+                    onclick="expandAdminSection('section-members')">
+                + Add Member
+            </button>
+        </div>
     </div>
+
 
     <!-- Add Member Form -->
     <div class="collapse" id="addMemberForm">
@@ -230,12 +243,24 @@
      FAMILIES SECTION
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-families">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-families')"></i>Families</h4>
-        <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addFamilyForm"
-                onclick="expandAdminSection('section-families')">
-            + Add Family
-        </button>
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar admin-bar--beige" onclick="toggleAdminSection('section-families')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-house"></i>
+                <span class="admin-bar-label">Families</span>
+            </div>
+            <div class="admin-bar-right">
+                <span class="admin-bar-count">@Model.Families.Count</span>
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
+        <div class="admin-bar-subrow">
+            <span></span>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addFamilyForm"
+                    onclick="expandAdminSection('section-families')">
+                + Add Family
+            </button>
+        </div>
     </div>
 
     <div class="collapse" id="addFamilyForm">
@@ -379,11 +404,16 @@
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-email">
     <div class="admin-section-header mb-3">
-        <h4 class="mb-0">
-            <i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-email')"></i>
-            <i class="fa-solid fa-envelope me-2" style="color:var(--dir-mustard);"></i>Send Email
-        </h4>
-        <p class="text-muted small mb-0">Sends only to Members — Attendants and children are never included, even if selected.</p>
+        <div class="admin-bar admin-bar--slate" onclick="toggleAdminSection('section-email')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-envelope"></i>
+                <span class="admin-bar-label">Send Email</span>
+            </div>
+            <div class="admin-bar-right">
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
+        <p class="text-muted small mb-0 px-1">Sends only to Members (Attendants and children are never included, even if selected.)</p>
     </div>
     <div class="form-card">
         <form method="post" asp-page-handler="SendEmail" id="sendEmailForm">
@@ -431,7 +461,16 @@
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-staff">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-staff')"></i>Staff</h4>
+    <div class="admin-bar admin-bar--neutral" onclick="toggleAdminSection('section-staff')">
+        <div class="admin-bar-left">
+            <i class="fa-solid fa-user-tie"></i>
+            <span class="admin-bar-label">Staff</span>
+        </div>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@Model.StaffAssignments.Select(sa => sa.MemberId).Distinct().Count()</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+        </div>
+    </div>
 </div>
 
     <div class="row g-4">
@@ -544,7 +583,16 @@
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-groups">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-groups')"></i>Groups & Ministries</h4>
+    <div class="admin-bar admin-bar--mustard" onclick="toggleAdminSection('section-groups')">
+        <div class="admin-bar-left">
+            <i class="fa-solid fa-people-group"></i>
+            <span class="admin-bar-label">Groups &amp; Ministries</span>
+        </div>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@Model.Groups.Count</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+        </div>
+    </div>
 </div>
     <div class="row g-4">
 
@@ -718,8 +766,16 @@
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-caregroups">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-caregroups')"></i>Care Groups</h4>
-    <p class="text-muted small mb-0">Pastoral care assignments: who's shepherding whom. Separate from Groups &amp; Ministries above; shown on each member's public directory card.</p>
+    <div class="admin-bar admin-bar--beige" onclick="toggleAdminSection('section-caregroups')">
+        <div class="admin-bar-left">
+            <i class="fa-solid fa-hand-holding-heart"></i>
+            <span class="admin-bar-label">Care Groups</span>
+        </div>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@Model.CareGroups.Count</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+        </div>
+    </div>
 </div>
     <div class="row g-4">
 
@@ -887,16 +943,24 @@
      PDF MANAGEMENT SECTION
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-pdf">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">
-            <i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-pdf')"></i>
-            <i class="fa-solid fa-file-pdf me-2" style="color:var(--dir-mustard);"></i>PDF Directory
-        </h4>
-        <form method="post" asp-page-handler="GeneratePdf">
-            <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-arrows-rotate me-1"></i>Update PDF
-            </button>
-        </form>
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar admin-bar--slate" onclick="toggleAdminSection('section-pdf')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-file-pdf"></i>
+                <span class="admin-bar-label">PDF Directory</span>
+            </div>
+            <div class="admin-bar-right">
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
+        <div class="admin-bar-subrow">
+            <span></span>
+            <form method="post" asp-page-handler="GeneratePdf">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-arrows-rotate me-1"></i>Update PDF
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Status banner -->
@@ -1183,8 +1247,16 @@ function togglePdfPasswordVisibility() {
      APPROVAL SETTINGS
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-approval">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-approval')"></i>Approval Settings</h4>
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar admin-bar--neutral" onclick="toggleAdminSection('section-approval')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span class="admin-bar-label">Approval Settings</span>
+            </div>
+            <div class="admin-bar-right">
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
     </div>
     <div class="form-card">
         <p class="text-muted small mb-3">Choose which profile fields require admin approval before going live. Fields set to instant are applied immediately when a member saves their profile.</p>
@@ -1356,12 +1428,17 @@ function togglePdfPasswordVisibility() {
      PENDING MEMBER UPDATES — DETAILED
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-pendingupdates">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-pendingupdates')"></i> Pending Member Updates </h4>
-        @if (Model.PendingUpdates.Any())
-        {
-            <span class="badge bg-warning text-dark ms-2">@Model.PendingUpdates.Count</span>
-        }
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar @(Model.PendingUpdates.Any() ? "admin-bar--gold" : "admin-bar--neutral")" onclick="toggleAdminSection('section-pendingupdates')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-user-clock"></i>
+                <span class="admin-bar-label">Pending Member Updates</span>
+            </div>
+            <div class="admin-bar-right">
+                <span class="admin-bar-count">@Model.PendingUpdates.Count</span>
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
     </div>
     @if (!Model.PendingUpdates.Any())
     {
@@ -1572,12 +1649,17 @@ function togglePdfPasswordVisibility() {
      their own Profile page; always require approval, no setting to skip.
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-pendingphotos">
-    <div class="admin-section-header d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-pendingphotos')"></i>Pending Family Photos</h4>
-        @if (Model.PendingFamilyPhotos.Any())
-        {
-            <span class="badge bg-warning text-dark ms-2">@Model.PendingFamilyPhotos.Count</span>
-        }
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar @(Model.PendingFamilyPhotos.Any() ? "admin-bar--gold" : "admin-bar--neutral")" onclick="toggleAdminSection('section-pendingphotos')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-image"></i>
+                <span class="admin-bar-label">Pending Family Photos</span>
+            </div>
+            <div class="admin-bar-right">
+                <span class="admin-bar-count">@Model.PendingFamilyPhotos.Count</span>
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
     </div>
     @if (!Model.PendingFamilyPhotos.Any())
     {
@@ -1653,24 +1735,34 @@ function togglePdfPasswordVisibility() {
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-issues">
     <div class="admin-section-header mb-3">
-        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-issues')"></i>Issues</h4>
+        @{ var openIssuesCount = Model.IssueReports.Count(r => !r.IsResolved); }
+        <div class="admin-bar @(openIssuesCount > 0 ? "admin-bar--urgent" : "admin-bar--neutral")" onclick="toggleAdminSection('section-issues')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span class="admin-bar-label">Issues</span>
+            </div>
+            <div class="admin-bar-right">
+                <span class="admin-bar-count">@openIssuesCount</span>
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
     </div>
     @{
         var openIssues     = Model.IssueReports.Where(r => !r.IsResolved).ToList();
         var resolvedIssues = Model.IssueReports.Where(r => r.IsResolved).ToList();
     }
 
-    <div class="issue-bar issue-bar--open" onclick="toggleIssueBar('open')">
-        <div class="issue-bar-left">
+    <div class="admin-bar @(openIssues.Any() ? "admin-bar--urgent" : "admin-bar--neutral")" data-bar-key="open" onclick="toggleIssueBar('open')">
+        <div class="admin-bar-left">
             <i class="fa-solid fa-triangle-exclamation"></i>
-            <span class="issue-bar-label">Open</span>
+            <span class="admin-bar-label">Open</span>
         </div>
-        <div class="issue-bar-right">
-            <span class="issue-bar-count">@openIssues.Count</span>
-            <i class="fa-solid fa-chevron-down issue-bar-chevron"></i>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@openIssues.Count</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
         </div>
     </div>
-    <div class="issue-bar-content" id="issueBarContent-open">
+    <div class="admin-bar-content" id="issueBarContent-open">
         @if (!openIssues.Any())
         {
             <p class="text-muted small">Nothing open right now.</p>
@@ -1697,17 +1789,17 @@ function togglePdfPasswordVisibility() {
         }
     </div>
 
-    <div class="issue-bar issue-bar--resolved issue-bar--collapsed" onclick="toggleIssueBar('resolved')">
-        <div class="issue-bar-left">
+    <div class="admin-bar admin-bar--resolved admin-bar--collapsed" data-bar-key="resolved" onclick="toggleIssueBar('resolved')">
+        <div class="admin-bar-left">
             <i class="fa-solid fa-layer-group"></i>
-            <span class="issue-bar-label">Resolved</span>
+            <span class="admin-bar-label">Resolved</span>
         </div>
-        <div class="issue-bar-right">
-            <span class="issue-bar-count">@resolvedIssues.Count</span>
-            <i class="fa-solid fa-chevron-down issue-bar-chevron"></i>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@resolvedIssues.Count</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
         </div>
     </div>
-    <div class="issue-bar-content d-none" id="issueBarContent-resolved">
+    <div class="admin-bar-content d-none" id="issueBarContent-resolved">
         @if (!resolvedIssues.Any())
         {
             <p class="text-muted small">No resolved issues yet.</p>
@@ -1740,7 +1832,16 @@ function togglePdfPasswordVisibility() {
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-recentchanges">
 <div class="admin-section-header mb-3">
-    <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-recentchanges')"></i>Recent Changes</h4>
+    <div class="admin-bar admin-bar--mustard" onclick="toggleAdminSection('section-recentchanges')">
+        <div class="admin-bar-left">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span class="admin-bar-label">Recent Changes</span>
+        </div>
+        <div class="admin-bar-right">
+            <span class="admin-bar-count">@Model.RecentChanges.Count</span>
+            <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+        </div>
+    </div>
 </div>
     @if (!Model.RecentChanges.Any())
     {
@@ -2124,17 +2225,23 @@ function deselectAllMembers() {
 })();
 
 function toggleIssueBar(key) {
-    const bar = document.querySelector('.issue-bar--' + key);
+    const bar = document.querySelector('[data-bar-key="' + key + '"]');
     const content = document.getElementById('issueBarContent-' + key);
     if (!bar || !content) return;
-    bar.classList.toggle('issue-bar--collapsed');
+    bar.classList.toggle('admin-bar--collapsed');
     content.classList.toggle('d-none');
+}
+
+function syncBarChevron(sectionEl, collapsed) {
+    const bar = sectionEl.querySelector('.admin-bar');
+    if (bar) bar.classList.toggle('admin-bar--collapsed', collapsed);
 }
 
 function toggleAdminSection(id) {
     const el = document.getElementById(id);
     if (!el) return;
     const collapsed = el.classList.toggle('admin-section--collapsed');
+    syncBarChevron(el, collapsed);
     try { localStorage.setItem('admin-section-collapsed:' + id, collapsed ? '1' : '0'); }
     catch (e) { /* localStorage unavailable — collapse state just won't persist */ }
 }
@@ -2143,6 +2250,7 @@ function expandAdminSection(id) {
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.remove('admin-section--collapsed');
+    syncBarChevron(el, false);
     try { localStorage.setItem('admin-section-collapsed:' + id, '0'); }
     catch (e) { /* localStorage unavailable — collapse state just won't persist */ }
 }
@@ -2152,6 +2260,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             if (localStorage.getItem('admin-section-collapsed:' + el.id) === '1') {
                 el.classList.add('admin-section--collapsed');
+                syncBarChevron(el, true);
             }
         } catch (e) { /* localStorage unavailable — sections just stay expanded */ }
     });
