@@ -399,64 +399,6 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════
-     SEND EMAIL — only ever reaches actual Members (not Attendants,
-     not children), enforced server-side regardless of what's picked.
-════════════════════════════════════════════════════════ -->
-<div class="admin-section mb-5" id="section-email">
-    <div class="admin-section-header mb-3">
-        <div class="admin-bar admin-bar--slate" onclick="toggleAdminSection('section-email')">
-            <div class="admin-bar-left">
-                <i class="fa-solid fa-envelope"></i>
-                <span class="admin-bar-label">Send Email</span>
-            </div>
-            <div class="admin-bar-right">
-                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
-            </div>
-        </div>
-        <p class="text-muted small mb-0 px-1">Sends only to Members (Attendants and children are never included, even if selected.)</p>
-    </div>
-    <div class="form-card">
-        <form method="post" asp-page-handler="SendEmail" id="sendEmailForm">
-            <div class="row g-4">
-                <div class="col-md-5">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label mb-0">Recipients</label>
-                        <div class="d-flex gap-1">
-                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="selectAllMembers()">Select all</button>
-                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="deselectAllMembers()">Unselect all</button>
-                        </div>
-                    </div>
-                    <div class="member-picker member-picker--multi" data-field="memberIds" id="emailMemberPicker">
-                        <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
-                        <div class="member-picker-menu d-none">
-                            @foreach (var m in Model.Members.Where(m => m.MemberStatus == "Member" && m.Email != null))
-                            {
-                                <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
-                            }
-                        </div>
-                        <div class="member-picker-chips"></div>
-                    </div>
-                    <p class="small mt-2 mb-0" id="emailRecipientCount" style="color:var(--dir-mustard);font-weight:600;">No recipients selected yet.</p>
-                </div>
-                <div class="col-md-7">
-                    <div class="mb-2">
-                        <label class="form-label">Subject</label>
-                        <input name="subject" class="form-control" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Message</label>
-                        <textarea name="messageBody" class="form-control" rows="7" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fa-solid fa-paper-plane me-2"></i>Send Email
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════
      STAFF SECTION
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-staff">
@@ -1425,6 +1367,63 @@ function togglePdfPasswordVisibility() {
 </div>
 
 <!-- ══════════════════════════════════════════════════════
+     SEND EMAIL — only ever reaches actual Members (not Attendants,
+     not children), enforced server-side regardless of what's picked.
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5" id="section-email">
+    <div class="admin-section-header mb-3">
+        <div class="admin-bar admin-bar--slate" onclick="toggleAdminSection('section-email')">
+            <div class="admin-bar-left">
+                <i class="fa-solid fa-envelope"></i>
+                <span class="admin-bar-label">Send Email</span>
+            </div>
+            <div class="admin-bar-right">
+                <i class="fa-solid fa-chevron-down admin-bar-chevron"></i>
+            </div>
+        </div>
+    </div>
+    <div class="form-card">
+        <form method="post" asp-page-handler="SendEmail" id="sendEmailForm">
+            <div class="row g-4">
+                <div class="col-md-5">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label mb-0">Recipients</label>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="selectAllMembers()">Select all</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="deselectAllMembers()">Unselect all</button>
+                        </div>
+                    </div>
+                    <div class="member-picker member-picker--multi" data-field="memberIds" id="emailMemberPicker">
+                        <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
+                        <div class="member-picker-menu d-none">
+                            @foreach (var m in Model.Members.Where(m => m.MemberStatus == "Member" && m.Email != null))
+                            {
+                                <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
+                            }
+                        </div>
+                        <div class="member-picker-chips"></div>
+                    </div>
+                    <p class="small mt-2 mb-0" id="emailRecipientCount" style="color:var(--dir-mustard);font-weight:600;">No recipients selected yet.</p>
+                </div>
+                <div class="col-md-7">
+                    <div class="mb-2">
+                        <label class="form-label">Subject</label>
+                        <input name="subject" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <textarea name="messageBody" class="form-control" rows="7" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-paper-plane me-2"></i>Send Email
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
      PENDING MEMBER UPDATES — DETAILED
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-pendingupdates">
@@ -1470,13 +1469,6 @@ function togglePdfPasswordVisibility() {
                     bool spChanged      = propShowPhone.HasValue && propShowPhone.Value != member.ShowPhone;
                     bool sbChanged      = propShowBd.HasValue   && propShowBd.Value    != member.ShowBirthdate;
                     bool saChanged      = propShowAnn.HasValue  && propShowAnn.Value   != member.ShowAnniversary;
-                    // These three fields were part of the submission whenever
-                    // their approval setting was on, whether or not the value
-                    // actually changed (same "resubmit everything" pattern the
-                    // fields above already use) — doc.TryGetProperty alone
-                    // can't tell "submitted, unchanged" from "not submitted",
-                    // so the changed-flag here is date-equality only, same
-                    // limitation the existing string fields above already have.
                     bool bdChanged      = propBirthdate.HasValue   && propBirthdate   != member.Birthdate;
                     bool anChanged      = propAnniversary.HasValue && propAnniversary != member.Anniversary;
                     bool djChanged      = propDateJoined.HasValue  && propDateJoined  != member.DateJoined;
@@ -1752,7 +1744,7 @@ function togglePdfPasswordVisibility() {
         var resolvedIssues = Model.IssueReports.Where(r => r.IsResolved).ToList();
     }
 
-    <div class="admin-bar @(openIssues.Any() ? "admin-bar--urgent" : "admin-bar--neutral")" data-bar-key="open" onclick="toggleIssueBar('open')">
+    <div class="admin-bar admin-bar--sub @(openIssues.Any() ? "admin-bar--urgent" : "admin-bar--neutral")" data-bar-key="open" onclick="toggleIssueBar('open')">
         <div class="admin-bar-left">
             <i class="fa-solid fa-triangle-exclamation"></i>
             <span class="admin-bar-label">Open</span>
@@ -1789,7 +1781,7 @@ function togglePdfPasswordVisibility() {
         }
     </div>
 
-    <div class="admin-bar admin-bar--resolved admin-bar--collapsed" data-bar-key="resolved" onclick="toggleIssueBar('resolved')">
+    <div class="admin-bar admin-bar--sub admin-bar--resolved admin-bar--collapsed" data-bar-key="resolved" onclick="toggleIssueBar('resolved')">
         <div class="admin-bar-left">
             <i class="fa-solid fa-layer-group"></i>
             <span class="admin-bar-label">Resolved</span>
