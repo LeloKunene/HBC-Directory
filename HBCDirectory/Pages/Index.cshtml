@@ -152,21 +152,23 @@
 <!-- ══════════════════════════════════════════════════════
      STAFF SECTION (collapsible, participates in search/filter)
 ════════════════════════════════════════════════════════ -->
-@if (Model.StaffAssignments.Any())
+@{
+    var staffMembers = Model.StaffAssignments.Select(sa => sa.Member).DistinctBy(m => m.Id).ToList();
+}
+@if (staffMembers.Any())
 {
     <div class="dir-section" id="staffSection">
         <div class="dir-section-rule dir-section-rule--toggleable" onclick="toggleSection('staff')">
             <span class="dir-section-label">Staff</span>
             <div class="dir-section-line"></div>
-            <span class="dir-section-count" id="staffCount">@Model.StaffAssignments.Count</span>
+            <span class="dir-section-count" id="staffCount">@staffMembers.Count</span>
             <button type="button" class="dir-section-toggle" id="staffToggleBtn" aria-label="Toggle Staff section">
                 <i class="fa-solid fa-chevron-down"></i>
             </button>
         </div>
         <div class="dir-grid" id="staffGrid">
-            @foreach (var sa in Model.StaffAssignments)
+            @foreach (var m in staffMembers)
             {
-                var m = sa.Member;
                 var staffRoles = Model.StaffRolesFor(m.Id);
                 <div class="dir-card dir-card--staff" data-bs-toggle="modal"
                      data-bs-target="#memberModal"
@@ -201,6 +203,10 @@
                     <div class="dir-card-body">
                         <p class="dir-card-name">@m.Surname, @m.Name</p>
                         <div class="dir-card-badges">
+                            @if (!string.IsNullOrEmpty(m.ChurchOffice))
+                            {
+                                <span class="dir-badge dir-badge--office">@m.ChurchOffice</span>
+                            }
                             @foreach (var role in staffRoles)
                             {
                                 <span class="dir-badge dir-badge--staff">@role</span>

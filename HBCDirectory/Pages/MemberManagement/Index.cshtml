@@ -97,15 +97,16 @@
             <div class="card-header">Grant a role</div>
             <div class="card-body">
             <form method="post" asp-page-handler="AssignRole" class="d-flex gap-2 flex-wrap align-items-end">
-                <div class="form-field" style="min-width:220px;">
+                <div class="form-field member-picker" style="min-width:220px;">
                     <label class="form-label">Member</label>
-                    <select name="memberId" class="form-select" required>
-                        <option value="" disabled selected>Choose a member…</option>
+                    <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
+                    <input type="hidden" name="memberId" class="member-picker-value" required />
+                    <div class="member-picker-menu d-none">
                         @foreach (var m in Model.AllMembers)
                         {
-                            <option value="@m.Id">@m.DisplayName</option>
+                            <div class="member-picker-option" data-id="@m.Id" data-name="@m.DisplayName">@m.DisplayName</div>
                         }
-                    </select>
+                    </div>
                 </div>
                 <div class="form-field" style="min-width:160px;">
                     <label class="form-label">Role</label>
