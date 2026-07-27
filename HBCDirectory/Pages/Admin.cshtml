@@ -145,6 +145,7 @@
 
                 <p class="small text-muted mt-2"><span class="text-danger">*</span> Required</p>
                 <button type="submit" class="btn btn-primary">Add Member</button>
+                <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#addMemberForm">Cancel</button>
             </form>
         </div>
     </div>
@@ -297,6 +298,7 @@
                 </div>
                 <p class="small text-muted mt-2"><span class="text-danger">*</span> Required</p>
                 <button type="submit" class="btn btn-primary">Create Family</button>
+                <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#addFamilyForm">Cancel</button>
             </form>
         </div>
     </div>
@@ -2434,6 +2436,34 @@ function openEditMemberFromFamily(memberId) {
         if (editBtn) editBtn.click();
     });
 }
+
+// Preserves scroll position across a collapsible form's open/close cycle,
+// so Cancel returns the user to where they were before opening it.
+function setupCancelableForm(collapseId) {
+    const formEl = document.getElementById(collapseId);
+    if (!formEl) return;
+
+    let savedScrollY = null;
+
+    // Capture position right as the form starts opening
+    formEl.addEventListener('show.bs.collapse', () => {
+        savedScrollY = window.scrollY;
+    });
+
+    // Restore once fully closed
+    formEl.addEventListener('hidden.bs.collapse', () => {
+        if (savedScrollY !== null) {
+            window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+            savedScrollY = null;
+        }
+    });
+}
+
+// Register scroll-preservation for each collapsible add-form
+document.addEventListener('DOMContentLoaded', () => {
+    setupCancelableForm('addMemberForm');
+    setupCancelableForm('addFamilyForm');
+});
 
 // Init
 updateAddForm();
