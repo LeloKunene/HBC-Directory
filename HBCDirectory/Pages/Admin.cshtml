@@ -391,7 +391,10 @@
                 <div class="col-md-5">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <label class="form-label mb-0">Recipients</label>
-                        <button type="button" class="btn btn-xs btn-outline-secondary" onclick="selectAllMembers()">Select all</button>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="selectAllMembers()">Select all</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="deselectAllMembers()">Unselect all</button>
+                        </div>
                     </div>
                     <div class="member-picker member-picker--multi" data-field="memberIds" id="emailMemberPicker">
                         <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
@@ -2009,6 +2012,14 @@ function selectAllMembers() {
     if (!picker) return;
     picker.querySelectorAll('.member-picker-option:not(.member-picker-option--active)').forEach(function (opt) {
         opt.click();
+    });
+}
+
+function deselectAllMembers() {
+    const picker = document.getElementById('emailMemberPicker');
+    if (!picker) return;
+    picker.querySelectorAll('.member-picker-chip i').forEach(function (x) {
+        x.click();
     });
 }
 
