@@ -165,46 +165,40 @@
 
 @media (max-width: 767px) {
   .table-stack thead { display: none; }
-  .table-stack, .table-stack tbody, .table-stack tr, .table-stack td {
+  .table-stack, .table-stack tbody {
     display: block;
     width: 100%;
   }
   .table-stack tr {
-    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
     border: 1px solid var(--dir-light2);
     border-radius: 10px;
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
   .table-stack td {
-    border: none;
-    padding: 6px 0;
-    text-align: right;
-  }
-  .table-stack td:not(:last-child) {
-    border-bottom: 1px solid var(--dir-light);
-  }
-  .table-stack td::before {
-    content: attr(data-label);
-    float: left;
-    font-weight: 600;
-    font-size: 12px;
-    color: var(--dir-grey);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-  .table-stack td[data-label=""]::before,
-  .table-stack td:not([data-label])::before {
     display: none;
+    border: none;
+    padding: 0;
   }
   .table-stack td.table-stack-cell--photo {
-    text-align: center;
-    padding-top: 10px;
+    display: block;
+    flex-shrink: 0;
+  }
+  .table-stack td.table-stack-cell--name {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .table-stack td.table-stack-cell--actions {
-    text-align: left;
     display: flex;
-    gap: 8px;
-    padding-top: 10px;
+    flex-shrink: 0;
+    gap: 6px;
   }
 }
 
