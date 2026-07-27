@@ -417,12 +417,16 @@
                 <form method="post" asp-page-handler="AssignStaff">
                     <div class="mb-2">
                         <label class="form-label">Member</label>
-                        <select name="memberId" class="form-select">
-                            @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
-                            {
-                                <option value="@m.Id">@m.Surname, @m.Name</option>
-                            }
-                        </select>
+                        <div class="member-picker">
+                            <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
+                            <input type="hidden" name="memberId" class="member-picker-value" />
+                            <div class="member-picker-menu d-none">
+                                @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
+                                {
+                                    <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
+                                }
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Staff Role</label>
@@ -538,12 +542,16 @@
                 <form method="post" asp-page-handler="AddMemberToGroup">
                     <div class="mb-2">
                         <label class="form-label">Member</label>
-                        <select name="memberId" class="form-select">
-                            @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
-                            {
-                                <option value="@m.Id">@m.Surname, @m.Name</option>
-                            }
-                        </select>
+                        <div class="member-picker">
+                            <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
+                            <input type="hidden" name="memberId" class="member-picker-value" />
+                            <div class="member-picker-menu d-none">
+                                @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
+                                {
+                                    <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
+                                }
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Group</label>
@@ -653,12 +661,16 @@
                 <form method="post" asp-page-handler="AddCareGroupLeader">
                     <div class="mb-2">
                         <label class="form-label">Member</label>
-                        <select name="memberId" class="form-select">
-                            @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
-                            {
-                                <option value="@m.Id">@m.Surname, @m.Name</option>
-                            }
-                        </select>
+                        <div class="member-picker">
+                            <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
+                            <input type="hidden" name="memberId" class="member-picker-value" />
+                            <div class="member-picker-menu d-none">
+                                @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
+                                {
+                                    <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
+                                }
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Care Group</label>
@@ -682,12 +694,16 @@
                 <form method="post" asp-page-handler="AddMemberToCareGroup">
                     <div class="mb-2">
                         <label class="form-label">Member</label>
-                        <select name="memberId" class="form-select">
-                            @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
-                            {
-                                <option value="@m.Id">@m.Surname, @m.Name</option>
-                            }
-                        </select>
+                        <div class="member-picker">
+                            <input type="text" class="form-control member-picker-input" placeholder="Type a name..." autocomplete="off" />
+                            <input type="hidden" name="memberId" class="member-picker-value" />
+                            <div class="member-picker-menu d-none">
+                                @foreach (var m in Model.Members.Where(m => m.MemberType == "Adult"))
+                                {
+                                    <div class="member-picker-option" data-id="@m.Id" data-name="@m.Surname, @m.Name">@m.Surname, @m.Name</div>
+                                }
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Care Group</label>

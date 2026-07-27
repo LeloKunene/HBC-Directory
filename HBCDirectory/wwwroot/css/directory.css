@@ -93,6 +93,35 @@
 /* Form cards */
 .form-card { background: white; border: 0.5px solid var(--dir-light2); border-radius: 10px; padding: 20px; }
 .form-card-title { font-size: 13px; font-weight: 600; color: var(--dir-dark); margin: 0 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--dir-light2); }
+
+.member-picker { position: relative; }
+.member-picker-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 220px;
+  overflow-y: auto;
+  background: white;
+  border: 0.5px solid var(--dir-light2);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.12));
+}
+.member-picker-option {
+  padding: 7px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.member-picker-option:hover,
+.member-picker-option--active {
+  background: var(--dir-light);
+}
+.member-picker-empty {
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--dir-grey);
+}
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-field { display: flex; flex-direction: column; gap: 4px; }
 .form-field--full { grid-column: 1 / -1; }

@@ -243,3 +243,68 @@ window.filterTableRows = function (inputId, tableId) {
     row.style.display = text.includes(q) ? "" : "none";
   });
 };
+
+(function () {
+  function initMemberPicker(picker) {
+    const input   = picker.querySelector(".member-picker-input");
+    const hidden  = picker.querySelector(".member-picker-value");
+    const menu    = picker.querySelector(".member-picker-menu");
+    const options = Array.from(menu.querySelectorAll(".member-picker-option"));
+
+    function showMatches() {
+      const q = input.value.trim().toLowerCase();
+      let anyVisible = false;
+      options.forEach(function (opt) {
+        const match = !q || opt.dataset.name.toLowerCase().includes(q);
+        opt.style.display = match ? "" : "none";
+        if (match) anyVisible = true;
+      });
+      let empty = menu.querySelector(".member-picker-empty");
+      if (!anyVisible) {
+        if (!empty) {
+          empty = document.createElement("div");
+          empty.className = "member-picker-empty";
+          empty.textContent = "No matches";
+          menu.appendChild(empty);
+        }
+      } else if (empty) {
+        empty.remove();
+      }
+      menu.classList.remove("d-none");
+    }
+
+    function choose(opt) {
+      input.value = opt.dataset.name;
+      hidden.value = opt.dataset.id;
+      menu.classList.add("d-none");
+    }
+
+    input.addEventListener("focus", showMatches);
+    input.addEventListener("input", function () {
+      hidden.value = ""; // typing invalidates whatever was picked before
+      showMatches();
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter") return;
+      const visible = options.filter(function (o) { return o.style.display !== "none"; });
+      if (visible.length === 1) {
+        e.preventDefault();
+        choose(visible[0]);
+      } else if (!hidden.value) {
+        e.preventDefault(); // don't let an incomplete pick submit the form
+      }
+    });
+
+    options.forEach(function (opt) {
+      opt.addEventListener("click", function () { choose(opt); });
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!picker.contains(e.target)) menu.classList.add("d-none");
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".member-picker").forEach(initMemberPicker);
+  });
+})();
