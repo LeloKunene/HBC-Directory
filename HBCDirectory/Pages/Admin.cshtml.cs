@@ -46,6 +46,7 @@ namespace HBCDirectory.Pages
         public List<PendingUpdate> PendingUpdates { get; set; } = new();
         public List<PendingFamilyPhoto> PendingFamilyPhotos { get; set; } = new();
         public List<ChangeLog>     RecentChanges  { get; set; } = new();
+        public List<IssueReport>   IssueReports   { get; set; } = new();
         public List<(string Label, int Value)> Stats { get; set; } = new();
         public ApprovalSettings ApprovalConfig { get; set; } = new();
         public PdfSettings PdfConfig { get; set; } = new();
@@ -85,11 +86,13 @@ namespace HBCDirectory.Pages
             var recentChangesTask      = LoadRecentChangesAsync();
             var pdfConfigTask          = LoadPdfConfigAsync();
             var approvalConfigTask     = LoadApprovalConfigAsync();
+            var issueReportsTask       = LoadIssueReportsAsync();
 
             await Task.WhenAll(
                 membersTask, familiesTask, staffRolesTask, staffAssignmentsTask,
                 groupsTask, memberGroupsTask, careGroupsTask, pendingUpdatesTask,
-                pendingFamilyPhotosTask, recentChangesTask, pdfConfigTask, approvalConfigTask);
+                pendingFamilyPhotosTask, recentChangesTask, pdfConfigTask, approvalConfigTask,
+                issueReportsTask);
 
             Members             = await membersTask;
             Families            = await familiesTask;
@@ -103,6 +106,7 @@ namespace HBCDirectory.Pages
             RecentChanges       = await recentChangesTask;
             PdfConfig           = await pdfConfigTask;
             ApprovalConfig      = await approvalConfigTask;
+            IssueReports        = await issueReportsTask;
 
             var adults      = Members.Count(m => m.MemberType == "Adult");
             var children    = Members.Count(m => m.MemberType == "Child");
@@ -206,6 +210,13 @@ namespace HBCDirectory.Pages
         {
             await using var db = await _dbFactory.CreateDbContextAsync();
             return await db.ApprovalSettings.FindAsync(1) ?? new ApprovalSettings();
+        }
+
+        private async Task<List<IssueReport>> LoadIssueReportsAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.IssueReports.Include(r => r.ReportedByMember)
+                .OrderByDescending(r => r.SubmittedAt).ToListAsync();
         }
 
         //  Add Member 
@@ -420,6 +431,28 @@ namespace HBCDirectory.Pages
                 ? $"Email sent to {sent} member{(sent == 1 ? "" : "s")}."
                 : $"Sent to {sent} of {recipients.Count} — check the server log for the rest.";
             return Redirect("/Admin#section-email");
+        }
+
+        public async Task<IActionResult> OnPostResolveIssueAsync(int id)
+        {
+            var issue = await _db.IssueReports.FindAsync(id);
+            if (issue == null) return NotFound();
+            issue.IsResolved = true;
+            issue.ResolvedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Marked resolved.";
+            return Redirect("/Admin#section-issues");
+        }
+
+        public async Task<IActionResult> OnPostReopenIssueAsync(int id)
+        {
+            var issue = await _db.IssueReports.FindAsync(id);
+            if (issue == null) return NotFound();
+            issue.IsResolved = false;
+            issue.ResolvedAt = null;
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Reopened.";
+            return Redirect("/Admin#section-issues");
         }
 
         //  Add Family 

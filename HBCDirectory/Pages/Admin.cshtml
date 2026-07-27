@@ -1648,6 +1648,94 @@ function togglePdfPasswordVisibility() {
 </div>
 
 <!-- ══════════════════════════════════════════════════════
+     ISSUES — reports submitted via the nav bar's "Report an issue"
+     icon (see _Layout.cshtml), from any page, by anyone.
+════════════════════════════════════════════════════════ -->
+<div class="admin-section mb-5" id="section-issues">
+    <div class="admin-section-header mb-3">
+        <h4 class="mb-0"><i class="fa-solid fa-chevron-down admin-section-chevron" onclick="toggleAdminSection('section-issues')"></i>Issues</h4>
+    </div>
+    @{
+        var openIssues     = Model.IssueReports.Where(r => !r.IsResolved).ToList();
+        var resolvedIssues = Model.IssueReports.Where(r => r.IsResolved).ToList();
+    }
+
+    <div class="issue-bar issue-bar--open" onclick="toggleIssueBar('open')">
+        <div class="issue-bar-left">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span class="issue-bar-label">Open</span>
+        </div>
+        <div class="issue-bar-right">
+            <span class="issue-bar-count">@openIssues.Count</span>
+            <i class="fa-solid fa-chevron-down issue-bar-chevron"></i>
+        </div>
+    </div>
+    <div class="issue-bar-content" id="issueBarContent-open">
+        @if (!openIssues.Any())
+        {
+            <p class="text-muted small">Nothing open right now.</p>
+        }
+        @foreach (var issue in openIssues)
+        {
+            <div class="issue-card">
+                <div class="issue-card-top">
+                    <div>
+                        <span class="issue-card-category">@issue.Category</span>
+                        <p class="mb-1">@issue.Description</p>
+                    </div>
+                    <form method="post" asp-page-handler="ResolveIssue">
+                        <input type="hidden" name="id" value="@issue.Id" />
+                        <button type="submit" class="btn btn-xs btn-outline-secondary">Mark resolved</button>
+                    </form>
+                </div>
+                <p class="issue-card-meta mb-0">
+                    @issue.SubmittedAt.ToString("d MMM yyyy, HH:mm")
+                    @if (issue.ReportedByMember != null) { <text> · @issue.ReportedByMember.DisplayName</text> }
+                    @if (!string.IsNullOrEmpty(issue.PageUrl)) { <text> · @issue.PageUrl</text> }
+                </p>
+            </div>
+        }
+    </div>
+
+    <div class="issue-bar issue-bar--resolved issue-bar--collapsed" onclick="toggleIssueBar('resolved')">
+        <div class="issue-bar-left">
+            <i class="fa-solid fa-layer-group"></i>
+            <span class="issue-bar-label">Resolved</span>
+        </div>
+        <div class="issue-bar-right">
+            <span class="issue-bar-count">@resolvedIssues.Count</span>
+            <i class="fa-solid fa-chevron-down issue-bar-chevron"></i>
+        </div>
+    </div>
+    <div class="issue-bar-content d-none" id="issueBarContent-resolved">
+        @if (!resolvedIssues.Any())
+        {
+            <p class="text-muted small">No resolved issues yet.</p>
+        }
+        @foreach (var issue in resolvedIssues)
+        {
+            <div class="issue-card">
+                <div class="issue-card-top">
+                    <div>
+                        <span class="issue-card-category">@issue.Category</span>
+                        <p class="mb-1">@issue.Description</p>
+                    </div>
+                    <form method="post" asp-page-handler="ReopenIssue">
+                        <input type="hidden" name="id" value="@issue.Id" />
+                        <button type="submit" class="btn btn-xs btn-outline-secondary">Reopen</button>
+                    </form>
+                </div>
+                <p class="issue-card-meta mb-0">
+                    Reported @issue.SubmittedAt.ToString("d MMM yyyy")
+                    @if (issue.ReportedByMember != null) { <text> · @issue.ReportedByMember.DisplayName</text> }
+                    · Resolved @issue.ResolvedAt?.ToString("d MMM yyyy")
+                </p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
      CHANGE HISTORY (Audit Log)
 ════════════════════════════════════════════════════════ -->
 <div class="admin-section mb-5" id="section-recentchanges">
@@ -2006,7 +2094,6 @@ document.getElementById('editCareGroupModal').addEventListener('show.bs.modal', 
     document.getElementById('editCareGroup-name').value = btn.getAttribute('data-caregroupname');
 });
 
-
 function selectAllMembers() {
     const picker = document.getElementById('emailMemberPicker');
     if (!picker) return;
@@ -2035,6 +2122,14 @@ function deselectAllMembers() {
     }
     new MutationObserver(updateCount).observe(chips, { childList: true });
 })();
+
+function toggleIssueBar(key) {
+    const bar = document.querySelector('.issue-bar--' + key);
+    const content = document.getElementById('issueBarContent-' + key);
+    if (!bar || !content) return;
+    bar.classList.toggle('issue-bar--collapsed');
+    content.classList.toggle('d-none');
+}
 
 function toggleAdminSection(id) {
     const el = document.getElementById(id);

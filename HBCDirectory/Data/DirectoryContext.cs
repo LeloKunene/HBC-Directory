@@ -26,6 +26,7 @@ namespace HBCDirectory.Data
         public DbSet<CareGroup>       CareGroups       => Set<CareGroup>();
         public DbSet<CareGroupLeader> CareGroupLeaders => Set<CareGroupLeader>();
         public DbSet<CareGroupMember> CareGroupMembers => Set<CareGroupMember>();
+        public DbSet<IssueReport>     IssueReports     => Set<IssueReport>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -119,12 +120,14 @@ namespace HBCDirectory.Data
             modelBuilder.Entity<CareGroupMember>()
                 .HasOne(cgm => cgm.Member).WithMany()
                 .HasForeignKey(cgm => cgm.MemberId).OnDelete(DeleteBehavior.Cascade);
-            // One care group per member, unlike Groups/Ministries — a
-            // unique index on MemberId alone (not the (CareGroupId,
-            // MemberId) pair MemberGroup uses), so a member can never end
-            // up under two care groups' pastoral care at once.
+                
             modelBuilder.Entity<CareGroupMember>()
                 .HasIndex(cgm => cgm.MemberId).IsUnique();
+
+            modelBuilder.Entity<IssueReport>()
+                .HasOne(r => r.ReportedByMember).WithMany()
+                .HasForeignKey(r => r.ReportedByMemberId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }
