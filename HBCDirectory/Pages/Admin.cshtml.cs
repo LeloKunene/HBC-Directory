@@ -497,8 +497,14 @@ namespace HBCDirectory.Pages
         public async Task<IActionResult> OnPostAssignStaffAsync(
             int memberId, int staffRoleId, string? bio, int displayOrder)
         {
-            var existing = await _db.StaffAssignments.FirstOrDefaultAsync(sa => sa.MemberId == memberId);
-            if (existing != null) _db.StaffAssignments.Remove(existing);
+            var alreadyHasThisRole = await _db.StaffAssignments
+                .AnyAsync(sa => sa.MemberId == memberId && sa.StaffRoleId == staffRoleId);
+            if (alreadyHasThisRole)
+            {
+                TempData["Error"] = "This member already has that staff role.";
+                return Redirect("/Admin#section-staff");
+            }
+
             _db.StaffAssignments.Add(new StaffAssignment
             {
                 MemberId = memberId, StaffRoleId = staffRoleId,
