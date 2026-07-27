@@ -461,19 +461,20 @@
                 else
                 {
                     <ul class="list-group list-group-flush">
-                        @foreach (var sa in Model.StaffAssignments)
+                        @foreach (var group in Model.StaffAssignments.GroupBy(sa => sa.MemberId))
                         {
                             <li class="list-group-item px-0">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <strong class="d-block">@sa.Member.DisplayName</strong>
+                                <strong class="d-block mb-1">@group.First().Member.DisplayName</strong>
+                                @foreach (var sa in group)
+                                {
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="text-muted small">@sa.StaffRole.RoleName</span>
+                                        <form method="post" asp-page-handler="RemoveStaff">
+                                            <input type="hidden" name="id" value="@sa.Id" />
+                                            <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                                        </form>
                                     </div>
-                                    <form method="post" asp-page-handler="RemoveStaff">
-                                        <input type="hidden" name="id" value="@sa.Id" />
-                                        <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
-                                    </form>
-                                </div>
+                                }
                             </li>
                         }
                     </ul>
