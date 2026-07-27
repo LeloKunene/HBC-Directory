@@ -1,7 +1,7 @@
 // HBC Directory Service Worker — Phase 4
 // Network-first for pages, cache-first for static assets
 
-const CACHE_NAME = 'hbc-dir-v1';
+const CACHE_NAME = 'hbc-dir-v2';
 const STATIC_SHELL = [
   '/css/site.css',
   '/css/directory.css',
@@ -27,6 +27,9 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  
+  if (event.request.method !== 'GET') return;
+
   const url = new URL(event.request.url);
 
   // Static assets: cache-first
