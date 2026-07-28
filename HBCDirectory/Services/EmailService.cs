@@ -84,5 +84,31 @@ namespace HBCDirectory.Services
 
             await SendAsync(toEmail, memberName, subject, html);
         }
+
+        //  Rejection email
+        
+        public async Task SendRejectionEmailAsync(
+            string toEmail,
+            string memberName,
+            string subject,
+            string requestType,
+            string submissionDetail,
+            string submittedDate,
+            string rejectionReason,
+            string ctaUrl,
+            string ctaLabel)
+        {
+            var html = RejectionEmailTemplate.Html
+                .Replace("{subject}",          subject)
+                .Replace("{memberName}",       memberName)
+                .Replace("{requestType}",      requestType)
+                .Replace("{submissionDetail}", submissionDetail)
+                .Replace("{submittedDate}",    submittedDate)
+                .Replace("{rejectionReason}",  rejectionReason)
+                .Replace("{ctaUrl}",           ctaUrl)
+                .Replace("{ctaLabel}",         ctaLabel);
+
+            await SendAsync(toEmail, memberName, subject, html);
+        }
     }
 }
