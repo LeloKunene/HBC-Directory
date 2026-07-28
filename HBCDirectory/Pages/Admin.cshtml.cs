@@ -900,7 +900,8 @@ namespace HBCDirectory.Pages
             {
                 if (!string.IsNullOrEmpty(member.PhotoFileName))
                     await DeleteFromR2Async(member.PhotoFileName);
-                member.PhotoFileName = pending.PendingPhotoFileName;
+                member.PhotoFileName = await RenameInR2Async(pending.PendingPhotoFileName);
+                pending.PendingPhotoFileName = member.PhotoFileName;
             }
 
             pending.IsApproved = true;
@@ -945,7 +946,8 @@ namespace HBCDirectory.Pages
 
             if (!string.IsNullOrEmpty(family.PhotoFileName))
                 await DeleteFromR2Async(family.PhotoFileName);
-            family.PhotoFileName = pending.PendingPhotoFileName;
+            family.PhotoFileName = await RenameInR2Async(pending.PendingPhotoFileName);
+            pending.PendingPhotoFileName = family.PhotoFileName;
 
             pending.IsApproved = true;
             pending.ReviewedAt = DateTime.UtcNow;
@@ -1145,6 +1147,33 @@ namespace HBCDirectory.Pages
                 Console.WriteLine($"Deleted from R2: {fn}");
             }
             catch (Exception ex) { Console.WriteLine($"R2 delete failed: {ex.Message}"); }
+        }
+
+        private async Task<string> RenameInR2Async(string oldKey)
+        {
+            if (!oldKey.StartsWith("pending-")) return oldKey;
+            var newKey = oldKey["pending-".Length..];
+            try
+            {
+                var cred = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
+                var cfg  = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
+                using var client = new AmazonS3Client(cred, cfg);
+                await client.CopyObjectAsync(new CopyObjectRequest
+                {
+                    SourceBucket      = _config["R2:BucketName"],
+                    SourceKey         = oldKey,
+                    DestinationBucket = _config["R2:BucketName"],
+                    DestinationKey    = newKey
+                });
+                await client.DeleteObjectAsync(_config["R2:BucketName"], oldKey);
+                Console.WriteLine($"Renamed in R2: {oldKey} -> {newKey}");
+                return newKey;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"R2 rename failed ({oldKey} -> {newKey}): {ex.Message}");
+                return oldKey;
+            }
         }
 
         private static string GenerateTempPassword()
