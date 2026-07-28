@@ -1491,13 +1491,11 @@ function togglePdfPasswordVisibility() {
                                     <i class="fa-solid fa-check me-1"></i>Approve
                                 </button>
                             </form>
-                            <form method="post" asp-page-handler="RejectPending"
-                                  onsubmit="return confirm('Reject this update from @member.DisplayName?')">
-                                <input type="hidden" name="id" value="@p.Id" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="fa-solid fa-xmark me-1"></i>Reject
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal" data-bs-target="#rejectPendingModal"
+                                    data-id="@p.Id" data-name="@member.DisplayName">
+                                <i class="fa-solid fa-xmark me-1"></i>Reject
+                            </button>
                         </div>
                     </div>
 
@@ -1680,13 +1678,11 @@ function togglePdfPasswordVisibility() {
                                     <i class="fa-solid fa-check me-1"></i>Approve
                                 </button>
                             </form>
-                            <form method="post" asp-page-handler="RejectPendingFamilyPhoto"
-                                  onsubmit="return confirm('Reject this photo submission for @family.FamilyName?')">
-                                <input type="hidden" name="id" value="@p.Id" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="fa-solid fa-xmark me-1"></i>Reject
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal" data-bs-target="#rejectFamilyPhotoModal"
+                                    data-id="@p.Id" data-name="@family.FamilyName">
+                                <i class="fa-solid fa-xmark me-1"></i>Reject
+                            </button>
                         </div>
                     </div>
                     <div class="pending-update-body">
@@ -2172,6 +2168,73 @@ function togglePdfPasswordVisibility() {
     </div>
 </div>
 
+<!-- Reject Pending Member Update — preset reason + free text, emailed
+     to the member so they know why and what to fix. -->
+<div class="modal fade" id="rejectPendingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reject Update: <span id="rejectPending-nameLabel"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="RejectPending">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="rejectPending-id" />
+                    <label class="form-label">Reason</label>
+                    <select class="form-select mb-2" id="rejectPending-reasonSelect" onchange="syncRejectReason('rejectPending')">
+                        <option value="">Choose a reason...</option>
+                        <option>Photo is blurry or low quality</option>
+                        <option>Photo includes other people, please submit a photo of just yourself</option>
+                        <option>Photo doesn't clearly show your face</option>
+                        <option>Photo isn't appropriate for the church directory</option>
+                        <option value="__other__">Other (type your own below)</option>
+                    </select>
+                    <textarea name="reviewNote" id="rejectPending-note" class="form-control" rows="3"
+                              placeholder="Add details, or type your own reason..." required></textarea>
+                    <p class="small text-muted mt-2 mb-0">This reason will be emailed to the member.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Reject &amp; Notify</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Pending Family Photo — same pattern, emailed to the head
+     of family who submitted it. -->
+<div class="modal fade" id="rejectFamilyPhotoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reject Photo: <span id="rejectFamilyPhoto-nameLabel"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="RejectPendingFamilyPhoto">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="rejectFamilyPhoto-id" />
+                    <label class="form-label">Reason</label>
+                    <select class="form-select mb-2" id="rejectFamilyPhoto-reasonSelect" onchange="syncRejectReason('rejectFamilyPhoto')">
+                        <option value="">Choose a reason...</option>
+                        <option>Photo is blurry or low quality</option>
+                        <option>Photo doesn't clearly show the family</option>
+                        <option>Photo isn't appropriate for the church directory</option>
+                        <option value="__other__">Other (type your own below)</option>
+                    </select>
+                    <textarea name="reviewNote" id="rejectFamilyPhoto-note" class="form-control" rows="3"
+                              placeholder="Add details, or type your own reason..." required></textarea>
+                    <p class="small text-muted mt-2 mb-0">This reason will be emailed to the head of family.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Reject &amp; Notify</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script>
 //  Add form: show/hide fields by MemberType 
@@ -2187,6 +2250,26 @@ document.getElementById('editCareGroupModal').addEventListener('show.bs.modal', 
     const btn = e.relatedTarget;
     document.getElementById('editCareGroup-id').value   = btn.getAttribute('data-caregroupid');
     document.getElementById('editCareGroup-name').value = btn.getAttribute('data-caregroupname');
+});
+
+function syncRejectReason(prefix) {
+    const select = document.getElementById(prefix + '-reasonSelect');
+    const note   = document.getElementById(prefix + '-note');
+    note.value = select.value === '__other__' ? '' : select.value;
+}
+document.getElementById('rejectPendingModal').addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('rejectPending-id').value = btn.getAttribute('data-id');
+    document.getElementById('rejectPending-nameLabel').textContent = btn.getAttribute('data-name');
+    document.getElementById('rejectPending-reasonSelect').value = '';
+    document.getElementById('rejectPending-note').value = '';
+});
+document.getElementById('rejectFamilyPhotoModal').addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('rejectFamilyPhoto-id').value = btn.getAttribute('data-id');
+    document.getElementById('rejectFamilyPhoto-nameLabel').textContent = btn.getAttribute('data-name');
+    document.getElementById('rejectFamilyPhoto-reasonSelect').value = '';
+    document.getElementById('rejectFamilyPhoto-note').value = '';
 });
 
 function selectAllMembers() {

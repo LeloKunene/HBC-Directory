@@ -900,7 +900,8 @@ namespace HBCDirectory.Pages
             {
                 if (!string.IsNullOrEmpty(member.PhotoFileName))
                     await DeleteFromR2Async(member.PhotoFileName);
-                member.PhotoFileName = pending.PendingPhotoFileName;
+                member.PhotoFileName = await RenameInR2Async(pending.PendingPhotoFileName);
+                pending.PendingPhotoFileName = member.PhotoFileName;
             }
 
             pending.IsApproved = true;
@@ -930,6 +931,27 @@ namespace HBCDirectory.Pages
             pending.ReviewNote = reviewNote?.Trim();
             await _db.SaveChangesAsync();
 
+            if (!string.IsNullOrEmpty(pending.Member.Email) && !string.IsNullOrEmpty(pending.ReviewNote))
+            {
+                try
+                {
+                    var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                    var submissionDetail = string.IsNullOrEmpty(pending.PendingPhotoFileName)
+                        ? "Profile information update"
+                        : "Profile photo update";
+                    await _email.SendRejectionEmailAsync(
+                        pending.Member.Email, pending.Member.DisplayName,
+                        subject: "Your HBC Directory profile update wasn't approved",
+                        requestType: "profile update",
+                        submissionDetail: submissionDetail,
+                        submittedDate: pending.SubmittedAt.ToString("d MMM yyyy"),
+                        rejectionReason: System.Net.WebUtility.HtmlEncode(pending.ReviewNote),
+                        ctaUrl: $"{baseUrl}/Profile",
+                        ctaLabel: "View My Profile");
+                }
+                catch (Exception ex) { Console.WriteLine($"Rejection email to {pending.Member.Email} failed: {ex.Message}"); }
+            }
+
             TempData["Success"] = $"Update for '{pending.Member.DisplayName}' rejected.";
             return Redirect("/Admin#section-pendingupdates");
         }
@@ -945,7 +967,8 @@ namespace HBCDirectory.Pages
 
             if (!string.IsNullOrEmpty(family.PhotoFileName))
                 await DeleteFromR2Async(family.PhotoFileName);
-            family.PhotoFileName = pending.PendingPhotoFileName;
+            family.PhotoFileName = await RenameInR2Async(pending.PendingPhotoFileName);
+            pending.PendingPhotoFileName = family.PhotoFileName;
 
             pending.IsApproved = true;
             pending.ReviewedAt = DateTime.UtcNow;
@@ -970,6 +993,28 @@ namespace HBCDirectory.Pages
             pending.ReviewedAt = DateTime.UtcNow;
             pending.ReviewNote = reviewNote?.Trim();
             await _db.SaveChangesAsync();
+
+            if (pending.Family.HeadOfFamilyId.HasValue && !string.IsNullOrEmpty(pending.ReviewNote))
+            {
+                var headOfFamily = await _db.Members.FindAsync(pending.Family.HeadOfFamilyId.Value);
+                if (headOfFamily != null && !string.IsNullOrEmpty(headOfFamily.Email))
+                {
+                    try
+                    {
+                        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                        await _email.SendRejectionEmailAsync(
+                            headOfFamily.Email, headOfFamily.DisplayName,
+                            subject: $"The '{pending.Family.FamilyName}' family photo wasn't approved",
+                            requestType: "family photo update",
+                            submissionDetail: $"Family photo — {pending.Family.FamilyName}",
+                            submittedDate: pending.SubmittedAt.ToString("d MMM yyyy"),
+                            rejectionReason: System.Net.WebUtility.HtmlEncode(pending.ReviewNote),
+                            ctaUrl: $"{baseUrl}/Profile",
+                            ctaLabel: "View My Profile");
+                    }
+                    catch (Exception ex) { Console.WriteLine($"Rejection email to {headOfFamily.Email} failed: {ex.Message}"); }
+                }
+            }
 
             TempData["Success"] = $"Family photo submission for '{pending.Family.FamilyName}' rejected.";
             return Redirect("/Admin#section-pendingphotos");
@@ -1145,6 +1190,33 @@ namespace HBCDirectory.Pages
                 Console.WriteLine($"Deleted from R2: {fn}");
             }
             catch (Exception ex) { Console.WriteLine($"R2 delete failed: {ex.Message}"); }
+        }
+
+        private async Task<string> RenameInR2Async(string oldKey)
+        {
+            if (!oldKey.StartsWith("pending-")) return oldKey;
+            var newKey = oldKey["pending-".Length..];
+            try
+            {
+                var cred = new BasicAWSCredentials(_config["R2:AccessKeyId"], _config["R2:SecretAccessKey"]);
+                var cfg  = new AmazonS3Config { ServiceURL = _config["R2:Endpoint"], ForcePathStyle = true };
+                using var client = new AmazonS3Client(cred, cfg);
+                await client.CopyObjectAsync(new CopyObjectRequest
+                {
+                    SourceBucket      = _config["R2:BucketName"],
+                    SourceKey         = oldKey,
+                    DestinationBucket = _config["R2:BucketName"],
+                    DestinationKey    = newKey
+                });
+                await client.DeleteObjectAsync(_config["R2:BucketName"], oldKey);
+                Console.WriteLine($"Renamed in R2: {oldKey} -> {newKey}");
+                return newKey;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"R2 rename failed ({oldKey} -> {newKey}): {ex.Message}");
+                return oldKey;
+            }
         }
 
         private static string GenerateTempPassword()
