@@ -866,6 +866,37 @@ namespace HBCDirectory.Pages
             return Redirect("/Admin#section-caregroups");
         }
 
+        // Shared by a single row's Move button and the bulk "Move
+        // Selected" action — ids is a CareGroupMember row id either
+        // way (one item for a single move, several for bulk), never a
+        // MemberId, since a member can only belong to one care group
+        // at a time and this just repoints their existing row.
+        public async Task<IActionResult> OnPostMoveCareGroupMembersAsync(List<int> ids, int targetCareGroupId)
+        {
+            if (ids == null || ids.Count == 0)
+            { TempData["Error"] = "Choose at least one member to move."; return Redirect("/Admin#section-caregroups"); }
+
+            var rows = await _db.CareGroupMembers.Where(cgm => ids.Contains(cgm.Id)).ToListAsync();
+            foreach (var row in rows) row.CareGroupId = targetCareGroupId;
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = rows.Count == 1 ? "Member moved." : $"{rows.Count} members moved.";
+            return Redirect("/Admin#section-caregroups");
+        }
+
+        public async Task<IActionResult> OnPostRemoveCareGroupMembersBulkAsync(List<int> ids)
+        {
+            if (ids == null || ids.Count == 0)
+            { TempData["Error"] = "Choose at least one member to remove."; return Redirect("/Admin#section-caregroups"); }
+
+            var rows = await _db.CareGroupMembers.Where(cgm => ids.Contains(cgm.Id)).ToListAsync();
+            _db.CareGroupMembers.RemoveRange(rows);
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = rows.Count == 1 ? "Member removed from care group." : $"{rows.Count} members removed from care group.";
+            return Redirect("/Admin#section-caregroups");
+        }
+
         public async Task<IActionResult> OnPostApprovePendingAsync(int id)
         {
             var pending = await _db.PendingUpdates

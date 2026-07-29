@@ -739,7 +739,12 @@
                     @foreach (var cg in Model.CareGroups)
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <span>@cg.Name</span>
+                            <span>
+                                @cg.Name
+                                <span class="badge bg-light text-dark border ms-1" title="Members in this care group">
+                                    @cg.Members.Count
+                                </span>
+                            </span>
                             <div class="d-flex gap-1">
                                 <button type="button" class="btn btn-xs btn-outline-secondary" title="View roster"
                                         data-bs-toggle="modal" data-bs-target="#careGroupRoster-@cg.Id">
@@ -862,26 +867,89 @@
                         </div>
                     }
 
-                    <p class="small text-muted mb-1 mt-3">Members:</p>
+                    <p class="small text-muted mb-1 mt-3">Members (@cg.Members.Count):</p>
                     @if (!cg.Members.Any())
                     {
                         <p class="small text-muted fst-italic">None assigned</p>
                     }
-                    @foreach (var cgm in cg.Members)
+                    else
                     {
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="small">@cgm.Member.Surname, @cgm.Member.Name</span>
-                            <form method="post" asp-page-handler="RemoveMemberFromCareGroup">
-                                <input type="hidden" name="id" value="@cgm.Id" />
-                                <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
-                            </form>
+                        <form method="post" id="careGroupMembersForm-@cg.Id" asp-antiforgery="true"></form>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="form-check mb-0">
+                                <input type="checkbox" class="form-check-input"
+                                       onclick="toggleAllCareGroupChecks('careGroupMembersForm-@cg.Id', this.checked)" />
+                                <label class="form-check-label small">Select all</label>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-xs btn-outline-secondary"
+                                        onclick="moveSelectedCareGroupMembers('careGroupMembersForm-@cg.Id', '@cg.Name')">
+                                    Move Selected
+                                </button>
+                                <button type="button" class="btn btn-xs btn-outline-danger"
+                                        onclick="removeSelectedCareGroupMembers('careGroupMembersForm-@cg.Id')">
+                                    Remove Selected
+                                </button>
+                            </div>
                         </div>
+                        @foreach (var cgm in cg.Members)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div class="form-check mb-0">
+                                    <input type="checkbox" class="form-check-input" name="ids" value="@cgm.Id"
+                                           form="careGroupMembersForm-@cg.Id" />
+                                    <label class="form-check-label small">@cgm.Member.Surname, @cgm.Member.Name</label>
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-xs btn-outline-secondary"
+                                            onclick="openMoveMembersModal([@cgm.Id], '@cgm.Member.Surname, @cgm.Member.Name')">
+                                        Move
+                                    </button>
+                                    <form method="post" asp-page-handler="RemoveMemberFromCareGroup">
+                                        <input type="hidden" name="id" value="@cgm.Id" />
+                                        <button type="submit" class="btn btn-xs btn-outline-danger">Remove</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
                     }
                 </div>
             </div>
         </div>
     </div>
 }
+
+<!-- Shared "Move to Care Group" modal — reused for both a single row's
+     Move button and the bulk "Move Selected" action; JS populates the
+     hidden ids before opening it either way, so there's one real,
+     antiforgery-safe form instead of a modal per care group. -->
+<div class="modal fade" id="moveMembersModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Care Group</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="MoveCareGroupMembers">
+                <div class="modal-body">
+                    <div id="moveMembers-idsContainer"></div>
+                    <p class="small text-muted mb-3" id="moveMembers-summary"></p>
+                    <label class="form-label">Move to</label>
+                    <select name="targetCareGroupId" class="form-select" required>
+                        @foreach (var cg in Model.CareGroups)
+                        {
+                            <option value="@cg.Id">@cg.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Move</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- ══════════════════════════════════════════════════════
      PDF MANAGEMENT SECTION
