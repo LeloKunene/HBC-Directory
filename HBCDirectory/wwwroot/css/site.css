@@ -227,7 +227,6 @@ a:hover {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   border-radius: 4px;
-  /* padding: 0.6rem 1.4rem; removed for button uniformity */
   transition: var(--transition);
 }
 
@@ -311,10 +310,7 @@ a:hover {
   color: var(--color-beige, #c6b08d);
 }
 
-.report-issue-category-group {
-  display: flex;
-  gap: 6px;
-}
+.report-issue-category-group { display: flex; gap: 6px; }
 .report-issue-category-btn {
   flex: 1;
   padding: 7px 0;
@@ -1369,16 +1365,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background: white;
   border-radius: 8px;
   padding: 12px 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16);
   font-size: 13.5px;
   line-height: 1.4;
   border-left: 4px solid var(--dir-mustard);
   color: var(--dir-dark);
   opacity: 0;
   transform: translateX(24px);
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease;
   pointer-events: auto;
 }
 
@@ -1392,34 +1386,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   transform: translateX(24px);
 }
 
-.app-toast--success {
-  border-left-color: #4a8c5f;
-}
-.app-toast--error {
-  border-left-color: #c0524a;
-}
-.app-toast--info {
-  border-left-color: var(--dir-mustard);
-}
+.app-toast--success { border-left-color: #4a8c5f; }
+.app-toast--error   { border-left-color: #c0524a; }
+.app-toast--info    { border-left-color: var(--dir-mustard); }
 
 .app-toast-icon {
   margin-top: 1px;
   flex-shrink: 0;
   font-size: 15px;
 }
-.app-toast--success .app-toast-icon {
-  color: #4a8c5f;
-}
-.app-toast--error .app-toast-icon {
-  color: #c0524a;
-}
-.app-toast--info .app-toast-icon {
-  color: var(--dir-mustard);
-}
+.app-toast--success .app-toast-icon { color: #4a8c5f; }
+.app-toast--error   .app-toast-icon { color: #c0524a; }
+.app-toast--info    .app-toast-icon { color: var(--dir-mustard); }
 
-.app-toast-message {
-  flex: 1;
-}
+.app-toast-message { flex: 1; }
 
 .app-toast-close {
   background: none;
@@ -1431,16 +1411,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   padding: 0;
   cursor: pointer;
 }
-.app-toast-close:hover {
-  color: var(--dir-dark);
-}
+.app-toast-close:hover { color: var(--dir-dark); }
 
 @media (max-width: 576px) {
-  .app-toast-stack {
-    left: 16px;
-    right: 16px;
-    max-width: none;
-  }
+  .app-toast-stack { left: 16px; right: 16px; max-width: none; }
 }
 
 /*  Global photo lightbox   */
@@ -1456,12 +1430,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   transition: background 0.2s ease;
   cursor: zoom-out;
 }
-.app-lightbox--open {
-  display: flex;
-}
-.app-lightbox--visible {
-  background: rgba(0, 0, 0, 0.85);
-}
+.app-lightbox--open { display: flex; }
+.app-lightbox--visible { background: rgba(0, 0, 0, 0.85); }
 
 .app-lightbox-img {
   max-width: min(90vw, 720px);
@@ -1471,15 +1441,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   opacity: 0;
   transform: scale(0.94);
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
   cursor: default;
 }
-.app-lightbox--visible .app-lightbox-img {
-  opacity: 1;
-  transform: scale(1);
-}
+.app-lightbox--visible .app-lightbox-img { opacity: 1; transform: scale(1); }
 
 .app-lightbox-close {
   position: absolute;
@@ -1496,14 +1461,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.app-lightbox-close:hover {
-  background: rgba(255, 255, 255, 0.22);
-}
+.app-lightbox-close:hover { background: rgba(255, 255, 255, 0.22); }
 
 /* Any photo that opens the lightbox gets this so it reads as clickable */
-.lightbox-trigger {
-  cursor: zoom-in;
-}
+.lightbox-trigger { cursor: zoom-in; }
 
 /*  Profile photo — click to view, camera badge to change   */
 .profile-photo-wrap {
@@ -1528,20 +1489,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   transition: background 0.15s ease;
 }
-.profile-photo-camera-btn:hover {
-  background: var(--color-primary-dark);
-}
+.profile-photo-camera-btn:hover { background: var(--color-primary-dark); }
 
 /*  Phone number: country code + local number   */
-.phone-input-group {
-  display: flex;
-  gap: 8px;
-}
-.phone-input-group .phone-country-code {
-  flex: 0 0 auto;
-  width: 130px;
-}
-.phone-input-group input[type="tel"] {
-  flex: 1 1 auto;
-  min-width: 0;
-}
+.phone-input-group { display: flex; gap: 8px; }
+.phone-input-group .phone-country-code { flex: 0 0 auto; width: 130px; }
+.phone-input-group input[type="tel"] { flex: 1 1 auto; min-width: 0; }
